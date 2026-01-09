@@ -5,9 +5,18 @@ import random
 # CONSTANTES
 # ==========================
 
-NAIPES = ["♠", "♦", "♣", "♥"]
+NAIPES = ["♦", "♠", "♣", "♥"]
 VALORES = list(range(2, 11)) + ["J", "Q", "K", "A"]
-PESO = {v: i for i, v in enumerate(VALORES)}
+
+PESO_VALOR = {v: i for i, v in enumerate(VALORES)}
+PESO_NAIPE = {"♦": 0, "♠": 1, "♣": 2, "♥": 3}
+
+COR_NAIPE = {
+    "♦": "red",
+    "♥": "red",
+    "♠": "black",
+    "♣": "black"
+}
 
 # ==========================
 # MODELOS
@@ -18,8 +27,11 @@ class Carta:
         self.naipe = naipe
         self.valor = valor
 
-    def __repr__(self):
-        return f"{self.valor}{self.naipe}"
+    def peso(self):
+        return PESO_NAIPE[self.naipe], PESO_VALOR[self.valor]
+
+    def render(self):
+        return f"<span style='color:{COR_NAIPE[self.naipe]}; font-size:22px'>{self.valor}{self.naipe}</span>"
 
 class Jogador:
     def __init__(self, nome, humano=False):
@@ -31,13 +43,13 @@ class Jogador:
         self.pontos = 0
 
 # ==========================
-# FUNÇÕES DO JOGO
+# FUNÇÕES
 # ==========================
 
 def criar_baralho():
     return [Carta(n, v) for n in NAIPES for v in VALORES]
 
-def distribuir_cartas(jogadores, qtd):
+def distribuir(jogadores, qtd):
     baralho = criar_baralho()
     random.shuffle(baralho)
 
@@ -49,19 +61,22 @@ def distribuir_cartas(jogadores, qtd):
         for j in jogadores:
             j.mao.append(baralho.pop())
 
+def ordenar_mao(mao):
+    return sorted(mao, key=lambda c: c.peso())
+
 def vencedor_vaza(mesa, naipe_base):
     copas = [x for x in mesa if x[1].naipe == "♥"]
     if copas:
-        return max(copas, key=lambda x: PESO[x[1].valor])[0]
+        return max(copas, key=lambda x: PESO_VALOR[x[1].valor])[0]
 
-    mesmo_naipe = [x for x in mesa if x[1].naipe == naipe_base]
-    return max(mesmo_naipe, key=lambda x: PESO[x[1].valor])[0]
+    base = [x for x in mesa if x[1].naipe == naipe_base]
+    return max(base, key=lambda x: PESO_VALOR[x[1].valor])[0]
 
 # ==========================
-# INTERFACE
+# CONFIG
 # ==========================
 
-st.set_page_config(page_title="Jogo de Prognóstico", layout="centered")
+st.set_page_config("Jogo de Prognóstico", layout="centered")
 st.title("🃏 Jogo de Prognóstico")
 
 # ==========================
@@ -71,7 +86,7 @@ st.title("🃏 Jogo de Prognóstico")
 if "fase" not in st.session_state:
     st.session_state.fase = "inicio"
     st.session_state.rodada = 10
-    st.session_state.inicio_ordem = 0
+    st.session_state.mao_inicial = 0
 
 # ==========================
 # INÍCIO
@@ -79,18 +94,15 @@ if "fase" not in st.session_state:
 
 if st.session_state.fase == "inicio":
     nomes = st.text_input(
-        "Jogadores (separados por vírgula)",
+        "Jogadores (primeiro é você)",
         "Você, Ana, Bruno, Carlos"
     )
 
     if st.button("▶ Iniciar Jogo"):
         lista = [n.strip() for n in nomes.split(",")]
-        jogadores = []
-
-        for i, n in enumerate(lista):
-            jogadores.append(Jogador(n, humano=(i == 0)))
-
-        st.session_state.jogadores = jogadores
+        st.session_state.jogadores = [
+            Jogador(n, humano=(i == 0)) for i, n in enumerate(lista)
+        ]
         st.session_state.fase = "distribuir"
         st.rerun()
 
@@ -99,11 +111,7 @@ if st.session_state.fase == "inicio":
 # ==========================
 
 elif st.session_state.fase == "distribuir":
-    distribuir_cartas(
-        st.session_state.jogadores,
-        st.session_state.rodada
-    )
-
+    distribuir(st.session_state.jogadores, st.session_state.rodada)
     st.session_state.fase = "prognostico"
     st.rerun()
 
@@ -115,23 +123,27 @@ elif st.session_state.fase == "prognostico":
     st.subheader(f"📊 Rodada com {st.session_state.rodada} cartas")
 
     humano = st.session_state.jogadores[0]
+    humano.mao = ordenar_mao(humano.mao)
 
-    st.write("🂡 **Suas cartas:**")
-    st.write(" ".join(str(c) for c in humano.mao))
+    st.markdown("🂡 **Suas cartas:**", unsafe_allow_html=True)
+    st.markdown(" ".join(c.render() for c in humano.mao), unsafe_allow_html=True)
 
     humano.prognostico = st.number_input(
-        "Quantas vazas você acha que vai fazer?",
-        min_value=0,
-        max_value=st.session_state.rodada,
-        step=1
+        "Seu prognóstico",
+        0,
+        st.session_state.rodada,
+        0
     )
 
     if st.button("Confirmar Prognóstico"):
         for j in st.session_state.jogadores[1:]:
             j.prognostico = random.randint(0, st.session_state.rodada)
 
+        st.session_state.ordem = (
+            st.session_state.jogadores[st.session_state.mao_inicial:] +
+            st.session_state.jogadores[:st.session_state.mao_inicial]
+        )
         st.session_state.mesa = []
-        st.session_state.naipe_base = None
         st.session_state.fase = "jogada"
         st.rerun()
 
@@ -140,51 +152,53 @@ elif st.session_state.fase == "prognostico":
 # ==========================
 
 elif st.session_state.fase == "jogada":
-    jogadores = st.session_state.jogadores
-    ordem = jogadores[st.session_state.inicio_ordem:] + jogadores[:st.session_state.inicio_ordem]
+    jogador = st.session_state.ordem[0]
 
-    atual = ordem[0]
+    st.subheader(f"🎴 Vez de {jogador.nome}")
 
-    st.subheader(f"🎴 Vez de {atual.nome}")
+    if jogador.humano:
+        jogador.mao = ordenar_mao(jogador.mao)
+        cols = st.columns(len(jogador.mao))
 
-    if atual.humano:
-        cols = st.columns(len(atual.mao))
-        for i, carta in enumerate(atual.mao):
-            if cols[i].button(str(carta)):
-                atual.mao.remove(carta)
-                st.session_state.mesa.append((atual, carta))
+        for i, carta in enumerate(jogador.mao):
+            if cols[i].button(f"{carta.valor}{carta.naipe}"):
+                jogador.mao.remove(carta)
+                st.session_state.mesa.append((jogador, carta))
                 st.session_state.naipe_base = carta.naipe
-                st.session_state.ordem_temp = ordem[1:]
+                st.session_state.ordem = st.session_state.ordem[1:]
                 st.session_state.fase = "ia"
                 st.rerun()
     else:
-        carta = random.choice(atual.mao)
-        atual.mao.remove(carta)
-        st.session_state.mesa.append((atual, carta))
+        carta = random.choice(jogador.mao)
+        jogador.mao.remove(carta)
+        st.session_state.mesa.append((jogador, carta))
         st.session_state.naipe_base = carta.naipe
-        st.session_state.ordem_temp = ordem[1:]
+        st.session_state.ordem = st.session_state.ordem[1:]
         st.session_state.fase = "ia"
         st.rerun()
 
 # ==========================
-# IA JOGA
+# IA CONTINUA
 # ==========================
 
 elif st.session_state.fase == "ia":
-    for j in st.session_state.ordem_temp:
+    while st.session_state.ordem:
+        j = st.session_state.ordem[0]
+        if j.humano:
+            st.session_state.fase = "jogada"
+            st.rerun()
+
         carta = random.choice(j.mao)
         j.mao.remove(carta)
         st.session_state.mesa.append((j, carta))
+        st.session_state.ordem = st.session_state.ordem[1:]
 
     vencedor = vencedor_vaza(
         st.session_state.mesa,
         st.session_state.naipe_base
     )
     vencedor.vazas += 1
-
-    st.session_state.inicio_ordem = st.session_state.jogadores.index(vencedor)
-    st.session_state.ultima_mesa = st.session_state.mesa.copy()
-    st.session_state.mesa = []
+    st.session_state.vencedor_vaza = vencedor
     st.session_state.fase = "resultado"
     st.rerun()
 
@@ -195,12 +209,19 @@ elif st.session_state.fase == "ia":
 elif st.session_state.fase == "resultado":
     st.subheader("🏆 Resultado da Vaza")
 
-    for j, c in st.session_state.ultima_mesa:
-        st.write(f"{j.nome}: {c}")
+    for j, c in st.session_state.mesa:
+        st.markdown(f"{j.nome}: {c.render()}", unsafe_allow_html=True)
+
+    st.success(f"Vencedor da vaza: **{st.session_state.vencedor_vaza.nome}**")
+
+    st.session_state.mao_inicial = st.session_state.jogadores.index(
+        st.session_state.vencedor_vaza
+    )
 
     if st.button("Próxima vaza"):
+        st.session_state.mesa = []
         if st.session_state.jogadores[0].mao:
-            st.session_state.fase = "jogada"
+            st.session_state.fase = "prognostico_jogada"
         else:
             st.session_state.fase = "pontuacao"
         st.rerun()
@@ -210,20 +231,17 @@ elif st.session_state.fase == "resultado":
 # ==========================
 
 elif st.session_state.fase == "pontuacao":
-    st.subheader("📊 Pontuação da Rodada")
+    st.subheader("📊 Placar da Rodada")
 
     for j in st.session_state.jogadores:
         pontos = j.vazas + (5 if j.vazas == j.prognostico else 0)
         j.pontos += pontos
-        st.write(f"{j.nome}: {pontos} pontos")
+        st.write(f"{j.nome}: {j.pontos} pontos")
+
+    st.write(f"🂡 Próximo mão: **{st.session_state.jogadores[st.session_state.mao_inicial].nome}**")
 
     st.session_state.rodada -= 1
-
-    if st.session_state.rodada > 0:
-        st.session_state.fase = "distribuir"
-    else:
-        st.session_state.fase = "fim"
-
+    st.session_state.fase = "distribuir" if st.session_state.rodada > 0 else "fim"
     st.rerun()
 
 # ==========================
@@ -243,6 +261,3 @@ elif st.session_state.fase == "fim":
     if st.button("🔄 Jogar Novamente"):
         st.session_state.clear()
         st.rerun()
-
-
-
