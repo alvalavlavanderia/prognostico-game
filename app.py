@@ -49,20 +49,16 @@ def criar_baralho():
 def ordenar_mao(mao):
     return sorted(mao, key=lambda c: c.peso())
 
-def tem_naipe(mao, naipe):
-    return any(c.naipe == naipe for c in mao)
-
 def somente_copas(mao):
     return all(c.naipe == "♥" for c in mao) if mao else False
 
 def cartas_legais(jogador, naipe_base, hearts_broken):
     """
-    Regra:
-    - Se naipe_base existe: deve seguir naipe se puder.
-    - Se for mão (naipe_base None):
-        - Pode jogar qualquer carta
-        - (opcional) Copas travadas no começo: se hearts_broken == False e não tem somente copas,
-          não pode começar com ♥.
+    REGRAS:
+    1) Se naipe_base existe (não é mão): deve seguir naipe se tiver.
+    2) Se é mão (naipe_base None):
+       - NÃO pode começar com ♥ enquanto hearts_broken == False
+         EXCETO se só tiver ♥ na mão.
     """
     mao = jogador.mao
     if not mao:
@@ -77,11 +73,11 @@ def cartas_legais(jogador, naipe_base, hearts_broken):
 
     # Se é mão (vai definir o naipe base)
     if not hearts_broken and not somente_copas(mao):
-        # não pode abrir com copas se ainda não "quebrou" e tem outros naipes
+        # travar copas: remover ♥ das opções iniciais
         nao_copas = [c for c in mao if c.naipe != "♥"]
         if nao_copas:
-            return mao  # <- aqui você pode permitir abrir com qualquer naipe exceto ♥
-            # Se quiser travar copas de verdade, troque para: return nao_copas
+            return nao_copas
+
     return mao
 
 def definir_vencedor(mesa, naipe_base):
@@ -130,7 +126,7 @@ if "hearts_broken" not in st.session_state:
     st.session_state.hearts_broken = False
 
 if "historico_vazas" not in st.session_state:
-    st.session_state.historico_vazas = []  # lista de dicts: {"mesa": [...], "vencedor": "Nome"}
+    st.session_state.historico_vazas = []
 
 if "rodada_inicial" not in st.session_state:
     st.session_state.rodada_inicial = 10
@@ -160,6 +156,13 @@ if st.session_state.jogadores:
         st.markdown("## 🂡 Mão da vaza")
         if st.session_state.ordem:
             st.success(st.session_state.ordem[0].nome)
+
+        st.markdown("---")
+        st.markdown("## ♥ Copas")
+        if st.session_state.hearts_broken:
+            st.success("Copas já foi quebrada ✅ (pode abrir com ♥)")
+        else:
+            st.warning("Copas TRAVADA ⛔ (não pode abrir com ♥)")
 
         st.markdown("---")
         st.markdown("## 🧾 Histórico (rodada atual)")
@@ -205,6 +208,7 @@ if st.session_state.fase == "inicio":
         st.session_state.rodada_inicial = int(cartas_por_jogador)
         st.session_state.rodada_atual = int(cartas_por_jogador)
         st.session_state.numero_rodada = 1
+        st.session_state.ordem = jogadores[:]  # ordem inicial
 
         st.session_state.fase = "distribuir"
         st.rerun()
@@ -235,10 +239,6 @@ elif st.session_state.fase == "distribuir":
     for j in st.session_state.jogadores:
         j.mao = ordenar_mao([baralho.pop() for _ in range(qtd)])
 
-    # define ordem inicial da rodada: mantém quem está em ordem (se existir) ou padrão
-    if not st.session_state.ordem:
-        st.session_state.ordem = st.session_state.jogadores[:]
-
     st.session_state.fase = "prognostico"
     st.rerun()
 
@@ -259,7 +259,6 @@ elif st.session_state.fase == "prognostico":
     if st.button("Confirmar Prognóstico"):
         humano.prognostico = int(prog)
 
-        # Bots: por enquanto aleatório (depois fazemos IA esperta)
         for j in st.session_state.jogadores[1:]:
             j.prognostico = random.randint(0, len(j.mao))
 
@@ -272,19 +271,17 @@ elif st.session_state.fase == "prognostico":
 elif st.session_state.fase == "jogada":
     st.subheader(f"🧩 Vaza {st.session_state.numero_vaza} — Mão: {st.session_state.ordem[0].nome}")
 
-    # Se já terminou a vaza, resolve antes de acessar ordem[indice]
+    # Se já terminou a vaza, resolve antes
     if st.session_state.indice_jogador >= len(st.session_state.ordem):
         vencedor = definir_vencedor(st.session_state.mesa, st.session_state.naipe_base)
         vencedor.vazas += 1
 
-        # registra histórico
         hist = {
             "mesa": [(x["jogador"].nome, x["carta"].texto()) for x in st.session_state.mesa],
             "vencedor": vencedor.nome
         }
         st.session_state.historico_vazas.append(hist)
 
-        # vencedor começa a próxima (roda ordem)
         idx = st.session_state.ordem.index(vencedor)
         st.session_state.ordem = st.session_state.ordem[idx:] + st.session_state.ordem[:idx]
 
@@ -302,13 +299,10 @@ elif st.session_state.fase == "jogada":
     jogador = st.session_state.ordem[st.session_state.indice_jogador]
     st.markdown(f"## 🎴 Vez de: **{jogador.nome}**")
 
-    # calcula cartas legais
     legais = cartas_legais(jogador, st.session_state.naipe_base, st.session_state.hearts_broken)
     legais = ordenar_mao(legais)
 
-    # HUMANO escolhe
     if jogador.humano:
-        # mapeamento estável para evitar bug de selectbox
         opcoes = [f"{i}|{c.texto()}" for i, c in enumerate(legais)]
         escolha = st.selectbox(
             "Escolha uma carta (somente jogadas válidas aparecem)",
@@ -319,24 +313,21 @@ elif st.session_state.fase == "jogada":
 
         if st.button("Jogar carta"):
             idx = int(escolha.split("|", 1)[0])
-            carta_escolhida = legais[idx]  # pega do pool legal
-
-            # remove da mão real
+            carta_escolhida = legais[idx]
             jogador.mao.remove(carta_escolhida)
 
-            # atualiza estado
             st.session_state.mesa.append({"jogador": jogador, "carta": carta_escolhida})
 
             if st.session_state.naipe_base is None:
                 st.session_state.naipe_base = carta_escolhida.naipe
 
+            # ✅ Copas quebra ao ser jogada por qualquer um
             if carta_escolhida.naipe == "♥":
                 st.session_state.hearts_broken = True
 
             st.session_state.indice_jogador += 1
             st.rerun()
 
-    # IA joga (sempre respeitando cartas legais)
     else:
         carta = random.choice(legais)
         jogador.mao.remove(carta)
@@ -358,19 +349,16 @@ elif st.session_state.fase == "jogada":
 elif st.session_state.fase == "resultado_vaza":
     st.subheader("🏆 Resultado da Vaza")
 
-    # mostra cartas da vaza
     for item in st.session_state.mesa:
         st.markdown(f"- **{item['jogador'].nome}**: {item['carta'].render()}", unsafe_allow_html=True)
 
     st.success(f"Vencedor da vaza: **{st.session_state.vencedor.nome}**")
 
-    # placar parcial após cada vaza (na tela, além do sidebar)
     st.markdown("### 📊 Placar (parcial da rodada)")
     for j in st.session_state.jogadores:
         st.write(f"{j.nome}: vazas {j.vazas} / prognóstico {j.prognostico}")
 
     if st.button("➡ Continuar"):
-        # prepara próxima vaza ou encerra rodada
         st.session_state.mesa = []
         st.session_state.naipe_base = None
         st.session_state.indice_jogador = 0
@@ -423,6 +411,7 @@ elif st.session_state.fase == "fim_rodada":
 
         if st.button("🔄 Jogar novamente"):
             resetar_partida()
+
 
 
 
