@@ -50,7 +50,7 @@ def ordenar_mao(mao):
     return sorted(mao, key=lambda c: c.peso())
 
 def definir_vencedor(mesa, naipe_base):
-    # regra simples: copas é trunfo
+    # Regra simples: Copas é trunfo
     copas = [x for x in mesa if x["carta"].naipe == "♥"]
     if copas:
         return max(copas, key=lambda x: VALOR_PESO[x["carta"].valor])["jogador"]
@@ -58,8 +58,47 @@ def definir_vencedor(mesa, naipe_base):
     seguindo = [x for x in mesa if x["carta"].naipe == naipe_base]
     return max(seguindo, key=lambda x: VALOR_PESO[x["carta"].valor])["jogador"]
 
+def iniciar_jogo(nomes, cartas_por_jogador):
+    lista = [n.strip() for n in nomes.split(",") if n.strip()]
+    if len(lista) < 2:
+        st.error("Informe pelo menos 2 jogadores.")
+        st.stop()
+
+    jogadores = [Jogador(nome, humano=(i == 0)) for i, nome in enumerate(lista)]
+
+    baralho = criar_baralho()
+    random.shuffle(baralho)
+
+    for j in jogadores:
+        j.mao = ordenar_mao([baralho.pop() for _ in range(cartas_por_jogador)])
+
+    st.session_state.jogadores = jogadores
+    st.session_state.ordem = jogadores[:]  # ordem atual da vaza
+    st.session_state.mesa = []
+    st.session_state.naipe_base = None
+    st.session_state.indice_jogador = 0
+    st.session_state.vencedor = None
+    st.session_state.fase = "prognostico"
+
+def encerrar_vaza_se_preciso():
+    """
+    Se o índice já passou do tamanho da ordem, significa que a vaza terminou.
+    Então calculamos o vencedor e passamos para a fase de resultado.
+    """
+    if st.session_state.indice_jogador >= len(st.session_state.ordem):
+        vencedor = definir_vencedor(st.session_state.mesa, st.session_state.naipe_base)
+        vencedor.vazas += 1
+
+        # vencedor passa a ser o "mão" (ordem roda a partir dele)
+        idx = st.session_state.ordem.index(vencedor)
+        st.session_state.ordem = st.session_state.ordem[idx:] + st.session_state.ordem[:idx]
+
+        st.session_state.vencedor = vencedor
+        st.session_state.fase = "resultado"
+        st.rerun()
+
 # =========================
-# ESTADO (SEMPRE INICIALIZAR)
+# ESTADO (INICIALIZAÇÃO)
 # =========================
 if "fase" not in st.session_state:
     st.session_state.fase = "inicio"
@@ -92,33 +131,16 @@ st.title("🎴 Jogo de Prognóstico")
 # =========================
 if st.session_state.fase == "inicio":
     nomes = st.text_input("Jogadores (separados por vírgula)", "Você, Ana, Bruno, Carlos")
-    cartas_por_jogador = st.number_input("Cartas por jogador (ex: 10 para 4 jogadores)", min_value=1, max_value=13, value=10, step=1)
+    cartas_por_jogador = st.number_input(
+        "Cartas por jogador (ex: 10 para 4 jogadores)",
+        min_value=1,
+        max_value=13,
+        value=10,
+        step=1
+    )
 
     if st.button("Iniciar Jogo"):
-        lista = [n.strip() for n in nomes.split(",") if n.strip()]
-        if len(lista) < 2:
-            st.error("Informe pelo menos 2 jogadores.")
-            st.stop()
-
-        jogadores = []
-        for i, nome in enumerate(lista):
-            jogadores.append(Jogador(nome, humano=(i == 0)))
-
-        baralho = criar_baralho()
-        random.shuffle(baralho)
-
-        # distribuição
-        for j in jogadores:
-            j.mao = ordenar_mao([baralho.pop() for _ in range(cartas_por_jogador)])
-
-        st.session_state.jogadores = jogadores
-        st.session_state.ordem = jogadores[:]
-        st.session_state.mesa = []
-        st.session_state.naipe_base = None
-        st.session_state.indice_jogador = 0
-        st.session_state.vencedor = None
-
-        st.session_state.fase = "prognostico"
+        iniciar_jogo(nomes, int(cartas_por_jogador))
         st.rerun()
 
 # =========================
@@ -142,30 +164,33 @@ elif st.session_state.fase == "prognostico":
         st.rerun()
 
 # =========================
-# JOGADA (UMA CARTA POR VEZ)
+# JOGADA
 # =========================
 elif st.session_state.fase == "jogada":
+    # ✅ CORREÇÃO: antes de acessar ordem[indice], verificamos se a vaza já acabou.
+    encerrar_vaza_se_preciso()
+
+    # Agora é seguro acessar:
     jogador = st.session_state.ordem[st.session_state.indice_jogador]
 
     st.subheader(f"🎴 Vez de: {jogador.nome}")
 
-    # Mostra mesa atual
+    # mesa atual
     if st.session_state.mesa:
         st.markdown("### 🪑 Mesa")
         for item in st.session_state.mesa:
             st.markdown(f"- {item['jogador'].nome}: {item['carta'].render()}", unsafe_allow_html=True)
 
-    # HUMANO escolhe (corrigido: selectbox com STRINGS)
     if jogador.humano:
         jogador.mao = ordenar_mao(jogador.mao)
 
-        # cria uma lista de chaves únicas, estáveis
+        # opções estáveis (string) -> índice real
         opcoes = [f"{i}|{c.texto()}" for i, c in enumerate(jogador.mao)]
         escolha = st.selectbox(
             "Escolha uma carta para jogar",
             opcoes,
             format_func=lambda x: x.split("|", 1)[1],
-            key=f"pick_{len(jogador.mao)}_{st.session_state.indice_jogador}_{len(st.session_state.mesa)}"
+            key=f"pick_{jogador.nome}_{len(jogador.mao)}_{st.session_state.indice_jogador}_{len(st.session_state.mesa)}"
         )
 
         if st.button("Jogar carta"):
@@ -180,8 +205,8 @@ elif st.session_state.fase == "jogada":
             st.session_state.indice_jogador += 1
             st.rerun()
 
-    # IA joga
     else:
+        # IA joga
         carta = random.choice(jogador.mao)
         jogador.mao.remove(carta)
 
@@ -191,19 +216,6 @@ elif st.session_state.fase == "jogada":
             st.session_state.naipe_base = carta.naipe
 
         st.session_state.indice_jogador += 1
-        st.rerun()
-
-    # Quando todos jogaram a vaza, resolve vencedor
-    if st.session_state.indice_jogador >= len(st.session_state.ordem):
-        vencedor = definir_vencedor(st.session_state.mesa, st.session_state.naipe_base)
-        vencedor.vazas += 1
-
-        # vencedor vira o próximo mão (roda a ordem)
-        idx = st.session_state.ordem.index(vencedor)
-        st.session_state.ordem = st.session_state.ordem[idx:] + st.session_state.ordem[:idx]
-
-        st.session_state.vencedor = vencedor
-        st.session_state.fase = "resultado"
         st.rerun()
 
 # =========================
@@ -222,7 +234,7 @@ elif st.session_state.fase == "resultado":
         st.session_state.naipe_base = None
         st.session_state.indice_jogador = 0
 
-        # acabou a mão do humano? então acabou a rodada
+        # acabou a rodada?
         if len(st.session_state.jogadores[0].mao) == 0:
             st.session_state.fase = "fim"
         else:
@@ -249,5 +261,6 @@ elif st.session_state.fase == "fim":
     if st.button("🔄 Reiniciar"):
         st.session_state.clear()
         st.rerun()
+
 
 
