@@ -53,7 +53,6 @@ def carta_vencedora(mesa, naipe_base):
 # ==========================
 
 st.set_page_config(page_title="Jogo de Prognóstico", layout="centered")
-
 st.title("🃏 Jogo de Prognóstico – Etapa 2")
 
 # Estado inicial
@@ -65,22 +64,25 @@ if "fase" not in st.session_state:
 # ==========================
 
 if st.session_state.fase == "inicio":
-    nomes = st.text_input("Jogadores (separados por vírgula)", "Você, Ana, Bruno, Carlos")
+    nomes = st.text_input(
+        "Jogadores (separados por vírgula)",
+        "Você, Ana, Bruno, Carlos"
+    )
 
     if st.button("▶ Iniciar Jogo"):
         lista = [n.strip() for n in nomes.split(",")]
         jogadores = []
+
         for i, n in enumerate(lista):
             jogadores.append(Jogador(n, humano=(i == 0)))
 
         distribuir(jogadores, 5)
 
         st.session_state.jogadores = jogadores
-        st.session_state.ordem = jogadores.copy()
         st.session_state.mesa = []
         st.session_state.naipe_base = None
         st.session_state.fase = "prognostico"
-        st.experimental_rerun()
+        st.rerun()
 
 # ==========================
 # PROGNÓSTICO
@@ -88,6 +90,7 @@ if st.session_state.fase == "inicio":
 
 elif st.session_state.fase == "prognostico":
     st.subheader("📊 Faça seu prognóstico")
+
     humano = st.session_state.jogadores[0]
 
     humano.prognostico = st.number_input(
@@ -100,19 +103,18 @@ elif st.session_state.fase == "prognostico":
     if st.button("Confirmar Prognóstico"):
         for j in st.session_state.jogadores[1:]:
             j.prognostico = random.randint(0, len(j.mao))
+
         st.session_state.fase = "jogada"
-        st.experimental_rerun()
+        st.rerun()
 
 # ==========================
-# JOGADA
+# JOGADA HUMANA
 # ==========================
 
 elif st.session_state.fase == "jogada":
     st.subheader("🂡 Sua vez de jogar")
 
     humano = st.session_state.jogadores[0]
-
-    st.write("### Suas cartas:")
     cols = st.columns(len(humano.mao))
 
     for i, carta in enumerate(humano.mao):
@@ -121,7 +123,7 @@ elif st.session_state.fase == "jogada":
             humano.mao.remove(carta)
             st.session_state.naipe_base = carta.naipe
             st.session_state.fase = "ia"
-            st.experimental_rerun()
+            st.rerun()
 
 # ==========================
 # IA JOGA
@@ -143,34 +145,27 @@ elif st.session_state.fase == "ia":
     st.session_state.mesa = []
     st.session_state.naipe_base = None
     st.session_state.fase = "resultado"
-    st.experimental_rerun()
+    st.rerun()
 
 # ==========================
-# RESULTADO DA VAZA
+# RESULTADO
 # ==========================
 
 elif st.session_state.fase == "resultado":
-    st.subheader("🏆 Resultado da vaza")
+    st.subheader("🏆 Resultado da Vaza")
 
     for j, c in st.session_state.ultima_mesa:
         st.write(f"{j.nome}: {c}")
-
-    vencedor = max(
-        st.session_state.ultima_mesa,
-        key=lambda x: PESO[x[1].valor]
-    )[0]
-
-    st.success(f"Vencedor da vaza: {vencedor.nome}")
 
     if st.button("Próxima vaza"):
         if st.session_state.jogadores[0].mao:
             st.session_state.fase = "jogada"
         else:
             st.session_state.fase = "fim"
-        st.experimental_rerun()
+        st.rerun()
 
 # ==========================
-# FIM DO JOGO
+# FIM
 # ==========================
 
 elif st.session_state.fase == "fim":
@@ -181,5 +176,8 @@ elif st.session_state.fase == "fim":
         total = j.vazas + bonus
         st.write(f"{j.nome}: {total} pontos")
 
-    st.button("🔄 Jogar Novamente", on_click=lambda: st.session_state.clear())
+    if st.button("🔄 Jogar Novamente"):
+        st.session_state.clear()
+        st.rerun()
+
 
