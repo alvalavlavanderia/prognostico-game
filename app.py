@@ -62,7 +62,11 @@ def distribuir(jogadores, qtd):
             j.mao.append(baralho.pop())
 
 def ordenar_mao(mao):
-    return sorted(mao, key=lambda c: c.peso())
+    return sorted(
+        mao,
+        key=lambda c: (PESO_NAIPE[c.naipe], PESO_VALOR[c.valor])
+    )
+
 
 def vencedor_vaza(mesa, naipe_base):
     copas = [x for x in mesa if x[1].naipe == "♥"]
