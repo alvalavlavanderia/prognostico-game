@@ -1,13 +1,13 @@
 import streamlit as st
 import random
 
-# -------------------------
-# MODELOS BÁSICOS
-# -------------------------
+# ==========================
+# MODELOS
+# ==========================
 
 NAIPES = ["♠", "♦", "♣", "♥"]
 VALORES = list(range(2, 11)) + ["J", "Q", "K", "A"]
-VALOR_PESO = {v: i for i, v in enumerate(VALORES)}
+PESO = {v: i for i, v in enumerate(VALORES)}
 
 class Carta:
     def __init__(self, naipe, valor):
@@ -24,156 +24,162 @@ class Jogador:
         self.mao = []
         self.prognostico = 0
         self.vazas = 0
-        self.pontos = 0
 
-    def somente_copas(self):
-        return all(c.naipe == "♥" for c in self.mao)
-
-# -------------------------
-# BARALHO
-# -------------------------
+# ==========================
+# FUNÇÕES DO JOGO
+# ==========================
 
 def criar_baralho():
     return [Carta(n, v) for n in NAIPES for v in VALORES]
 
-# -------------------------
-# JOGO
-# -------------------------
+def distribuir(jogadores, cartas_por_jogador):
+    baralho = criar_baralho()
+    random.shuffle(baralho)
+    for j in jogadores:
+        j.mao = []
+        j.vazas = 0
+        for _ in range(cartas_por_jogador):
+            j.mao.append(baralho.pop())
 
-class PrognosticoGame:
-    def __init__(self, nomes_jogadores, prognostico_humano):
-        self.jogadores = []
-        for i, nome in enumerate(nomes_jogadores):
-            self.jogadores.append(
-                Jogador(nome, humano=(i == 0))
-            )
+def carta_vencedora(mesa, naipe_base):
+    copas = [c for c in mesa if c[1].naipe == "♥"]
+    if copas:
+        return max(copas, key=lambda x: PESO[x[1].valor])[0]
+    mesmo_naipe = [c for c in mesa if c[1].naipe == naipe_base]
+    return max(mesmo_naipe, key=lambda x: PESO[x[1].valor])[0]
 
-        self.prognostico_humano = prognostico_humano
-        self.mao_inicial = random.randint(0, len(self.jogadores) - 1)
-
-    def distribuir_cartas(self, cartas):
-        baralho = criar_baralho()
-        random.shuffle(baralho)
-
-        for j in self.jogadores:
-            j.mao = []
-            j.vazas = 0
-
-        for _ in range(cartas):
-            for j in self.jogadores:
-                j.mao.append(baralho.pop())
-
-    def coletar_prognosticos(self):
-        for j in self.jogadores:
-            if j.humano:
-                j.prognostico = self.prognostico_humano
-            else:
-                j.prognostico = random.randint(0, len(j.mao))
-
-    def escolher_carta(self, jogador, naipe_base, primeira_vaza):
-        cartas_validas = []
-
-        for c in jogador.mao:
-            if primeira_vaza and c.naipe == "♥" and not jogador.somente_copas():
-                continue
-            cartas_validas.append(c)
-
-        if naipe_base:
-            seguindo = [c for c in cartas_validas if c.naipe == naipe_base]
-            if seguindo:
-                return random.choice(seguindo)
-
-        return random.choice(cartas_validas)
-
-    def definir_vencedor(self, mesa, naipe_base):
-        copas = [(j, c) for j, c in mesa if c.naipe == "♥"]
-        if copas:
-            return max(copas, key=lambda x: VALOR_PESO[x[1].valor])[0]
-
-        mesmo_naipe = [(j, c) for j, c in mesa if c.naipe == naipe_base]
-        return max(mesmo_naipe, key=lambda x: VALOR_PESO[x[1].valor])[0]
-
-    def pontuar(self):
-        for j in self.jogadores:
-            pontos = j.vazas
-            if j.vazas == j.prognostico:
-                pontos += 5
-            j.pontos += pontos
-
-    def jogar_rodada(self, cartas):
-        self.distribuir_cartas(cartas)
-        self.coletar_prognosticos()
-
-        ordem = self.jogadores[self.mao_inicial:] + self.jogadores[:self.mao_inicial]
-        primeira_vaza = True
-
-        while ordem[0].mao:
-            mesa = []
-            naipe_base = None
-
-            for j in ordem:
-                carta = self.escolher_carta(j, naipe_base, primeira_vaza)
-                j.mao.remove(carta)
-
-                if not naipe_base:
-                    naipe_base = carta.naipe
-
-                mesa.append((j, carta))
-
-            vencedor = self.definir_vencedor(mesa, naipe_base)
-            vencedor.vazas += 1
-
-            idx = ordem.index(vencedor)
-            ordem = ordem[idx:] + ordem[:idx]
-
-            primeira_vaza = False
-
-        self.pontuar()
-
-    def jogar(self):
-        cartas_max = 52 // len(self.jogadores)
-        for c in range(cartas_max, 0, -1):
-            self.jogar_rodada(c)
-
-        self.jogadores.sort(key=lambda j: j.pontos, reverse=True)
-
-# -------------------------
-# STREAMLIT
-# -------------------------
+# ==========================
+# INTERFACE STREAMLIT
+# ==========================
 
 st.set_page_config(page_title="Jogo de Prognóstico", layout="centered")
 
-st.title("🃏 Jogo de Prognóstico")
-st.write("Jogador 1 é humano. Os demais são automáticos.")
+st.title("🃏 Jogo de Prognóstico – Etapa 2")
 
-nomes_input = st.text_input(
-    "Jogadores (o primeiro será você)",
-    "Você, Ana, Bruno, Carlos"
-)
+# Estado inicial
+if "fase" not in st.session_state:
+    st.session_state.fase = "inicio"
 
-cartas = st.slider("Quantidade de cartas da rodada", 1, 10, 5)
+# ==========================
+# TELA INICIAL
+# ==========================
 
-prognostico = st.number_input(
-    "Seu prognóstico (quantas vazas você acha que fará)",
-    min_value=0,
-    max_value=cartas,
-    step=1
-)
+if st.session_state.fase == "inicio":
+    nomes = st.text_input("Jogadores (separados por vírgula)", "Você, Ana, Bruno, Carlos")
 
-if st.button("▶ Iniciar Jogo"):
-    nomes = [n.strip() for n in nomes_input.split(",") if n.strip()]
+    if st.button("▶ Iniciar Jogo"):
+        lista = [n.strip() for n in nomes.split(",")]
+        jogadores = []
+        for i, n in enumerate(lista):
+            jogadores.append(Jogador(n, humano=(i == 0)))
 
-    if len(nomes) < 2:
-        st.error("Informe pelo menos 2 jogadores.")
-    else:
-        jogo = PrognosticoGame(nomes, prognostico)
-        jogo.jogar()
+        distribuir(jogadores, 5)
 
-        st.success("🏆 Resultado Final")
-        for j in jogo.jogadores:
-            marcador = "👤" if j.humano else "🤖"
-            st.write(
-                f"{marcador} **{j.nome}** | Prognóstico: {j.prognostico} | "
-                f"Vazas: {j.vazas} | Pontos: {j.pontos}"
-            )
+        st.session_state.jogadores = jogadores
+        st.session_state.ordem = jogadores.copy()
+        st.session_state.mesa = []
+        st.session_state.naipe_base = None
+        st.session_state.fase = "prognostico"
+        st.experimental_rerun()
+
+# ==========================
+# PROGNÓSTICO
+# ==========================
+
+elif st.session_state.fase == "prognostico":
+    st.subheader("📊 Faça seu prognóstico")
+    humano = st.session_state.jogadores[0]
+
+    humano.prognostico = st.number_input(
+        "Quantas vazas você acha que vai fazer?",
+        min_value=0,
+        max_value=len(humano.mao),
+        step=1
+    )
+
+    if st.button("Confirmar Prognóstico"):
+        for j in st.session_state.jogadores[1:]:
+            j.prognostico = random.randint(0, len(j.mao))
+        st.session_state.fase = "jogada"
+        st.experimental_rerun()
+
+# ==========================
+# JOGADA
+# ==========================
+
+elif st.session_state.fase == "jogada":
+    st.subheader("🂡 Sua vez de jogar")
+
+    humano = st.session_state.jogadores[0]
+
+    st.write("### Suas cartas:")
+    cols = st.columns(len(humano.mao))
+
+    for i, carta in enumerate(humano.mao):
+        if cols[i].button(str(carta)):
+            st.session_state.mesa.append((humano, carta))
+            humano.mao.remove(carta)
+            st.session_state.naipe_base = carta.naipe
+            st.session_state.fase = "ia"
+            st.experimental_rerun()
+
+# ==========================
+# IA JOGA
+# ==========================
+
+elif st.session_state.fase == "ia":
+    for j in st.session_state.jogadores[1:]:
+        carta = random.choice(j.mao)
+        j.mao.remove(carta)
+        st.session_state.mesa.append((j, carta))
+
+    vencedor = carta_vencedora(
+        st.session_state.mesa,
+        st.session_state.naipe_base
+    )
+    vencedor.vazas += 1
+
+    st.session_state.ultima_mesa = st.session_state.mesa.copy()
+    st.session_state.mesa = []
+    st.session_state.naipe_base = None
+    st.session_state.fase = "resultado"
+    st.experimental_rerun()
+
+# ==========================
+# RESULTADO DA VAZA
+# ==========================
+
+elif st.session_state.fase == "resultado":
+    st.subheader("🏆 Resultado da vaza")
+
+    for j, c in st.session_state.ultima_mesa:
+        st.write(f"{j.nome}: {c}")
+
+    vencedor = max(
+        st.session_state.ultima_mesa,
+        key=lambda x: PESO[x[1].valor]
+    )[0]
+
+    st.success(f"Vencedor da vaza: {vencedor.nome}")
+
+    if st.button("Próxima vaza"):
+        if st.session_state.jogadores[0].mao:
+            st.session_state.fase = "jogada"
+        else:
+            st.session_state.fase = "fim"
+        st.experimental_rerun()
+
+# ==========================
+# FIM DO JOGO
+# ==========================
+
+elif st.session_state.fase == "fim":
+    st.subheader("📊 Resultado Final")
+
+    for j in st.session_state.jogadores:
+        bonus = 5 if j.vazas == j.prognostico else 0
+        total = j.vazas + bonus
+        st.write(f"{j.nome}: {total} pontos")
+
+    st.button("🔄 Jogar Novamente", on_click=lambda: st.session_state.clear())
 
