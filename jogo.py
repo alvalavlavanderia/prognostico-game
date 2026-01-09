@@ -13,105 +13,83 @@ class Carta:
         return f"{self.valor}{self.naipe}"
 
 class Jogador:
-    def __init__(self, nome):
+    def __init__(self, nome, humano=False):
         self.nome = nome
+        self.humano = humano
         self.mao = []
-        self.prognostico = 0
+        self.prognostico = None
         self.vazas = 0
         self.pontos = 0
+
+    def tem_naipe(self, naipe):
+        return any(c.naipe == naipe for c in self.mao)
 
     def somente_copas(self):
         return all(c.naipe == "♥" for c in self.mao)
 
-def criar_baralho():
-    return [Carta(n, v) for n in NAIPES for v in VALORES]
-
 class PrognosticoGame:
-    def __init__(self, nomes_jogadores):
-        self.jogadores = [Jogador(n) for n in nomes_jogadores]
-        self.mao_inicial = random.randint(0, len(self.jogadores) - 1)
+    def __init__(self):
+        self.jogadores = [
+            Jogador("Você", humano=True),
+            Jogador("Bot 1"),
+            Jogador("Bot 2"),
+            Jogador("Bot 3"),
+        ]
+        self.ordem = []
+        self.mesa = []
+        self.naipe_base = None
+        self.primeira_vaza = True
 
-    def distribuir_cartas(self, cartas_por_jogador):
-        baralho = criar_baralho()
+    def criar_baralho(self):
+        return [Carta(n, v) for n in NAIPES for v in VALORES]
+
+    def distribuir_cartas(self, qtd):
+        baralho = self.criar_baralho()
         random.shuffle(baralho)
-
         for j in self.jogadores:
             j.mao = []
             j.vazas = 0
-
-        for _ in range(cartas_por_jogador):
+        for _ in range(qtd):
             for j in self.jogadores:
                 j.mao.append(baralho.pop())
 
-    def coletar_prognosticos(self):
-        for j in self.jogadores:
-            j.prognostico = random.randint(0, len(j.mao))
+        self.ordem = self.jogadores.copy()
+        random.shuffle(self.ordem)
 
-    def escolher_carta(self, jogador, naipe_base, primeira_vaza):
+    def cartas_validas(self, jogador):
         validas = []
         for c in jogador.mao:
-            if primeira_vaza and c.naipe == "♥" and not jogador.somente_copas():
+            if self.primeira_vaza and c.naipe == "♥" and not jogador.somente_copas():
                 continue
             validas.append(c)
 
-        if naipe_base:
-            seguindo = [c for c in validas if c.naipe == naipe_base]
-            if seguindo:
-                return random.choice(seguindo)
+        if self.naipe_base and jogador.tem_naipe(self.naipe_base):
+            validas = [c for c in validas if c.naipe == self.naipe_base]
 
-        return random.choice(validas)
+        return validas
 
-    def definir_vencedor(self, mesa, naipe_base, primeira_vaza):
-        copas = [
-            (j, c) for j, c in mesa
-            if c.naipe == "♥" and (not primeira_vaza or j.somente_copas())
-        ]
+    def jogar_bot(self, jogador):
+        carta = random.choice(self.cartas_validas(jogador))
+        self.jogar_carta(jogador, carta)
 
-        if copas:
-            return max(copas, key=lambda x: VALOR_PESO[x[1].valor])[0]
+    def jogar_carta(self, jogador, carta):
+        jogador.mao.remove(carta)
+        if not self.naipe_base:
+            self.naipe_base = carta.naipe
+        self.mesa.append((jogador, carta))
 
-        mesmo_naipe = [(j, c) for j, c in mesa if c.naipe == naipe_base]
-        return max(mesmo_naipe, key=lambda x: VALOR_PESO[x[1].valor])[0]
+    def fechar_vaza(self):
+        copas = [(j, c) for j, c in self.mesa if c.naipe == "♥"]
+        if copas and not self.primeira_vaza:
+            vencedor = max(copas, key=lambda x: VALOR_PESO[x[1].valor])[0]
+        else:
+            mesmo_naipe = [(j, c) for j, c in self.mesa if c.naipe == self.naipe_base]
+            vencedor = max(mesmo_naipe, key=lambda x: VALOR_PESO[x[1].valor])[0]
 
-    def jogar_rodada(self, cartas_por_jogador):
-        self.distribuir_cartas(cartas_por_jogador)
-        self.coletar_prognosticos()
+        vencedor.vazas += 1
+        self.ordem = self.ordem[self.ordem.index(vencedor):] + \
+                     self.ordem[:self.ordem.index(vencedor)]
 
-        ordem = self.jogadores[self.mao_inicial:] + self.jogadores[:self.mao_inicial]
-        primeira_vaza = True
-
-        while ordem[0].mao:
-            mesa = []
-            naipe_base = None
-
-            for j in ordem:
-                carta = self.escolher_carta(j, naipe_base, primeira_vaza)
-                j.mao.remove(carta)
-
-                if not naipe_base:
-                    naipe_base = carta.naipe
-
-                mesa.append((j, carta))
-
-            vencedor = self.definir_vencedor(mesa, naipe_base, primeira_vaza)
-            vencedor.vazas += 1
-
-            idx = ordem.index(vencedor)
-            ordem = ordem[idx:] + ordem[:idx]
-            primeira_vaza = False
-
-    def pontuar(self):
-        for j in self.jogadores:
-            pontos = j.vazas
-            if j.vazas == j.prognostico:
-                pontos += 5
-            j.pontos += pontos
-
-    def jogar(self):
-        cartas_max = 52 // len(self.jogadores)
-
-        for c in range(cartas_max, 0, -1):
-            self.jogar_rodada(c)
-            self.pontuar()
-
-        self.jogadores.sort(key=lambda j: j.pontos, reverse=True)
+        self.mesa = []
+        self.naipe_base = None
+        self.primeira_vaza = False
