@@ -10,7 +10,7 @@ import streamlit as st
 st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="wide")
 
 # =========================
-# CSS PREMIUM (com animações)
+# CSS PREMIUM (mesa + fichas + montes + delay de vaza)
 # =========================
 APP_CSS = """
 <style>
@@ -31,7 +31,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   border-radius:20px;
   border:1px solid rgba(0,0,0,.10);
   background: radial-gradient(circle at 30% 20%, rgba(0,150,110,.30) 0%, rgba(0,120,90,.18) 28%, rgba(0,0,0,.03) 60%, rgba(0,0,0,.02) 100%);
-  height: 420px;
+  height: 460px;
   position:relative;
   overflow:hidden;
   box-shadow: 0 18px 40px rgba(0,0,0,.10);
@@ -44,6 +44,8 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   text-transform: uppercase;
   letter-spacing: .08em;
 }
+
+/* Assentos */
 .seat{
   position:absolute;
   padding:6px 10px;
@@ -52,7 +54,6 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   border:1px solid rgba(0,0,0,.08);
   font-size:12px;
   white-space:nowrap;
-  transition: box-shadow .15s ease, outline .15s ease, transform .15s ease;
 }
 .seat.you{ outline:2px solid rgba(0,120,90,.55); font-weight:900; }
 .seat.dealer{ border-color: rgba(0,120,90,.30); background: rgba(255,255,255,.92); }
@@ -69,13 +70,19 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   background: rgba(255,255,255,.95);
 }
 
+/* Cartas na mesa */
 .playCard{
   position:absolute;
   transform: translate(-50%,-50%);
   pointer-events:none;
 }
+@keyframes popIn {
+  0% { transform: translate(-50%,-50%) scale(.92); opacity: .0; }
+  100% { transform: translate(-50%,-50%) scale(1.0); opacity: 1; }
+}
+.playCard.pop{ animation: popIn .16s ease-out; }
 
-/* Carta estática */
+/* Carta (frente) */
 .card{
   width:76px;
   height:110px;
@@ -90,16 +97,49 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .card .br{ position:absolute; bottom:8px; right:8px; font-weight:900; font-size:14px; line-height:14px; transform:rotate(180deg); }
 .card .mid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:900; opacity:.92; }
 
-/* Pop card on table */
-@keyframes popIn {
-  0% { transform: translate(-50%,-50%) scale(.92); opacity: .0; }
-  100% { transform: translate(-50%,-50%) scale(1.0); opacity: 1; }
+/* Carta (verso) para o montinho */
+.cardBackWrap{ position:absolute; transform: translate(-50%,-50%); }
+.cardBack{
+  width:54px; height:78px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,.16);
+  background: linear-gradient(180deg, rgba(0,120,90,.95) 0%, rgba(0,90,70,.95) 100%);
+  box-shadow: 0 10px 18px rgba(0,0,0,.14);
+  position:relative;
+  overflow:hidden;
 }
-.playCard.pop{ animation: popIn .16s ease-out; }
+.cardBack:before{
+  content:"";
+  position:absolute; inset:-20%;
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.18) 0 8px, rgba(255,255,255,0) 8px 16px);
+  transform: rotate(12deg);
+}
+.pileCount{
+  margin-top:6px;
+  text-align:center;
+  font-weight:900;
+  font-size:12px;
+  opacity:.85;
+}
+
+/* Ficha do prognóstico */
+.tokenWrap{ position:absolute; transform: translate(-50%,-50%); }
+.token{
+  min-width: 120px;
+  padding:8px 10px;
+  border-radius: 16px;
+  border:1px solid rgba(0,0,0,.10);
+  background: rgba(255,255,255,.86);
+  box-shadow: 0 12px 24px rgba(0,0,0,.10);
+  text-align:center;
+}
+.tokenTitle{ font-size:11px; font-weight:900; opacity:.70; letter-spacing:.06em; text-transform:uppercase; }
+.tokenValue{ font-size:18px; font-weight:900; margin-top:2px; }
+.tokenSub{ font-size:11px; font-weight:900; opacity:.70; margin-top:3px; }
 
 /* Dock da mão */
 .handDock{
-  margin-top: 10px;
+  margin-top: 12px;
   border-radius: 18px;
   border:1px solid rgba(0,0,0,.10);
   background: rgba(255,255,255,.75);
@@ -155,9 +195,7 @@ div[data-testid="column"] .stButton > button:disabled{
   font-size:34px; font-weight:900; opacity:.92;
 }
 
-/* =========================
-   ANIMAÇÃO: carta sumindo da mão
-   ========================= */
+/* Animação: carta sumindo da mão */
 @keyframes flyAway {
   0%   { transform: translateY(0px) scale(1); opacity: 1; }
   55%  { transform: translateY(-26px) scale(1.03); opacity: .85; }
@@ -165,13 +203,14 @@ div[data-testid="column"] .stButton > button:disabled{
 }
 .flyAway{ animation: flyAway .25s ease-in forwards; }
 
-/* Overlay “Jogando...” */
+/* Overlay */
 .playingOverlay{
   display:flex; align-items:center; gap:10px;
   padding:10px 12px; border-radius:14px;
   border:1px solid rgba(0,0,0,.08);
   background: rgba(255,255,255,.85);
   font-weight:900;
+  margin-top: 10px;
 }
 
 /* Sidebar */
@@ -191,12 +230,12 @@ div[data-testid="column"] .stButton > button:disabled{
 st.markdown(APP_CSS, unsafe_allow_html=True)
 
 # =========================
-# BARALHO / ORDENAÇÃO
+# BARALHO / REGRAS
 # =========================
 VALORES = [2,3,4,5,6,7,8,9,10,"J","Q","K","A"]
 PESO_VALOR = {v:i for i,v in enumerate(VALORES)}
-COR_NAIPE = {"♦":"#C1121F", "♥":"#C1121F", "♠":"#111827", "♣":"#111827"}
-ORDEM_NAIPE = {"♦":0, "♠":1, "♣":2, "♥":3}
+COR_NAIPE = {"♦":"#C1121F", "♥":"#C1121F", "♠":"#111827", "♣":"#111827"}  # vermelho/preto
+ORDEM_NAIPE = {"♦":0, "♠":1, "♣":2, "♥":3}  # ouro, espada, paus, copas
 TRUNFO = "♥"
 
 def criar_baralho():
@@ -281,16 +320,24 @@ def ss_init():
         "primeira_vaza": True,
         "copas_quebrada": False,
 
-        "log": [],
         "pontuou_rodada": False,
 
         # Premium: animação "sumir da mão"
         "pending_play": None,
 
         # Premium: pop + winner flash
-        "table_pop_until": 0.0,      # timestamp
+        "table_pop_until": 0.0,
         "winner_flash_name": None,
         "winner_flash_until": 0.0,
+
+        # NOVO: resolução da vaza com delay (cartas ficam 1-2s)
+        "trick_pending": False,
+        "trick_resolve_at": 0.0,
+        "trick_winner": None,
+        "trick_snapshot": [],  # cópia das cartas na mesa
+
+        # Para desenhar montinho por jogador (quantas vazas ganhou na rodada)
+        "pile_counts": {},
     }
     for k,v in defaults.items():
         if k not in st.session_state:
@@ -329,10 +376,16 @@ def distribuir(cartas_alvo: int):
     st.session_state.progn_pre = {}
     st.session_state.progn_pos = {}
     st.session_state.vazas_rodada = {nome: 0 for nome in nomes}
+    st.session_state.pile_counts = {nome: 0 for nome in nomes}
+
     st.session_state.fase = "prognostico"
-    st.session_state.log = []
     st.session_state.pontuou_rodada = False
     st.session_state.pending_play = None
+
+    st.session_state.trick_pending = False
+    st.session_state.trick_resolve_at = 0.0
+    st.session_state.trick_winner = None
+    st.session_state.trick_snapshot = []
 
 def preparar_prognosticos_anteriores():
     nomes = st.session_state.nomes
@@ -359,7 +412,6 @@ def iniciar_fase_jogo():
     st.session_state.primeira_vaza = True
     st.session_state.copas_quebrada = False
     st.session_state.fase = "jogo"
-    st.session_state.log.append(f"🎬 Início da rodada — mão: {st.session_state.ordem[0]}.")
 
 def cartas_validas_para_jogar(nome):
     mao = st.session_state.maos[nome]
@@ -370,21 +422,24 @@ def cartas_validas_para_jogar(nome):
     if not mao:
         return []
 
+    # seguir naipe se puder
     if naipe_base and tem_naipe(mao, naipe_base):
         return [c for c in mao if c[0] == naipe_base]
 
+    # não tem naipe da vaza
     if naipe_base and not tem_naipe(mao, naipe_base):
         if primeira_vaza and not somente_trunfo(mao):
-            return [c for c in mao if c[0] != TRUNFO]
+            return [c for c in mao if c[0] != TRUNFO]  # não pode cortar com copas na 1ª vaza
         return mao[:]
 
+    # abrindo vaza
     if naipe_base is None:
         if primeira_vaza:
             if somente_trunfo(mao):
-                return mao[:]
-            return [c for c in mao if c[0] != TRUNFO]
+                return mao[:]  # exceção
+            return [c for c in mao if c[0] != TRUNFO]  # não abre com copas na 1ª vaza
         if not copas_quebrada and not somente_trunfo(mao):
-            return [c for c in mao if c[0] != TRUNFO]
+            return [c for c in mao if c[0] != TRUNFO]  # só abre copas se já quebrou
 
     return mao[:]
 
@@ -394,27 +449,36 @@ def jogar_carta(nome, carta):
         st.session_state.naipe_base = carta[0]
     if carta[0] == TRUNFO and not st.session_state.primeira_vaza:
         st.session_state.copas_quebrada = True
-    st.session_state.mesa.append((nome, carta))
-    st.session_state.log.append(f"🃏 {nome} jogou {valor_str(carta[1])}{carta[0]}.")
 
-    # Pop na carta recém-jogada na mesa
+    st.session_state.mesa.append((nome, carta))
     st.session_state.table_pop_until = time.time() + 0.22
 
-def vencedor_da_vaza():
-    mesa = st.session_state.mesa
-    naipe_base = st.session_state.naipe_base
-    copas = [(n,c) for (n,c) in mesa if c[0] == TRUNFO]
+def vencedor_da_vaza(mesa_snapshot, naipe_base_snapshot):
+    copas = [(n,c) for (n,c) in mesa_snapshot if c[0] == TRUNFO]
     if copas:
         return max(copas, key=lambda x: PESO_VALOR[x[1][1]])[0]
-    base = [(n,c) for (n,c) in mesa if c[0] == naipe_base]
+    base = [(n,c) for (n,c) in mesa_snapshot if c[0] == naipe_base_snapshot]
     return max(base, key=lambda x: PESO_VALOR[x[1][1]])[0]
 
-def fechar_vaza():
-    win = vencedor_da_vaza()
-    st.session_state.vazas_rodada[win] += 1
-    st.session_state.log.append(f"🏅 {win} venceu a vaza.")
+def schedule_trick_resolution(delay_seconds=1.4):
+    """Quando a mesa completa, mantém cartas visíveis por X segundos e depois resolve."""
+    if st.session_state.trick_pending:
+        return
+    st.session_state.trick_pending = True
+    st.session_state.trick_resolve_at = time.time() + float(delay_seconds)
+    st.session_state.trick_snapshot = st.session_state.mesa[:]
+    st.session_state.trick_winner = vencedor_da_vaza(st.session_state.trick_snapshot, st.session_state.naipe_base)
 
-    # Winner glow
+def resolve_trick_if_due():
+    if not st.session_state.trick_pending:
+        return False
+    if time.time() < st.session_state.trick_resolve_at:
+        return False
+
+    win = st.session_state.trick_winner
+    st.session_state.vazas_rodada[win] += 1
+    st.session_state.pile_counts[win] = st.session_state.pile_counts.get(win, 0) + 1
+
     st.session_state.winner_flash_name = win
     st.session_state.winner_flash_until = time.time() + 1.2
 
@@ -423,6 +487,12 @@ def fechar_vaza():
     st.session_state.mesa = []
     st.session_state.naipe_base = None
     st.session_state.primeira_vaza = False
+
+    st.session_state.trick_pending = False
+    st.session_state.trick_resolve_at = 0.0
+    st.session_state.trick_winner = None
+    st.session_state.trick_snapshot = []
+    return True
 
 def rodada_terminou():
     return all(len(st.session_state.maos[n]) == 0 for n in st.session_state.nomes)
@@ -435,24 +505,34 @@ def pontuar_rodada():
         p = v + (5 if st.session_state.prognosticos.get(n) == v else 0)
         st.session_state.pontos[n] = st.session_state.pontos.get(n, 0) + p
     st.session_state.pontuou_rodada = True
-    st.session_state.log.append("📌 Fim da rodada — pontuação aplicada.")
 
 def ai_escolhe_carta(nome):
     validas = cartas_validas_para_jogar(nome)
     return random.choice(validas) if validas else None
 
 def avancar_ate_humano_ou_fim():
+    """Roda IA até chegar na vez do humano ou terminar, respeitando o delay de vaza."""
     humano = st.session_state.nomes[st.session_state.humano_idx]
     ordem = st.session_state.ordem
+
+    # se tem vaza pendente, não avança IA
+    if st.session_state.trick_pending:
+        return
+
     limit = 2500
     steps = 0
 
     while steps < limit:
         steps += 1
 
-        if len(st.session_state.mesa) == len(ordem):
-            fechar_vaza()
-            continue
+        # resolve vaza se chegou a hora
+        if resolve_trick_if_due():
+            # após resolver, pode continuar loop
+            pass
+
+        # se agora ficou pendente (não deve), sai
+        if st.session_state.trick_pending:
+            return
 
         if rodada_terminou():
             pontuar_rodada()
@@ -474,6 +554,11 @@ def avancar_ate_humano_ou_fim():
 
         jogar_carta(atual, carta)
         st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
+
+        # se completou mesa, agenda resolução e para
+        if len(st.session_state.mesa) == len(ordem):
+            schedule_trick_resolution(delay_seconds=1.4)
+            return
 
 def start_next_round():
     if st.session_state.cartas_alvo <= 1:
@@ -531,7 +616,7 @@ st.markdown(
 <div class="titleRow">
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
-    <div class="smallMuted">Premium UI • Pop na mesa • Highlight do vencedor</div>
+    <div style="opacity:.70;font-weight:800;font-size:12px;">Mesa real: cartas ficam visíveis e viram montinho no vencedor • Prognóstico como ficha na mesa</div>
   </div>
   <div class="badges">
     <span class="badge">Trunfo: ♥</span>
@@ -619,23 +704,29 @@ if st.session_state.fase == "prognostico":
         st.rerun()
 
 # =========================
-# UI: Mesa e mão
+# UI: Mesa + fichas + montes
 # =========================
 def render_mesa():
     ordem = st.session_state.ordem
-    nomes = st.session_state.nomes
     n = len(ordem)
-    humano = nomes[st.session_state.humano_idx]
+    humano = st.session_state.nomes[st.session_state.humano_idx]
     dealer = ordem[0]
 
     now = time.time()
     flash_name = st.session_state.winner_flash_name if now <= st.session_state.winner_flash_until else None
     pop_active = now <= st.session_state.table_pop_until
 
+    # Se está aguardando resolver a vaza, as cartas da mesa ficam "congeladas"
+    mesa_to_render = st.session_state.trick_snapshot if st.session_state.trick_pending else st.session_state.mesa
+    naipe_base_show = st.session_state.naipe_base
+
     cx, cy = 50, 50
     rx, ry = 42, 36
 
     seats_html = ""
+    tokens_html = ""
+    piles_html = ""
+
     for i, nome in enumerate(ordem):
         ang = (2*math.pi) * (i/n) - (math.pi/2)
         x = cx + rx*math.cos(ang)
@@ -654,30 +745,65 @@ def render_mesa():
 
         seats_html += f'<div class="{cls}" style="left:{x}%; top:{y}%; transform:translate(-50%,-50%);">{label}</div>'
 
+        # ficha do prognóstico (na frente do jogador: mais próximo do centro)
+        tx = cx + (rx*0.78)*math.cos(ang)
+        ty = cy + (ry*0.78)*math.sin(ang)
+
+        prog = st.session_state.prognosticos.get(nome, "-")
+        won = st.session_state.pile_counts.get(nome, 0)
+
+        tokens_html += f"""
+<div class="tokenWrap" style="left:{tx}%; top:{ty}%;">
+  <div class="token">
+    <div class="tokenTitle">PROGNÓSTICO</div>
+    <div class="tokenValue">{prog}</div>
+    <div class="tokenSub">Vazas: {won}</div>
+  </div>
+</div>
+"""
+
+        # montinho de cartas viradas (embaixo da ficha)
+        if won > 0:
+            px = tx
+            py = ty + 12  # abaixo da ficha
+            piles_html += f"""
+<div class="cardBackWrap" style="left:{px}%; top:{py}%;">
+  <div class="cardBack"></div>
+  <div class="pileCount">{won}</div>
+</div>
+"""
+
+    # cartas na mesa ao redor do centro (na posição de cada jogador)
     plays_html = ""
     pos_map = {nome:i for i,nome in enumerate(ordem)}
-    for idx, (nome, carta) in enumerate(st.session_state.mesa):
+    for idx, (nome, carta) in enumerate(mesa_to_render):
         i = pos_map.get(nome, 0)
         ang = (2*math.pi) * (i/n) - (math.pi/2)
-        x = cx + (rx*0.55)*math.cos(ang)
-        y = cy + (ry*0.55)*math.sin(ang)
+        x = cx + (rx*0.52)*math.cos(ang)
+        y = cy + (ry*0.52)*math.sin(ang)
 
-        is_last = (idx == len(st.session_state.mesa) - 1)
+        is_last = (idx == len(mesa_to_render) - 1)
         cls = "playCard"
-        if pop_active and is_last:
+        if pop_active and is_last and not st.session_state.trick_pending:
             cls += " pop"
 
         plays_html += f'<div class="{cls}" style="left:{x}%; top:{y}%;">{carta_html(carta)}</div>'
 
-    centro_txt = "Aguardando jogada" if not st.session_state.mesa else "Vaza em andamento"
-    if st.session_state.naipe_base:
-        centro_txt = f"Naipe da vaza: {st.session_state.naipe_base}"
+    # texto central
+    if st.session_state.trick_pending:
+        centro_txt = "Vaza completa — aguardando..."
+    else:
+        centro_txt = "Aguardando jogada" if not st.session_state.mesa else "Vaza em andamento"
+    if naipe_base_show:
+        centro_txt = f"{centro_txt} • Naipe: {naipe_base_show}"
 
     st.markdown('<div class="mesaWrap">', unsafe_allow_html=True)
     st.markdown(
         f"""
 <div class="mesa">
   {seats_html}
+  {tokens_html}
+  {piles_html}
   {plays_html}
   <div class="mesaCenter">{centro_txt}</div>
 </div>
@@ -695,6 +821,8 @@ def render_hand_clickable_streamlit():
 
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
     hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez"
+    if st.session_state.trick_pending:
+        hint = "Vaza completa — aguardando 1–2s"
     st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
 
     mao_ord = sorted(mao, key=peso_carta)
@@ -703,11 +831,15 @@ def render_hand_clickable_streamlit():
     pending = st.session_state.pending_play
 
     for i, c in enumerate(mao_ord):
-        disabled = (c not in validas) or (atual != humano) or (pending is not None)
+        disabled = (
+            (c not in validas) or
+            (atual != humano) or
+            (pending is not None) or
+            st.session_state.trick_pending
+        )
         with cols[i % 10]:
             if st.button(" ", key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}", disabled=disabled, use_container_width=True):
                 clicked = c
-
             extra = "flyAway" if (pending is not None and c == pending) else ""
             st.markdown(card_btn_html(c, extra_class=extra), unsafe_allow_html=True)
 
@@ -720,65 +852,63 @@ def render_hand_clickable_streamlit():
 if st.session_state.fase == "jogo":
     st.markdown(f"### 🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador")
 
-    col1, col2 = st.columns([1.35, 1])
+    # resolve vaza se já passou o tempo
+    if resolve_trick_if_due():
+        st.rerun()
 
-    with col1:
-        render_mesa()
+    render_mesa()
 
-        ordem = st.session_state.ordem
-        atual = ordem[st.session_state.turn_idx]
-        st.info(
-            f"🎯 Vez de: **{atual}** | Naipe: **{st.session_state.naipe_base or '-'}** | "
-            f"♥ quebrada: **{'Sim' if st.session_state.copas_quebrada else 'Não'}** | "
-            f"1ª vaza: **{'Sim' if st.session_state.primeira_vaza else 'Não'}**"
-        )
+    ordem = st.session_state.ordem
+    atual = ordem[st.session_state.turn_idx]
 
-        if rodada_terminou():
-            pontuar_rodada()
-            st.success("✅ Rodada finalizada (todos sem cartas). Use o botão no sidebar para ir à próxima.")
-        else:
-            humano = st.session_state.nomes[st.session_state.humano_idx]
+    # status linha (sem histórico)
+    st.info(
+        f"🎯 Vez de: **{atual}** | Naipe: **{st.session_state.naipe_base or '-'}** | "
+        f"♥ quebrada: **{'Sim' if st.session_state.copas_quebrada else 'Não'}** | "
+        f"1ª vaza: **{'Sim' if st.session_state.primeira_vaza else 'Não'}**"
+    )
 
-            if atual != humano and st.session_state.pending_play is None:
-                st.warning("A IA está jogando. Clique para avançar.")
-                if st.button("▶️ Continuar", use_container_width=True):
-                    avancar_ate_humano_ou_fim()
-                    st.rerun()
+    if rodada_terminou():
+        pontuar_rodada()
+        st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
+        st.stop()
 
-            clicked = render_hand_clickable_streamlit()
+    humano = st.session_state.nomes[st.session_state.humano_idx]
 
-            # 1) clicou => dispara animação (sem aplicar ainda)
-            if clicked is not None:
-                st.session_state.pending_play = clicked
-                st.rerun()
+    # se a vaza está completa aguardando, auto-refresh para “resolver”
+    if st.session_state.trick_pending:
+        time.sleep(0.15)
+        st.rerun()
 
-            # 2) aplica após 0.25s (tempo da animação)
-            if st.session_state.pending_play is not None and atual == humano:
-                st.markdown('<div class="playingOverlay">✨ Jogando carta...</div>', unsafe_allow_html=True)
-                time.sleep(0.25)
+    # IA (apenas botão de continuar)
+    if atual != humano and st.session_state.pending_play is None:
+        if st.button("▶️ Continuar (IA)", use_container_width=True):
+            avancar_ate_humano_ou_fim()
+            st.rerun()
 
-                carta = st.session_state.pending_play
-                st.session_state.pending_play = None
+    # Sua mão
+    clicked = render_hand_clickable_streamlit()
 
-                jogar_carta(humano, carta)
-                st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
+    # 1) clicou => dispara animação (sem aplicar ainda)
+    if clicked is not None:
+        st.session_state.pending_play = clicked
+        st.rerun()
 
-                if len(st.session_state.mesa) == len(ordem):
-                    fechar_vaza()
+    # 2) aplica após 0.25s (tempo da animação)
+    if st.session_state.pending_play is not None and atual == humano:
+        st.markdown('<div class="playingOverlay">✨ Jogando carta...</div>', unsafe_allow_html=True)
+        time.sleep(0.25)
 
-                avancar_ate_humano_ou_fim()
-                if rodada_terminou():
-                    pontuar_rodada()
+        carta = st.session_state.pending_play
+        st.session_state.pending_play = None
 
-                st.rerun()
+        jogar_carta(humano, carta)
+        st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
 
-    with col2:
-        st.markdown("### 🧾 Registro")
-        for msg in reversed(st.session_state.log[-18:]):
-            st.write(msg)
+        # se completou mesa, agenda resolução e para
+        if len(st.session_state.mesa) == len(ordem):
+            schedule_trick_resolution(delay_seconds=1.4)
 
-        st.markdown("---")
-        st.markdown("### 🎯 Vazas na rodada")
-        for n in st.session_state.nomes:
-            st.write(f"• **{n}**: {st.session_state.vazas_rodada.get(n, 0)}")
+        avancar_ate_humano_ou_fim()
+        st.rerun()
 
