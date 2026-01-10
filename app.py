@@ -76,9 +76,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   gap:12px;
   margin-bottom: 4px;
 }
-.titleRow h1{
-  margin:0;
-}
+.titleRow h1{ margin:0; }
 .panel{
   border:1px solid rgba(0,0,0,.08);
   border-radius:14px;
@@ -134,39 +132,40 @@ st.markdown(APP_CSS, unsafe_allow_html=True)
 # =========================
 # REGRAS / MODELOS
 # =========================
-NAIPES = ["♦", "♠", "♣", "♥"]  # ordem pedida na visualização: ouro, espada, paus, copas
 VALORES = [2,3,4,5,6,7,8,9,10,"J","Q","K","A"]
 PESO_VALOR = {v:i for i,v in enumerate(VALORES)}  # 2 menor, A maior
 COR_NAIPE = {"♦":"red", "♥":"red", "♠":"black", "♣":"black"}
+ORDEM_NAIPE = {"♦":0, "♠":1, "♣":2, "♥":3}  # pedido: ouro, espada, paus, copas
 
 def criar_baralho():
-    return [(n, v) for n in ["♠","♦","♣","♥"] for v in VALORES]  # baralho normal (naipes padrão)
+    # naipes padrão do jogo
+    naipes = ["♠", "♦", "♣", "♥"]
+    return [(n, v) for n in naipes for v in VALORES]
 
 def peso_carta(c):
     naipe, valor = c
-    # ordenação por naipe: ♦, ♠, ♣, ♥
-    ordem_naipe = {"♦":0,"♠":1,"♣":2,"♥":3}
-    return (ordem_naipe[naipe], PESO_VALOR[valor])
+    return (ORDEM_NAIPE[naipe], PESO_VALOR[valor])
 
 def format_valor(v):
     return str(v)
 
+# ✅ IMPORTANTE: sem identação/sem espaços no início das linhas (senão vira "code block" no Markdown)
 def carta_html(c):
     naipe, valor = c
     cor = COR_NAIPE[naipe]
     vv = format_valor(valor)
-    return f"""
-    <div class="card">
-      <div class="tl" style="color:{cor};">{vv}<br/>{naipe}</div>
-      <div class="mid" style="color:{cor};">{naipe}</div>
-      <div class="br" style="color:{cor};">{vv}<br/>{naipe}</div>
-    </div>
-    """
+    return (
+        f'<div class="card">'
+        f'<div class="tl" style="color:{cor};">{vv}<br/>{naipe}</div>'
+        f'<div class="mid" style="color:{cor};">{naipe}</div>'
+        f'<div class="br" style="color:{cor};">{vv}<br/>{naipe}</div>'
+        f'</div>'
+    )
 
 def render_hand(mao, titulo="Suas cartas (visualização)"):
     mao_ordenada = sorted(mao, key=peso_carta)
     cards = "".join(carta_html(c) for c in mao_ordenada)
-    st.markdown(f"### 🃏 {titulo}", unsafe_allow_html=True)
+    st.markdown(f"### 🃏 {titulo}")
     st.markdown(f'<div class="handRow">{cards}</div>', unsafe_allow_html=True)
 
 # =========================
@@ -204,20 +203,13 @@ ss_init()
 with st.sidebar:
     st.markdown("## 📊 Placar")
     if st.session_state.started:
-        # inicializa pontos se necessário
         for n in st.session_state.nomes:
             st.session_state.pontos.setdefault(n, 0)
 
-        # ordena por pontos desc
         ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
         for nome, pts in ranking:
             st.markdown(
-                f"""
-                <div class="scoreItem">
-                  <div class="scoreName">{nome}</div>
-                  <div class="scorePts">{pts}</div>
-                </div>
-                """,
+                f'<div class="scoreItem"><div class="scoreName">{nome}</div><div class="scorePts">{pts}</div></div>',
                 unsafe_allow_html=True
             )
     else:
@@ -228,20 +220,20 @@ with st.sidebar:
 # =========================
 st.markdown(
     """
-    <div class="titleRow">
-      <h1>🃏 Jogo de Prognóstico</h1>
-      <div class="topbar">
-        <span class="badge">Trunfo: ♥</span>
-        <span class="badge">1ª vaza: ♥ proibida (exceto só ♥)</span>
-        <span class="badge">Copas trava até quebrar</span>
-      </div>
-    </div>
-    """,
+<div class="titleRow">
+  <h1>🃏 Jogo de Prognóstico</h1>
+  <div class="topbar">
+    <span class="badge">Trunfo: ♥</span>
+    <span class="badge">1ª vaza: ♥ proibida (exceto só ♥)</span>
+    <span class="badge">Copas trava até quebrar</span>
+  </div>
+</div>
+""",
     unsafe_allow_html=True
 )
 
 # =========================
-# FUNÇÕES DE JOGO (básico para não quebrar)
+# FUNÇÕES DE JOGO (básico)
 # =========================
 def distribuir():
     nomes = st.session_state.nomes
@@ -249,19 +241,17 @@ def distribuir():
     baralho = criar_baralho()
     random.shuffle(baralho)
 
-    # distribui igualmente até onde dá
     cartas_por = len(baralho) // n
     st.session_state.cartas_por_jog = cartas_por
 
     st.session_state.maos = {nome: [] for nome in nomes}
-    for i in range(cartas_por):
+    for _ in range(cartas_por):
         for nome in nomes:
             st.session_state.maos[nome].append(baralho.pop())
 
     for nome in nomes:
         st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=peso_carta)
 
-    # mão aleatório por rodada (você depois pode trocar pela regra de “girar o mão”)
     st.session_state.mao_da_rodada = random.randint(0, n - 1)
     st.session_state.copas_quebrada = False
     st.session_state.prognosticos = {}
@@ -274,7 +264,7 @@ def mesa_ui():
     idx_mao = st.session_state.mao_da_rodada
     mao_nome = nomes[idx_mao]
 
-    # posições simples (até 4 “bonitinho”; mais que isso fica só como referência)
+    # posições simples (layout otimizado até 4)
     top = nomes[0] if n > 0 else ""
     right = nomes[1] if n > 1 else ""
     left = nomes[2] if n > 2 else ""
@@ -283,14 +273,14 @@ def mesa_ui():
     st.markdown("#### 🪑 Mesa")
     st.markdown(
         f"""
-        <div class="mesa">
-          <div class="mesaSeat seatTop">{top}</div>
-          <div class="mesaSeat seatRight">{right}</div>
-          <div class="mesaSeat seatLeft">{left}</div>
-          <div class="mesaSeat seatBottom">{bottom}</div>
-          <div class="mesaCenter">Mesa vazia — o mão abre a vaza</div>
-        </div>
-        """,
+<div class="mesa">
+  <div class="mesaSeat seatTop">{top}</div>
+  <div class="mesaSeat seatRight">{right}</div>
+  <div class="mesaSeat seatLeft">{left}</div>
+  <div class="mesaSeat seatBottom">{bottom}</div>
+  <div class="mesaCenter">Mesa vazia — o mão abre a vaza</div>
+</div>
+""",
         unsafe_allow_html=True
     )
     st.info(f"🟦 Mão da rodada: **{mao_nome}**")
@@ -337,19 +327,16 @@ if not st.session_state.started:
 # =========================
 st.markdown(f"### 📌 Rodada {st.session_state.rodada} — {st.session_state.cartas_por_jog} cartas")
 
-# Mesa ao centro
 mesa_ui()
 
 st.markdown("<hr/>", unsafe_allow_html=True)
 
-# Mostrar cartas do humano lado a lado (corrigido)
 humano_nome = st.session_state.nomes[st.session_state.humano_idx]
 mao_humano = st.session_state.maos.get(humano_nome, [])
 render_hand(mao_humano, "Suas cartas (visualização)")
 
 st.markdown("<hr/>", unsafe_allow_html=True)
 
-# Prognóstico (simples)
 st.markdown("### ✅ Prognósticos")
 max_palpite = len(mao_humano)
 palpite = st.number_input("Seu prognóstico", min_value=0, max_value=max_palpite, value=0, step=1)
@@ -357,4 +344,4 @@ palpite = st.number_input("Seu prognóstico", min_value=0, max_value=max_palpite
 if st.button("Confirmar meu prognóstico", use_container_width=True):
     st.session_state.prognosticos[humano_nome] = int(palpite)
     st.success("Prognóstico registrado! (Próximo passo: fase de jogo)")
-    # aqui você continuaria o fluxo da sua lógica (jogar vaza etc.)
+
