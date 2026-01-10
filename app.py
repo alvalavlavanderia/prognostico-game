@@ -54,7 +54,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   border:1px solid rgba(0,0,0,.08);
   font-size:12px;
   white-space:nowrap;
-  z-index: 8; /* acima de fichas/monte */
+  z-index: 12; /* acima de tudo */
 }
 .seat.you{ outline:2px solid rgba(0,120,90,.55); font-weight:900; }
 .seat.dealer{ border-color: rgba(0,120,90,.30); background: rgba(255,255,255,.94); }
@@ -71,12 +71,12 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   background: rgba(255,255,255,.96);
 }
 
-/* Cartas na mesa (um pouco menores) */
+/* Cartas na mesa (menores) */
 .playCard{
   position:absolute;
   transform: translate(-50%,-50%);
   pointer-events:none;
-  z-index: 6;
+  z-index: 9;
 }
 @keyframes popIn {
   0% { transform: translate(-50%,-50%) scale(.92); opacity: .0; }
@@ -102,7 +102,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 /* =========================
    MONTINHO EM CAMADAS
    ========================= */
-.pileWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 5; }
+.pileWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 7; }
 .pileStack{ position:relative; width:46px; height:68px; }
 .cardBackLayer{
   position:absolute;
@@ -127,20 +127,135 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   opacity:.72;
 }
 
-/* Ficha do prognóstico (menor e mais “pra dentro”) */
-.tokenWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 4; }
-.token{
-  min-width: 104px;
-  padding:7px 9px;
-  border-radius: 16px;
-  border:1px solid rgba(0,0,0,.10);
-  background: rgba(255,255,255,.84);
-  box-shadow: 0 12px 24px rgba(0,0,0,.10);
-  text-align:center;
+/* =========================
+   CHIP POKER (PROGNÓSTICO)
+   ========================= */
+.chipWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 8; }
+.chipCol{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
 }
-.tokenTitle{ font-size:10px; font-weight:900; opacity:.70; letter-spacing:.06em; text-transform:uppercase; }
-.tokenValue{ font-size:16px; font-weight:900; margin-top:2px; }
-.tokenSub{ font-size:10px; font-weight:900; opacity:.70; margin-top:3px; }
+.chip{
+  width:64px; height:64px;
+  border-radius:50%;
+  position:relative;
+  box-shadow: 0 14px 26px rgba(0,0,0,.16);
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.40), rgba(255,255,255,0) 45%),
+    conic-gradient(from 0deg,
+      rgba(255,255,255,.0) 0 12deg,
+      rgba(255,255,255,.75) 12deg 20deg,
+      rgba(255,255,255,.0) 20deg 32deg,
+      rgba(255,255,255,.75) 32deg 40deg,
+      rgba(255,255,255,.0) 40deg 52deg,
+      rgba(255,255,255,.75) 52deg 60deg,
+      rgba(255,255,255,.0) 60deg 72deg,
+      rgba(255,255,255,.75) 72deg 80deg,
+      rgba(255,255,255,.0) 80deg 92deg,
+      rgba(255,255,255,.75) 92deg 100deg,
+      rgba(255,255,255,.0) 100deg 112deg,
+      rgba(255,255,255,.75) 112deg 120deg,
+      rgba(255,255,255,.0) 120deg 132deg,
+      rgba(255,255,255,.75) 132deg 140deg,
+      rgba(255,255,255,.0) 140deg 152deg,
+      rgba(255,255,255,.75) 152deg 160deg,
+      rgba(255,255,255,.0) 160deg 172deg,
+      rgba(255,255,255,.75) 172deg 180deg,
+      rgba(255,255,255,.0) 180deg 192deg,
+      rgba(255,255,255,.75) 192deg 200deg,
+      rgba(255,255,255,.0) 200deg 212deg,
+      rgba(255,255,255,.75) 212deg 220deg,
+      rgba(255,255,255,.0) 220deg 232deg,
+      rgba(255,255,255,.75) 232deg 240deg,
+      rgba(255,255,255,.0) 240deg 252deg,
+      rgba(255,255,255,.75) 252deg 260deg,
+      rgba(255,255,255,.0) 260deg 272deg,
+      rgba(255,255,255,.75) 272deg 280deg,
+      rgba(255,255,255,.0) 280deg 292deg,
+      rgba(255,255,255,.75) 292deg 300deg,
+      rgba(255,255,255,.0) 300deg 312deg,
+      rgba(255,255,255,.75) 312deg 320deg,
+      rgba(255,255,255,.0) 320deg 332deg,
+      rgba(255,255,255,.75) 332deg 340deg,
+      rgba(255,255,255,.0) 340deg 352deg,
+      rgba(255,255,255,.75) 352deg 360deg
+    );
+  border: 3px solid rgba(0,0,0,.14);
+}
+.chipInner{
+  position:absolute;
+  inset:10px;
+  border-radius:50%;
+  background: rgba(255,255,255,.88);
+  border: 2px solid rgba(0,0,0,.10);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.chipNumber{
+  font-weight: 1000;
+  font-size: 20px;
+  line-height: 20px;
+  color: rgba(0,0,0,.86);
+}
+
+/* Cores do chip por jogador (variação suave usando CSS vars) */
+.chipColor{
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.40), rgba(255,255,255,0) 45%),
+    conic-gradient(from 0deg,
+      rgba(255,255,255,.0) 0 12deg,
+      rgba(255,255,255,.75) 12deg 20deg,
+      rgba(255,255,255,.0) 20deg 32deg,
+      rgba(255,255,255,.75) 32deg 40deg,
+      rgba(255,255,255,.0) 40deg 52deg,
+      rgba(255,255,255,.75) 52deg 60deg,
+      rgba(255,255,255,.0) 60deg 72deg,
+      rgba(255,255,255,.75) 72deg 80deg,
+      rgba(255,255,255,.0) 80deg 92deg,
+      rgba(255,255,255,.75) 92deg 100deg,
+      rgba(255,255,255,.0) 100deg 112deg,
+      rgba(255,255,255,.75) 112deg 120deg,
+      rgba(255,255,255,.0) 120deg 132deg,
+      rgba(255,255,255,.75) 132deg 140deg,
+      rgba(255,255,255,.0) 140deg 152deg,
+      rgba(255,255,255,.75) 152deg 160deg,
+      rgba(255,255,255,.0) 160deg 172deg,
+      rgba(255,255,255,.75) 172deg 180deg,
+      rgba(255,255,255,.0) 180deg 192deg,
+      rgba(255,255,255,.75) 192deg 200deg,
+      rgba(255,255,255,.0) 200deg 212deg,
+      rgba(255,255,255,.75) 212deg 220deg,
+      rgba(255,255,255,.0) 220deg 232deg,
+      rgba(255,255,255,.75) 232deg 240deg,
+      rgba(255,255,255,.0) 240deg 252deg,
+      rgba(255,255,255,.75) 252deg 260deg,
+      rgba(255,255,255,.0) 260deg 272deg,
+      rgba(255,255,255,.75) 272deg 280deg,
+      rgba(255,255,255,.0) 280deg 292deg,
+      rgba(255,255,255,.75) 292deg 300deg,
+      rgba(255,255,255,.0) 300deg 312deg,
+      rgba(255,255,255,.75) 312deg 320deg,
+      rgba(255,255,255,.0) 320deg 332deg,
+      rgba(255,255,255,.75) 332deg 340deg,
+      rgba(255,255,255,.0) 340deg 352deg,
+      rgba(255,255,255,.75) 352deg 360deg
+    );
+  background-color: var(--chip-base, rgba(16,185,129,.85));
+}
+
+/* texto abaixo do chip */
+.chipMeta{
+  font-size: 11px;
+  font-weight: 900;
+  opacity: .72;
+  background: rgba(255,255,255,.70);
+  border: 1px solid rgba(0,0,0,.06);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
 
 /* Dock da mão */
 .handDock{
@@ -604,7 +719,7 @@ st.markdown(
 <div class="titleRow">
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
-    <div style="opacity:.70;font-weight:800;font-size:12px;">Montinhos em camadas • Cartas menores • Nomes sempre visíveis</div>
+    <div style="opacity:.70;font-weight:800;font-size:12px;">Fichas estilo poker (prognóstico) • Montinhos em camadas • Nomes sempre visíveis</div>
   </div>
   <div class="badges">
     <span class="badge">Trunfo: ♥</span>
@@ -692,26 +807,48 @@ if st.session_state.fase == "prognostico":
         st.rerun()
 
 # =========================
-# UI: Mesa + fichas + montes em camadas
+# UI: Mesa + chips + montes
 # =========================
 def render_pile_layers_html(won: int):
-    """
-    Renderiza montinho em camadas (até 6 camadas visuais).
-    Ex.: won=1 => 1 camada, won=8 => 6 camadas.
-    """
     layers = min(max(won, 0), 6)
     parts = []
     for i in range(layers):
-        # deslocamento em "escadinha" (para parecer pilha)
         dx = i * 2
         dy = -i * 2
-        rot = (i % 3 - 1) * 2  # -2,0,2 graus
+        rot = (i % 3 - 1) * 2
         parts.append(
             f'<div class="cardBackLayer" style="left:{dx}px; top:{dy}px; transform: rotate({rot}deg);"></div>'
         )
-    label = f"{won}" if won > 6 else ""  # se passar de 6, mostra número; senão deixa só visual
+    label = f"{won}" if won > 6 else ""
     label_html = f'<div class="pileLabel">{label}</div>' if label else '<div class="pileLabel"></div>'
     return f'<div class="pileStack">{"".join(parts)}</div>{label_html}'
+
+def chip_color_for_index(idx: int) -> str:
+    # paleta discreta (varia por jogador)
+    palette = [
+        "rgba(16,185,129,.92)",   # verde
+        "rgba(59,130,246,.92)",   # azul
+        "rgba(245,158,11,.92)",   # âmbar
+        "rgba(239,68,68,.92)",    # vermelho
+        "rgba(168,85,247,.92)",   # roxo
+        "rgba(20,184,166,.92)",   # teal
+        "rgba(100,116,139,.92)",  # slate
+        "rgba(236,72,153,.92)",   # pink
+    ]
+    return palette[idx % len(palette)]
+
+def render_chip_html(prog, won, color):
+    prog_txt = str(prog) if prog is not None else "-"
+    return f"""
+<div class="chipCol">
+  <div class="chip chipColor" style="--chip-base: {color};">
+    <div class="chipInner">
+      <div class="chipNumber">{prog_txt}</div>
+    </div>
+  </div>
+  <div class="chipMeta">Vazas: {won}</div>
+</div>
+"""
 
 def render_mesa():
     ordem = st.session_state.ordem
@@ -730,7 +867,7 @@ def render_mesa():
     rx, ry = 42, 36
 
     seats_html = ""
-    tokens_html = ""
+    chips_html = ""
     piles_html = ""
     plays_html = ""
 
@@ -739,7 +876,7 @@ def render_mesa():
     for i, nome in enumerate(ordem):
         ang = (2*math.pi) * (i/n) - (math.pi/2)
 
-        # Nome fica mais pra fora
+        # Nome (mais pra fora)
         x = cx + rx*math.cos(ang)
         y = cy + ry*math.sin(ang)
 
@@ -756,34 +893,31 @@ def render_mesa():
 
         seats_html += f'<div class="{cls}" style="left:{x}%; top:{y}%; transform:translate(-50%,-50%);">{label}</div>'
 
-        # Ficha mais pra dentro (deixa nome livre)
-        tx = cx + (rx*0.72)*math.cos(ang)
-        ty = cy + (ry*0.72)*math.sin(ang)
+        # Chip (mais pra dentro)
+        tx = cx + (rx*0.70)*math.cos(ang)
+        ty = cy + (ry*0.70)*math.sin(ang)
 
         prog = st.session_state.prognosticos.get(nome, "-")
         won = st.session_state.pile_counts.get(nome, 0)
+        color = chip_color_for_index(i)
 
-        tokens_html += f"""
-<div class="tokenWrap" style="left:{tx}%; top:{ty}%;">
-  <div class="token">
-    <div class="tokenTitle">PROGNÓSTICO</div>
-    <div class="tokenValue">{prog}</div>
-    <div class="tokenSub">Vazas: {won}</div>
-  </div>
+        chips_html += f"""
+<div class="chipWrap" style="left:{tx}%; top:{ty}%;">
+  {render_chip_html(prog, won, color)}
 </div>
 """
 
-        # Montinho em camadas mais pra dentro ainda (abaixo da ficha)
+        # Montinho em camadas (embaixo do chip)
         if won > 0:
             px = tx
-            py = ty + 12
+            py = ty + 15
             piles_html += f"""
 <div class="pileWrap" style="left:{px}%; top:{py}%;">
   {render_pile_layers_html(won)}
 </div>
 """
 
-    # Cartas na mesa, ainda mais perto do centro (para não conflitar)
+    # Cartas na mesa (perto do centro)
     for idx, (nome, carta) in enumerate(mesa_to_render):
         i = pos_map.get(nome, 0)
         ang = (2*math.pi) * (i/n) - (math.pi/2)
@@ -808,7 +942,7 @@ def render_mesa():
         f"""
 <div class="mesa">
   {seats_html}
-  {tokens_html}
+  {chips_html}
   {piles_html}
   {plays_html}
   <div class="mesaCenter">{centro_txt}</div>
@@ -909,8 +1043,3 @@ if st.session_state.fase == "jogo":
 
         avancar_ate_humano_ou_fim()
         st.rerun()
-
-# =========================
-# PROGNÓSTICO / SETUP (final)
-# =========================
-# (já tratado acima)
