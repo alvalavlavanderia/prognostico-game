@@ -1,20 +1,20 @@
 # app.py
 import random
+import math
 import streamlit as st
 
 # =========================
-# CONFIG / ESTILO (APP)
+# CONFIG
 # =========================
 st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="wide")
 
 APP_CSS = """
 <style>
-/* evita topo “cortado” e dá cara de app */
 .block-container { padding-top: 1.2rem !important; padding-bottom: 1rem !important; max-width: 1200px; }
 header[data-testid="stHeader"] { height: 0.5rem; }
 div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 
-/* cards estilo baralho */
+/* cards */
 .handRow{
   display:flex;
   flex-wrap:wrap;
@@ -31,63 +31,21 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   position:relative;
   user-select:none;
 }
-.card .tl{
-  position:absolute;
-  top:8px; left:8px;
-  font-weight:800;
-  font-size:14px;
-  line-height:14px;
-}
-.card .br{
-  position:absolute;
-  bottom:8px; right:8px;
-  font-weight:800;
-  font-size:14px;
-  line-height:14px;
-  transform:rotate(180deg);
-}
-.card .mid{
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:30px;
-  font-weight:800;
-  opacity:.95;
-}
-.badge{
-  display:inline-block;
-  padding:4px 10px;
-  border-radius:999px;
-  background:rgba(0,0,0,.06);
-  font-size:12px;
-}
-.topbar{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  margin: 2px 0 10px 0;
-}
-.titleRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  margin-bottom: 4px;
-}
+.card .tl{ position:absolute; top:8px; left:8px; font-weight:800; font-size:14px; line-height:14px; }
+.card .br{ position:absolute; bottom:8px; right:8px; font-weight:800; font-size:14px; line-height:14px; transform:rotate(180deg); }
+.card .mid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:800; opacity:.95; }
+
+.badge{ display:inline-block; padding:4px 10px; border-radius:999px; background:rgba(0,0,0,.06); font-size:12px; }
+.topbar{ display:flex; gap:10px; flex-wrap:wrap; margin: 2px 0 10px 0; }
+.titleRow{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 4px; }
 .titleRow h1{ margin:0; }
-.panel{
-  border:1px solid rgba(0,0,0,.08);
-  border-radius:14px;
-  padding:14px;
-  background:#ffffff;
-}
+.panel{ border:1px solid rgba(0,0,0,.08); border-radius:14px; padding:14px; background:#ffffff; }
+
 .mesa{
   border-radius:18px;
   border:1px solid rgba(0,0,0,.10);
   background: radial-gradient(circle at 30% 20%, rgba(0,150,110,.25) 0%, rgba(0,120,90,.15) 30%, rgba(0,0,0,.03) 65%, rgba(0,0,0,.02) 100%);
-  min-height: 260px;
+  min-height: 320px;
   position:relative;
   overflow:hidden;
 }
@@ -98,22 +56,20 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   align-items:center;
   justify-content:center;
   font-weight:700;
-  opacity:.75;
+  opacity:.70;
 }
 .mesaSeat{
   position:absolute;
   font-size:12px;
   padding:6px 10px;
   border-radius:999px;
-  background:rgba(255,255,255,.7);
-  border:1px solid rgba(0,0,0,.06);
+  background:rgba(255,255,255,.78);
+  border:1px solid rgba(0,0,0,.08);
+  white-space:nowrap;
 }
-.seatTop{ top:14px; left:50%; transform:translateX(-50%); }
-.seatBottom{ bottom:14px; left:50%; transform:translateX(-50%); }
-.seatLeft{ left:14px; top:50%; transform:translateY(-50%); }
-.seatRight{ right:14px; top:50%; transform:translateY(-50%); }
+.seatIsYou{ outline: 2px solid rgba(0,120,90,.55); font-weight:800; }
+.seatIsDealer{ background: rgba(255,255,255,.92); border-color: rgba(0,120,90,.30); }
 
-/* placar lateral simples */
 .scoreItem{
   display:flex;
   justify-content:space-between;
@@ -125,20 +81,20 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 }
 .scoreName{ font-weight:700; }
 .scorePts{ font-weight:800; }
+.smallMuted{ opacity:.70; font-size:12px; }
 </style>
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
 
 # =========================
-# REGRAS / MODELOS
+# BARALHO / ORDENAÇÃO
 # =========================
 VALORES = [2,3,4,5,6,7,8,9,10,"J","Q","K","A"]
 PESO_VALOR = {v:i for i,v in enumerate(VALORES)}  # 2 menor, A maior
 COR_NAIPE = {"♦":"red", "♥":"red", "♠":"black", "♣":"black"}
-ORDEM_NAIPE = {"♦":0, "♠":1, "♣":2, "♥":3}  # pedido: ouro, espada, paus, copas
+ORDEM_NAIPE = {"♦":0, "♠":1, "♣":2, "♥":3}  # ouro, espada, paus, copas
 
 def criar_baralho():
-    # naipes padrão do jogo
     naipes = ["♠", "♦", "♣", "♥"]
     return [(n, v) for n in naipes for v in VALORES]
 
@@ -149,11 +105,11 @@ def peso_carta(c):
 def format_valor(v):
     return str(v)
 
-# ✅ IMPORTANTE: sem identação/sem espaços no início das linhas (senão vira "code block" no Markdown)
 def carta_html(c):
     naipe, valor = c
     cor = COR_NAIPE[naipe]
     vv = format_valor(valor)
+    # sem identação para não virar "code block" no Markdown
     return (
         f'<div class="card">'
         f'<div class="tl" style="color:{cor};">{vv}<br/>{naipe}</div>'
@@ -169,40 +125,47 @@ def render_hand(mao, titulo="Suas cartas (visualização)"):
     st.markdown(f'<div class="handRow">{cards}</div>', unsafe_allow_html=True)
 
 # =========================
-# ESTADO
+# UTIL
+# =========================
+def ordem_da_mesa(nomes, mao_idx):
+    """Retorna a ordem da rodada iniciando no mão."""
+    return [nomes[(mao_idx + i) % len(nomes)] for i in range(len(nomes))]
+
+def idx_na_ordem(ordem, nome):
+    return ordem.index(nome)
+
+# =========================
+# STATE
 # =========================
 def ss_init():
-    if "started" not in st.session_state:
-        st.session_state.started = False
-    if "nomes" not in st.session_state:
-        st.session_state.nomes = ["Ana", "Bruno", "Carlos", "Você"]
-    if "humano_idx" not in st.session_state:
-        st.session_state.humano_idx = 3
-    if "maos" not in st.session_state:
-        st.session_state.maos = {}
-    if "pontos" not in st.session_state:
-        st.session_state.pontos = {}
-    if "rodada" not in st.session_state:
-        st.session_state.rodada = 1
-    if "cartas_por_jog" not in st.session_state:
-        st.session_state.cartas_por_jog = 13
-    if "copas_quebrada" not in st.session_state:
-        st.session_state.copas_quebrada = False
-    if "mao_da_rodada" not in st.session_state:
-        st.session_state.mao_da_rodada = 0
-    if "prognosticos" not in st.session_state:
-        st.session_state.prognosticos = {}
-    if "fase" not in st.session_state:
-        st.session_state.fase = "setup"  # setup | prognostico | jogo
+    defaults = {
+        "started": False,
+        "nomes": ["Ana", "Bruno", "Carlos", "Você"],
+        "humano_idx": 3,
+        "pontos": {},
+        "maos": {},
+        "rodada": 1,
+        "cartas_por_jog": 0,
+        "sobras_monte": 0,
+        "mao_da_rodada": 0,
+        "fase": "setup",  # setup | prognostico | jogo
+        "prognosticos": {},
+        "progn_pre": {},  # prognósticos já visíveis (anteriores)
+        "progn_pos": {},  # prognósticos escondidos (posteriores)
+    }
+    for k,v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
 ss_init()
 
 # =========================
-# SIDEBAR (PLACAR SIMPLES)
+# SIDEBAR (PLACAR)
 # =========================
 with st.sidebar:
     st.markdown("## 📊 Placar")
     if st.session_state.started:
+        # garante que TODOS aparecem (incluindo você)
         for n in st.session_state.nomes:
             st.session_state.pontos.setdefault(n, 0)
 
@@ -212,6 +175,18 @@ with st.sidebar:
                 f'<div class="scoreItem"><div class="scoreName">{nome}</div><div class="scorePts">{pts}</div></div>',
                 unsafe_allow_html=True
             )
+        st.markdown(f'<div class="smallMuted">Rodada: {st.session_state.rodada} • Cartas/jogador: {st.session_state.cartas_por_jog} • Sobras: {st.session_state.sobras_monte}</div>', unsafe_allow_html=True)
+
+        if st.button("🔁 Reiniciar jogo", use_container_width=True):
+            # reset total
+            for key in [
+                "started","pontos","maos","rodada","cartas_por_jog","sobras_monte",
+                "mao_da_rodada","fase","prognosticos","progn_pre","progn_pos"
+            ]:
+                if key in st.session_state:
+                    del st.session_state[key]
+            ss_init()
+            st.rerun()
     else:
         st.info("Inicie uma partida para ver o placar.")
 
@@ -233,7 +208,7 @@ st.markdown(
 )
 
 # =========================
-# FUNÇÕES DE JOGO (básico)
+# JOGO
 # =========================
 def distribuir():
     nomes = st.session_state.nomes
@@ -242,9 +217,13 @@ def distribuir():
     random.shuffle(baralho)
 
     cartas_por = len(baralho) // n
+    sobras = len(baralho) - (cartas_por * n)
+
     st.session_state.cartas_por_jog = cartas_por
+    st.session_state.sobras_monte = sobras
 
     st.session_state.maos = {nome: [] for nome in nomes}
+
     for _ in range(cartas_por):
         for nome in nomes:
             st.session_state.maos[nome].append(baralho.pop())
@@ -253,40 +232,87 @@ def distribuir():
         st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=peso_carta)
 
     st.session_state.mao_da_rodada = random.randint(0, n - 1)
-    st.session_state.copas_quebrada = False
     st.session_state.prognosticos = {}
-    st.session_state.rodada = 1
+    st.session_state.progn_pre = {}
+    st.session_state.progn_pos = {}
     st.session_state.fase = "prognostico"
+
+def preparar_prognosticos_anteriores():
+    """Gera apenas os prognósticos dos jogadores ANTES do humano na ordem (começando pelo mão)."""
+    nomes = st.session_state.nomes
+    ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
+    humano = nomes[st.session_state.humano_idx]
+    pos_humano = idx_na_ordem(ordem, humano)
+
+    # jogadores anteriores (0 .. pos_humano-1)
+    prev = ordem[:pos_humano]
+
+    pre = {}
+    for nome in prev:
+        mao = st.session_state.maos[nome]
+        pre[nome] = random.randint(0, len(mao))  # IA simples
+    st.session_state.progn_pre = pre
+
+def preparar_prognosticos_posteriores():
+    """Após humano confirmar, gera os prognósticos dos jogadores DEPOIS do humano na ordem."""
+    nomes = st.session_state.nomes
+    ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
+    humano = nomes[st.session_state.humano_idx]
+    pos_humano = idx_na_ordem(ordem, humano)
+
+    post = ordem[pos_humano+1:]
+    pos = {}
+    for nome in post:
+        mao = st.session_state.maos[nome]
+        pos[nome] = random.randint(0, len(mao))
+    st.session_state.progn_pos = pos
 
 def mesa_ui():
     nomes = st.session_state.nomes
     n = len(nomes)
-    idx_mao = st.session_state.mao_da_rodada
-    mao_nome = nomes[idx_mao]
+    ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
+    humano = nomes[st.session_state.humano_idx]
+    dealer = ordem[0]
 
-    # posições simples (layout otimizado até 4)
-    top = nomes[0] if n > 0 else ""
-    right = nomes[1] if n > 1 else ""
-    left = nomes[2] if n > 2 else ""
-    bottom = nomes[st.session_state.humano_idx] if n > st.session_state.humano_idx else "Você"
+    st.markdown("#### 🪑 Mesa (todos os jogadores)")
+    # posições em círculo
+    # raio relativo ao container
+    cx, cy = 50, 50
+    rx, ry = 42, 36  # elipse para caber melhor
+    seats_html = ""
 
-    st.markdown("#### 🪑 Mesa")
+    for i, nome in enumerate(ordem):
+        ang = (2 * math.pi) * (i / n) - (math.pi/2)  # começa no topo
+        x = cx + rx * math.cos(ang)
+        y = cy + ry * math.sin(ang)
+
+        cls = "mesaSeat"
+        if nome == humano:
+            cls += " seatIsYou"
+        if nome == dealer:
+            cls += " seatIsDealer"
+
+        label = nome
+        if nome == humano:
+            label = f"{nome} (Você)"
+        if nome == dealer:
+            label = f"{label} • mão"
+
+        seats_html += f'<div class="{cls}" style="left:{x}%; top:{y}%; transform:translate(-50%,-50%);">{label}</div>'
+
     st.markdown(
         f"""
 <div class="mesa">
-  <div class="mesaSeat seatTop">{top}</div>
-  <div class="mesaSeat seatRight">{right}</div>
-  <div class="mesaSeat seatLeft">{left}</div>
-  <div class="mesaSeat seatBottom">{bottom}</div>
-  <div class="mesaCenter">Mesa vazia — o mão abre a vaza</div>
+  {seats_html}
+  <div class="mesaCenter">Mesa pronta — aguardando início da 1ª vaza</div>
 </div>
 """,
         unsafe_allow_html=True
     )
-    st.info(f"🟦 Mão da rodada: **{mao_nome}**")
+    st.info(f"🟦 Mão da rodada: **{dealer}** • Ordem: " + " → ".join(ordem))
 
 # =========================
-# TELA SETUP
+# SETUP
 # =========================
 if not st.session_state.started:
     st.markdown('<div class="panel">', unsafe_allow_html=True)
@@ -316,32 +342,94 @@ if not st.session_state.started:
             st.session_state.humano_idx = len(nomes) - 1
             st.session_state.pontos = {n: 0 for n in nomes}
             st.session_state.started = True
+            st.session_state.rodada = 1
             distribuir()
+            preparar_prognosticos_anteriores()
             st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
 # =========================
-# TELA PROGNÓSTICO
+# PROGNÓSTICO
 # =========================
-st.markdown(f"### 📌 Rodada {st.session_state.rodada} — {st.session_state.cartas_por_jog} cartas")
+nomes = st.session_state.nomes
+humano_nome = nomes[st.session_state.humano_idx]
 
+st.markdown(f"### 📌 Rodada {st.session_state.rodada} — {st.session_state.cartas_por_jog} cartas por jogador")
 mesa_ui()
-
 st.markdown("<hr/>", unsafe_allow_html=True)
 
-humano_nome = st.session_state.nomes[st.session_state.humano_idx]
+# Mão do humano
 mao_humano = st.session_state.maos.get(humano_nome, [])
 render_hand(mao_humano, "Suas cartas (visualização)")
 
 st.markdown("<hr/>", unsafe_allow_html=True)
 
-st.markdown("### ✅ Prognósticos")
+# =========================
+# VISUALIZAÇÃO DE PROGNÓSTICOS (regra que você pediu)
+# - mostra anteriores na ordem do mão
+# - se humano for o último (pé), mostra todos (anteriores já + posteriores depois que ele confirmar)
+# =========================
+ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
+pos_humano = idx_na_ordem(ordem, humano_nome)
+eh_pe = (pos_humano == len(ordem) - 1)
+
+st.markdown("### ✅ Prognósticos visíveis (anteriores na mesa)")
+# garante que pre existe
+if st.session_state.fase == "prognostico" and not st.session_state.progn_pre:
+    preparar_prognosticos_anteriores()
+
+visiveis = dict(st.session_state.progn_pre)
+
+# se você é o pé, você já pode ver todos os anteriores (ok)
+# os posteriores só aparecem depois do seu confirm (quando gerarmos)
+if eh_pe and st.session_state.progn_pos:
+    # quando pé, após seu confirm, pode ver todos mesmo
+    visiveis.update(st.session_state.progn_pos)
+
+if not visiveis:
+    st.info("Você é o mão — ninguém fez prognóstico antes de você.")
+else:
+    # mostra na ordem correta do mão
+    linhas = []
+    for nome in ordem:
+        if nome in visiveis:
+            linhas.append((nome, visiveis[nome]))
+    st.table({"Jogador": [x[0] for x in linhas], "Prognóstico": [x[1] for x in linhas]})
+
+st.markdown("<hr/>", unsafe_allow_html=True)
+
+# Entrada do humano
 max_palpite = len(mao_humano)
 palpite = st.number_input("Seu prognóstico", min_value=0, max_value=max_palpite, value=0, step=1)
 
-if st.button("Confirmar meu prognóstico", use_container_width=True):
-    st.session_state.prognosticos[humano_nome] = int(palpite)
-    st.success("Prognóstico registrado! (Próximo passo: fase de jogo)")
+if st.session_state.fase == "prognostico":
+    if st.button("Confirmar meu prognóstico", use_container_width=True):
+        # grava prognóstico humano
+        st.session_state.prognosticos[humano_nome] = int(palpite)
 
+        # grava também os anteriores e calcula posteriores
+        st.session_state.prognosticos.update(st.session_state.progn_pre)
+
+        preparar_prognosticos_posteriores()
+        st.session_state.prognosticos.update(st.session_state.progn_pos)
+
+        # se for pé, agora pode ver todos (na próxima renderização)
+        st.success("✅ Prognóstico registrado! Indo para a fase de jogo...")
+        st.session_state.fase = "jogo"
+        st.rerun()
+
+# =========================
+# FASE DE JOGO (placeholder por enquanto)
+# =========================
+if st.session_state.fase == "jogo":
+    st.markdown("## 🎮 Fase de Jogo")
+    st.success("Prognósticos fechados! (Próximo passo: jogar vazas com cartas clicáveis na mesa.)")
+
+    # Mostra todos os prognósticos na ordem do mão (agora pode)
+    linhas = []
+    for nome in ordem:
+        linhas.append((nome, st.session_state.prognosticos.get(nome, "-")))
+    st.markdown("### 📋 Prognósticos da rodada (ordem do mão)")
+    st.table({"Jogador": [x[0] for x in linhas], "Prognóstico": [x[1] for x in linhas]})
