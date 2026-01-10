@@ -2,6 +2,8 @@
 import random
 import math
 import time
+import base64
+import urllib.parse
 import streamlit as st
 
 # =========================
@@ -10,7 +12,7 @@ import streamlit as st
 st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="wide")
 
 # =========================
-# CSS PREMIUM (felt verde + mini-monte + avatar)
+# CSS PREMIUM (felt verde + mini-monte + avatar imagem)
 # =========================
 APP_CSS = """
 <style>
@@ -31,7 +33,6 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   border-radius:22px;
   border:1px solid rgba(0,0,0,.14);
 
-  /* fundo felt: camadas */
   background:
     radial-gradient(circle at 30% 20%, rgba(255,255,255,.12) 0%, rgba(255,255,255,0) 42%),
     radial-gradient(circle at 70% 80%, rgba(0,0,0,.10) 0%, rgba(0,0,0,0) 48%),
@@ -42,8 +43,6 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   overflow:hidden;
   box-shadow: 0 18px 42px rgba(0,0,0,.18);
 }
-
-/* textura leve (sem imagem) */
 .mesa:before{
   content:"";
   position:absolute; inset:0;
@@ -53,7 +52,6 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   opacity:.55;
   pointer-events:none;
 }
-
 .mesa:after{
   content:"";
   position:absolute; inset:14px;
@@ -89,13 +87,14 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .seat.you{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }
 .seat.dealer{ border-color: rgba(34,197,94,.35); background: rgba(255,255,255,.95); }
 
-.avatar{
-  width:22px; height:22px;
+/* Avatar imagem cartoon */
+.avatarImg{
+  width:26px; height:26px;
   border-radius:50%;
-  display:flex; align-items:center; justify-content:center;
-  font-size:14px;
-  background: rgba(0,0,0,.06);
-  border: 1px solid rgba(0,0,0,.08);
+  border: 1px solid rgba(0,0,0,.12);
+  background: rgba(0,0,0,.04);
+  box-shadow: 0 6px 12px rgba(0,0,0,.10);
+  flex: 0 0 auto;
 }
 
 /* Winner glow */
@@ -138,9 +137,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .card .br{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }
 .card .mid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }
 
-/* =========================
-   CHIPS PEQUENOS (PROGNÓSTICO)
-   ========================= */
+/* Chips pequenos */
 .chipWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 16; }
 .chipRow{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width: 140px; }
 .chipMini{
@@ -196,15 +193,9 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   display:inline-block;
 }
 
-/* =========================
-   MONTINHO MINI-CARTAS (VAZAS GANHAS)
-   ========================= */
+/* Montinho mini-cartas (bem pequeno) */
 .pileWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 15; }
-
-/* mini stack MUITO menor */
 .pileStack{ position:relative; width:26px; height:40px; }
-
-/* mini carta virada */
 .cardBackLayer{
   position:absolute;
   width:26px; height:40px;
@@ -244,7 +235,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .handTitle h3{ margin:0; font-size:16px; }
 .hint{ font-size:12px; opacity:.70; font-weight:800; }
 
-/* Botão-carta (Streamlit) */
+/* Botão-carta */
 div[data-testid="column"] .stButton > button{
   border-radius: 14px !important;
   border: 1px solid rgba(0,0,0,.18) !important;
@@ -288,7 +279,7 @@ div[data-testid="column"] .stButton > button:disabled{
   font-size:34px; font-weight:900; opacity:.92;
 }
 
-/* Animação: carta sumindo da mão */
+/* Animação: carta sumindo */
 @keyframes flyAway {
   0%   { transform: translateY(0px) scale(1); opacity: 1; }
   55%  { transform: translateY(-26px) scale(1.03); opacity: .85; }
@@ -380,6 +371,64 @@ def tem_naipe(mao, naipe):
     return any(n == naipe for (n, _) in mao)
 
 # =========================
+# AVATAR CARTOON (SVG inline)
+# =========================
+def avatar_svg_data_uri(idx: int) -> str:
+    # Paletas simples (cartoon)
+    skins = ["#F6D3B3", "#E9BE9D", "#D9A074", "#C6865F"]
+    hairs = ["#2F2F2F", "#5B3A29", "#C8A14A", "#7A4B2B", "#1F2937"]
+    shirts = ["#60A5FA", "#F59E0B", "#34D399", "#F472B6", "#A78BFA", "#FB7185", "#22C55E"]
+    bg = ["#E0F2FE", "#ECFDF5", "#FFF7ED", "#FDF2F8", "#EEF2FF", "#F1F5F9"]
+
+    skin = skins[idx % len(skins)]
+    hair = hairs[idx % len(hairs)]
+    shirt = shirts[idx % len(shirts)]
+    b = bg[idx % len(bg)]
+
+    # SVG 64x64 cartoon
+    svg = f"""
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <filter id="s" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity=".18"/>
+    </filter>
+  </defs>
+
+  <circle cx="32" cy="32" r="30" fill="{b}" filter="url(#s)"/>
+
+  <!-- shirt -->
+  <path d="M14 58c3-13 14-16 18-16s15 3 18 16" fill="{shirt}"/>
+  <path d="M23 44c3 3 6 4 9 4s6-1 9-4" fill="none" stroke="rgba(0,0,0,.12)" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- neck -->
+  <rect x="28" y="36" width="8" height="10" rx="4" fill="{skin}"/>
+
+  <!-- head -->
+  <circle cx="32" cy="28" r="16" fill="{skin}"/>
+
+  <!-- hair -->
+  <path d="M16 28c2-12 10-18 16-18s14 6 16 18c-4-7-10-9-16-9s-12 2-16 9z" fill="{hair}"/>
+
+  <!-- eyes -->
+  <circle cx="26" cy="28" r="2.2" fill="#111827"/>
+  <circle cx="38" cy="28" r="2.2" fill="#111827"/>
+  <circle cx="25.3" cy="27.4" r="0.7" fill="#fff"/>
+  <circle cx="37.3" cy="27.4" r="0.7" fill="#fff"/>
+
+  <!-- smile -->
+  <path d="M26 34c2.2 2 4.4 3 6 3s3.8-1 6-3" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- cheek -->
+  <circle cx="22" cy="33" r="2.1" fill="rgba(244,114,182,.35)"/>
+  <circle cx="42" cy="33" r="2.1" fill="rgba(244,114,182,.35)"/>
+</svg>
+""".strip()
+
+    # Data URI: encode to base64 (mais confiável que utf8 in-line em alguns browsers)
+    svg_b64 = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{svg_b64}"
+
+# =========================
 # STATE
 # =========================
 def ss_init():
@@ -427,6 +476,10 @@ def ss_init():
         "trick_snapshot": [],
 
         "pile_counts": {},
+
+        # throttle para não ficar loopando sem parar no autoplay
+        "autoplay_tick": 0,
+        "autoplay_last": 0.0,
     }
     for k,v in defaults.items():
         if k not in st.session_state:
@@ -645,6 +698,45 @@ def start_next_round():
     preparar_prognosticos_anteriores()
 
 # =========================
+# UI helpers: chips + pile
+# =========================
+def chip_color_for_index(idx: int) -> str:
+    palette = [
+        "rgba(16,185,129,.88)",   # verde
+        "rgba(59,130,246,.88)",   # azul
+        "rgba(245,158,11,.88)",   # âmbar
+        "rgba(239,68,68,.88)",    # vermelho
+        "rgba(168,85,247,.88)",   # roxo
+        "rgba(20,184,166,.88)",   # teal
+        "rgba(100,116,139,.88)",  # slate
+        "rgba(236,72,153,.88)",   # pink
+    ]
+    return palette[idx % len(palette)]
+
+def render_progn_chips_html(prog, color: str) -> str:
+    if isinstance(prog, str) or prog is None:
+        return '<span class="chipNote">—</span>'
+    p = max(0, int(prog))
+    show = min(p, 12)
+    chips = "".join([f'<div class="chipMini" style="--chip-base:{color};"></div>' for _ in range(show)])
+    extra = f'<span class="chipNote">+{p-12}</span>' if p > 12 else ''
+    return f'<div class="chipRow">{chips}</div>{extra}'
+
+def render_small_pile_html(won: int) -> str:
+    layers = min(max(won, 0), 10)
+    parts = []
+    for i in range(layers):
+        dx = i * 1.1
+        dy = -i * 1.2
+        rot = (i % 3 - 1) * 2
+        parts.append(
+            f'<div class="cardBackLayer" style="left:{dx}px; top:{dy}px; transform: rotate({rot}deg);"></div>'
+        )
+    label = f"{won}" if won > 10 else ""
+    label_html = f'<div class="pileLabel">{label}</div>' if label else ''
+    return f'<div class="pileStack">{"".join(parts)}</div>{label_html}'
+
+# =========================
 # SIDEBAR
 # =========================
 with st.sidebar:
@@ -692,7 +784,7 @@ st.markdown(
 <div class="titleRow">
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
-    <div style="opacity:.72;font-weight:800;font-size:12px;color:rgba(255,255,255,.0);"></div>
+    <div style="opacity:.70;font-weight:800;font-size:12px;">Premium UI • Avatares cartoon • IA automática</div>
   </div>
   <div class="badges">
     <span class="badge">Trunfo: ♥</span>
@@ -780,51 +872,8 @@ if st.session_state.fase == "prognostico":
         st.rerun()
 
 # =========================
-# UI: Mesa + chips (prognóstico) + montinho mini-cartas + avatar
+# RENDER MESA
 # =========================
-def chip_color_for_index(idx: int) -> str:
-    palette = [
-        "rgba(16,185,129,.88)",   # verde
-        "rgba(59,130,246,.88)",   # azul
-        "rgba(245,158,11,.88)",   # âmbar
-        "rgba(239,68,68,.88)",    # vermelho
-        "rgba(168,85,247,.88)",   # roxo
-        "rgba(20,184,166,.88)",   # teal
-        "rgba(100,116,139,.88)",  # slate
-        "rgba(236,72,153,.88)",   # pink
-    ]
-    return palette[idx % len(palette)]
-
-def avatar_for_index(idx: int) -> str:
-    # avatares simples (não dependem de imagem externa)
-    avatars = ["🙂","😎","🤠","🧠","🤖","🦊","🐼","🐯","🐸","🦁","🐵","🐙","🦄","🐰"]
-    return avatars[idx % len(avatars)]
-
-def render_progn_chips_html(prog, color: str) -> str:
-    if isinstance(prog, str) or prog is None:
-        return '<span class="chipNote">—</span>'
-
-    p = max(0, int(prog))
-    show = min(p, 12)
-    chips = "".join([f'<div class="chipMini" style="--chip-base:{color};"></div>' for _ in range(show)])
-    extra = f'<span class="chipNote">+{p-12}</span>' if p > 12 else ''
-    return f'<div class="chipRow">{chips}</div>{extra}'
-
-def render_small_pile_html(won: int) -> str:
-    # mini stack bem pequeno; mostra número só se ficar grande
-    layers = min(max(won, 0), 10)
-    parts = []
-    for i in range(layers):
-        dx = i * 1.1
-        dy = -i * 1.2
-        rot = (i % 3 - 1) * 2
-        parts.append(
-            f'<div class="cardBackLayer" style="left:{dx}px; top:{dy}px; transform: rotate({rot}deg);"></div>'
-        )
-    label = f"{won}" if won > 10 else ""
-    label_html = f'<div class="pileLabel">{label}</div>' if label else ''
-    return f'<div class="pileStack">{"".join(parts)}</div>{label_html}'
-
 def render_mesa():
     ordem = st.session_state.ordem
     n = len(ordem)
@@ -865,10 +914,11 @@ def render_mesa():
         if flash_name and nome == flash_name:
             cls += " winnerFlash"
 
-        avatar = avatar_for_index(i)
+        avatar_src = avatar_svg_data_uri(i)
+
         seats_html += f'''
 <div class="{cls}" style="left:{x}%; top:{y}%; transform:translate(-50%,-50%);">
-  <span class="avatar">{avatar}</span>
+  <img class="avatarImg" src="{avatar_src}" alt="avatar"/>
   <span>{label}</span>
 </div>
 '''
@@ -887,7 +937,7 @@ def render_mesa():
 </div>
 """
 
-        # montinho mini-cartas (bem pequeno) embaixo dos chips
+        # montinho mini-cartas embaixo dos chips
         if won > 0:
             px = tx
             py = ty + 12
@@ -897,7 +947,7 @@ def render_mesa():
 </div>
 """
 
-    # Cartas na mesa
+    # cartas na mesa
     for idx, (nome, carta) in enumerate(mesa_to_render):
         i = pos_map.get(nome, 0)
         ang = (2*math.pi) * (i/n) - (math.pi/2)
@@ -940,7 +990,7 @@ def render_hand_clickable_streamlit():
     validas = set(cartas_validas_para_jogar(humano))
 
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
-    hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez"
+    hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
     if st.session_state.trick_pending:
         hint = "Vaza completa — aguardando 1–2s"
     st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
@@ -979,6 +1029,7 @@ if st.session_state.fase == "jogo":
 
     ordem = st.session_state.ordem
     atual = ordem[st.session_state.turn_idx]
+    humano = st.session_state.nomes[st.session_state.humano_idx]
 
     st.info(
         f"🎯 Vez de: **{atual}** | Naipe: **{st.session_state.naipe_base or '-'}** | "
@@ -991,15 +1042,22 @@ if st.session_state.fase == "jogo":
         st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
         st.stop()
 
-    humano = st.session_state.nomes[st.session_state.humano_idx]
-
+    # Se vaza completa, só espera resolver (mantém cartas visíveis 1-2s)
     if st.session_state.trick_pending:
-        time.sleep(0.15)
+        time.sleep(0.10)
         st.rerun()
 
+    # =========================
+    # AUTOPLAY IA (sem botão)
+    # =========================
+    # Se não é sua vez e não tem animação pendente, a IA avança automaticamente.
     if atual != humano and st.session_state.pending_play is None:
-        if st.button("▶️ Continuar (IA)", use_container_width=True):
+        now = time.time()
+        # throttle pequeno para não "engasgar" o browser
+        if now - st.session_state.autoplay_last > 0.08:
+            st.session_state.autoplay_last = now
             avancar_ate_humano_ou_fim()
+            time.sleep(0.04)
             st.rerun()
 
     clicked = render_hand_clickable_streamlit()
@@ -1010,7 +1068,7 @@ if st.session_state.fase == "jogo":
 
     if st.session_state.pending_play is not None and atual == humano:
         st.markdown('<div class="playingOverlay">✨ Jogando carta...</div>', unsafe_allow_html=True)
-        time.sleep(0.25)
+        time.sleep(0.20)
 
         carta = st.session_state.pending_play
         st.session_state.pending_play = None
