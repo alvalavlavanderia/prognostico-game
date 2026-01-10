@@ -9,28 +9,111 @@ st.set_page_config(page_title="Jogo de Prognóstico", layout="wide")
 st.markdown(
     """
     <style>
-      .block-container { padding-top: 0.6rem; padding-bottom: 0.4rem; max-width: 1400px; }
+      .block-container { padding-top: 0.5rem; padding-bottom: 0.35rem; max-width: 1500px; }
       h1 { margin: 0.2rem 0 0.2rem 0; }
-      h2, h3 { margin: 0.6rem 0 0.35rem 0; }
-      .stButton>button { border-radius: 14px; padding: 0.52rem 0.55rem; font-weight: 900; }
-      .stButton>button:disabled { opacity: 0.30; }
-      .small { font-size: 12px; opacity: 0.85; }
-      .chip { display:inline-block; padding: 6px 10px; border-radius: 999px; background: rgba(0,0,0,0.05); margin-right: 6px; font-weight: 700; }
-      .panel { border: 1px solid rgba(60,60,60,.12); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.75); box-shadow: 0 1px 6px rgba(0,0,0,.05); }
-      .cardline { display:flex; flex-wrap:wrap; gap:8px; }
-      .cardpill {
-        border: 1px solid rgba(60,60,60,.18);
-        border-radius: 14px;
-        padding: 10px 12px;
-        background: rgba(250,250,250,.96);
-        box-shadow: 0 1px 5px rgba(0,0,0,.06);
-        font-weight: 950;
-        font-size: 18px;
-        min-width: 58px;
-        text-align:center;
-      }
-      .titleRow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom: 6px; }
+      h2, h3 { margin: 0.55rem 0 0.3rem 0; }
       footer { visibility: hidden; }
+
+      /* Painéis */
+      .panel {
+        border: 1px solid rgba(60,60,60,.10);
+        border-radius: 18px;
+        padding: 14px;
+        background: rgba(255,255,255,.80);
+        box-shadow: 0 1px 8px rgba(0,0,0,.05);
+      }
+      .chip {
+        display:inline-block; padding: 6px 10px; border-radius: 999px;
+        background: rgba(0,0,0,0.06); margin-right: 6px; font-weight: 800;
+      }
+      .small { font-size: 12px; opacity: 0.85; }
+
+      /* Mesa central */
+      .tableWrap {
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        gap:10px;
+        padding: 8px 6px;
+      }
+      .tableTitle { font-weight: 900; opacity: 0.9; }
+      .tableCards {
+        display:flex; flex-wrap:wrap; justify-content:center; gap:10px;
+        min-height: 88px;
+        width: 100%;
+      }
+
+      /* Cartas (visual) */
+      .cardFace {
+        width: 64px; height: 90px;
+        border-radius: 14px;
+        border: 1px solid rgba(30,30,30,.18);
+        background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,248,248,0.98) 100%);
+        box-shadow: 0 2px 10px rgba(0,0,0,.08);
+        position: relative;
+        overflow: hidden;
+
+        animation: fadeInUp .18s ease-out both;
+      }
+      .cardFace:hover { transform: translateY(-2px); transition: .12s ease; }
+
+      .cornerTL, .cornerBR {
+        position:absolute;
+        font-weight: 950;
+        font-size: 15px;
+        line-height: 1;
+      }
+      .cornerTL { top: 8px; left: 9px; text-align:left; }
+      .cornerBR { bottom: 8px; right: 9px; text-align:right; transform: rotate(180deg); }
+
+      .suitCenter {
+        position:absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%,-50%);
+        font-size: 30px;
+        font-weight: 950;
+        opacity: 0.9;
+      }
+
+      .nameTag {
+        margin-top: 4px;
+        text-align:center;
+        font-size: 12px;
+        font-weight: 800;
+        opacity: 0.9;
+      }
+
+      /* Cartas clicáveis (botão com cara de carta) */
+      div.stButton > button.cardBtn {
+        width: 64px !important;
+        height: 90px !important;
+        padding: 0 !important;
+        border-radius: 14px !important;
+        border: 1px solid rgba(30,30,30,.18) !important;
+        background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,248,248,0.98) 100%) !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,.08) !important;
+        font-weight: 950 !important;
+        position: relative !important;
+        overflow: hidden !important;
+        animation: fadeInUp .18s ease-out both;
+      }
+      div.stButton > button.cardBtn:hover {
+        transform: translateY(-2px) !important;
+        transition: .12s ease !important;
+      }
+      div.stButton > button.cardBtn:disabled {
+        opacity: 0.35 !important;
+        box-shadow: none !important;
+        transform: none !important;
+      }
+
+      /* Pequena animação */
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Compactar sidebar */
+      section[data-testid="stSidebar"] .block-container { padding-top: 0.6rem; }
+
     </style>
     """,
     unsafe_allow_html=True
@@ -40,7 +123,6 @@ st.markdown(
 # CONSTANTES
 # =========================
 TRUNFO = "♥"
-
 NAIPES = ["♦", "♠", "♣", "♥"]  # visual: ouro, espada, paus, copas
 NAIPE_ORDEM = {"♦": 0, "♠": 1, "♣": 2, "♥": 3}
 NAIPE_COR = {"♦": "red", "♥": "red", "♠": "black", "♣": "black"}
@@ -62,10 +144,6 @@ class Carta:
     def texto(self):
         return f"{self.valor}{self.naipe}"
 
-    def render_html(self):
-        cor = NAIPE_COR[self.naipe]
-        return f"<span style='color:{cor}; font-size:18px; font-weight:950'>{self.valor}{self.naipe}</span>"
-
 class Jogador:
     def __init__(self, nome, humano=False):
         self.nome = nome
@@ -76,7 +154,7 @@ class Jogador:
         self.pontos = 0
 
 # =========================
-# FUNÇÕES UTIL
+# UTIL
 # =========================
 def criar_baralho():
     return [Carta(n, v) for n in NAIPES for v in VALORES]
@@ -87,42 +165,50 @@ def ordenar_mao(mao):
 def somente_copas(mao):
     return all(c.naipe == TRUNFO for c in mao) if mao else False
 
-def render_cartinhas(mao):
-    mao = ordenar_mao(mao)
-    html = "<div class='cardline'>"
-    for c in mao:
-        cor = NAIPE_COR[c.naipe]
-        html += f"<div class='cardpill' style='color:{cor}'>{c.valor}{c.naipe}</div>"
-    html += "</div>"
-    return html
+def carta_html_face(carta, show_name=None):
+    cor = NAIPE_COR[carta.naipe]
+    valor = str(carta.valor)
+    naipe = carta.naipe
+    extra = f"<div class='nameTag'>{show_name}</div>" if show_name else ""
+    return f"""
+      <div>
+        <div class="cardFace">
+          <div class="cornerTL" style="color:{cor};">{valor}<br>{naipe}</div>
+          <div class="suitCenter" style="color:{cor};">{naipe}</div>
+          <div class="cornerBR" style="color:{cor};">{valor}<br>{naipe}</div>
+        </div>
+        {extra}
+      </div>
+    """
+
+def mesa_html(mesa):
+    if not mesa:
+        return "<div class='small'>Mesa vazia — o mão abre a vaza.</div>"
+    parts = []
+    for item in mesa:
+        parts.append(carta_html_face(item["carta"], show_name=item["jogador"].nome))
+    return "<div class='tableCards'>" + "".join(parts) + "</div>"
 
 # =========================
-# REGRAS: CARTAS LEGAIS
+# REGRAS
 # =========================
 def cartas_legais(jogador, naipe_base, hearts_broken, primeira_vaza):
-    """
-    A) 1ª VAZA DA RODADA:
-       - ♥ proibida para todos, exceto se o jogador só tem ♥.
-    B) Fora isso:
-       - Se naipe_base existe: deve seguir naipe se tiver.
-       - Se é mão: não pode abrir com ♥ enquanto hearts_broken == False (exceto só ♥).
-    """
     mao = jogador.mao[:]
     if not mao:
         return []
 
-    # A) Primeira vaza: trava copas geral (exceto só-copas)
+    # 1ª vaza: trava ♥ geral (exceto só ♥)
     if primeira_vaza and not somente_copas(mao):
         sem_copas = [c for c in mao if c.naipe != TRUNFO]
         if sem_copas:
             mao = sem_copas
 
-    # Seguir naipe se já existe naipe base
+    # seguir naipe se possível
     if naipe_base is not None:
         seguindo = [c for c in mao if c.naipe == naipe_base]
         return seguindo if seguindo else mao
 
-    # É mão: copas travada até quebrar (exceto só-copas)
+    # é mão: não pode abrir ♥ enquanto não quebrou (exceto só ♥)
     if (not hearts_broken) and (not somente_copas(mao)):
         nao_copas = [c for c in mao if c.naipe != TRUNFO]
         if nao_copas:
@@ -130,9 +216,6 @@ def cartas_legais(jogador, naipe_base, hearts_broken, primeira_vaza):
 
     return mao
 
-# =========================
-# VENCEDOR / RANK
-# =========================
 def definir_vencedor(mesa, naipe_base):
     copas = [x for x in mesa if x["carta"].naipe == TRUNFO]
     if copas:
@@ -154,7 +237,7 @@ def melhor_rank_na_mesa(mesa, naipe_base):
     return max(rank_carta_para_vaza(x["carta"], naipe_base) for x in mesa)
 
 # =========================
-# IA ESPERTA: tentar bater o próprio prognóstico
+# IA (mais esperta)
 # =========================
 def escolher_carta_ia(jogador, legais, naipe_base, mesa):
     legais = ordenar_mao(legais)
@@ -162,30 +245,24 @@ def escolher_carta_ia(jogador, legais, naipe_base, mesa):
     falta = alvo - jogador.vazas
     quer_ganhar = falta > 0
 
-    # Se é mão (mesa vazia)
+    # mão abrindo
     if not mesa:
         if quer_ganhar:
-            # abre com a mais forte dentre as legais (simplificado)
             return max(legais, key=lambda c: rank_carta_para_vaza(c, c.naipe))
-        else:
-            # tenta perder: menor carta, evitando trunfo
-            nao_trunfo = [c for c in legais if c.naipe != TRUNFO]
-            pool = nao_trunfo if nao_trunfo else legais
-            return min(pool, key=lambda c: rank_carta_para_vaza(c, c.naipe))
+        nao_trunfo = [c for c in legais if c.naipe != TRUNFO]
+        pool = nao_trunfo if nao_trunfo else legais
+        return min(pool, key=lambda c: rank_carta_para_vaza(c, c.naipe))
 
-    # Não é mão: comparar com mesa
     melhor_atual = melhor_rank_na_mesa(mesa, naipe_base)
 
     if quer_ganhar:
         vencedoras = [c for c in legais if rank_carta_para_vaza(c, naipe_base) > melhor_atual]
         if vencedoras:
             return min(vencedoras, key=lambda c: rank_carta_para_vaza(c, naipe_base))
-        # não dá pra vencer -> descarta baixo evitando trunfo
         nao_trunfo = [c for c in legais if c.naipe != TRUNFO]
         pool = nao_trunfo if nao_trunfo else legais
         return min(pool, key=lambda c: rank_carta_para_vaza(c, naipe_base))
     else:
-        # quer perder -> menor possível, evitando trunfo
         nao_trunfo = [c for c in legais if c.naipe != TRUNFO]
         pool = nao_trunfo if nao_trunfo else legais
         return min(pool, key=lambda c: rank_carta_para_vaza(c, naipe_base))
@@ -236,7 +313,7 @@ defaults = {
     "numero_rodada": 1,
     "rodada_pontuada": False,
     "primeira_vaza": True,
-    "start_idx": None,  # <<< MÃO DA RODADA: 1ª aleatório, depois gira +1 por rodada
+    "start_idx": None,  # 1ª aleatório, depois gira
     "bid_idx": 0,
 }
 for k, v in defaults.items():
@@ -248,11 +325,11 @@ for k, v in defaults.items():
 # =========================
 st.markdown(
     """
-    <div class='titleRow'>
-      <h1 style='margin:0;'>🎴 Jogo de Prognóstico</h1>
-      <span class='chip'>Trunfo: ♥</span>
-      <span class='chip'>Copas trava até quebrar</span>
-      <span class='chip'>1ª vaza: ♥ proibida (exceto só ♥)</span>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
+      <h1 style="margin:0;">🎴 Jogo de Prognóstico</h1>
+      <span class="chip">Trunfo: ♥</span>
+      <span class="chip">Copas trava até quebrar</span>
+      <span class="chip">1ª vaza: ♥ proibida (exceto só ♥)</span>
     </div>
     """,
     unsafe_allow_html=True
@@ -268,7 +345,7 @@ if st.session_state.jogadores:
             st.write(f"**{j.nome}** — **{j.pontos}** pts")
 
         st.markdown("---")
-        st.markdown("## 🎯 Rodada atual")
+        st.markdown("## 🎯 Rodada")
         for j in st.session_state.jogadores:
             prog_txt = "-" if j.prognostico is None else str(j.prognostico)
             st.write(f"{j.nome}: vazas **{j.vazas}** | prog. **{prog_txt}**")
@@ -280,13 +357,10 @@ if st.session_state.jogadores:
 
         st.markdown("---")
         st.markdown("## ♥ Copas")
-        if st.session_state.hearts_broken:
-            st.success("Copas quebrada ✅")
-        else:
-            st.warning("Copas travada ⛔")
+        st.success("Copas quebrada ✅") if st.session_state.hearts_broken else st.warning("Copas travada ⛔")
 
         st.markdown("---")
-        if st.button("🔄 Resetar partida"):
+        if st.button("🔄 Resetar", use_container_width=True):
             resetar_partida()
 
 # =========================
@@ -317,17 +391,15 @@ if st.session_state.fase == "inicio":
         st.session_state.jogadores = [Jogador(nome, humano=(i == 0)) for i, nome in enumerate(lista)]
         st.session_state.rodada_atual = int(cartas_por_jogador)
         st.session_state.numero_rodada = 1
-        st.session_state.start_idx = None  # força 1ª rodada aleatória
-
+        st.session_state.start_idx = None  # 1ª rodada aleatória
         st.session_state.fase = "distribuir"
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
-# FASE: DISTRIBUIR (NOVA RODADA)
+# FASE: DISTRIBUIR
 # =========================
 elif st.session_state.fase == "distribuir":
-    # reset rodada
     st.session_state.mesa = []
     st.session_state.naipe_base = None
     st.session_state.indice_jogador = 0
@@ -339,33 +411,27 @@ elif st.session_state.fase == "distribuir":
     st.session_state.rodada_pontuada = False
     st.session_state.bid_idx = 0
 
-    # reset stats rodada
     for j in st.session_state.jogadores:
         j.vazas = 0
         j.prognostico = None
 
-    # distribui cartas
     baralho = criar_baralho()
     random.shuffle(baralho)
     qtd = st.session_state.rodada_atual
     for j in st.session_state.jogadores:
         j.mao = ordenar_mao([baralho.pop() for _ in range(qtd)])
 
-    # MÃO DA RODADA:
-    # - 1ª rodada: aleatório
-    # - depois: gira +1 por rodada (jogador ao lado)
     n = len(st.session_state.jogadores)
     if st.session_state.start_idx is None:
         st.session_state.start_idx = random.randrange(n)
-    # ordem da rodada começa no start_idx
+
     idx = st.session_state.start_idx
     st.session_state.ordem = st.session_state.jogadores[idx:] + st.session_state.jogadores[:idx]
-
     st.session_state.fase = "prognostico"
     st.rerun()
 
 # =========================
-# FASE: PROGNÓSTICO (revela só anteriores, se você for pé mostra todos)
+# FASE: PROGNÓSTICO (mostra só anteriores, se você for pé mostra todos)
 # =========================
 elif st.session_state.fase == "prognostico":
     humano = next(j for j in st.session_state.jogadores if j.humano)
@@ -377,7 +443,7 @@ elif st.session_state.fase == "prognostico":
         st.subheader(f"📌 Rodada {st.session_state.numero_rodada} — {st.session_state.rodada_atual} cartas")
         st.info(f"🂡 Mão da rodada: **{st.session_state.ordem[0].nome}**")
 
-        # bots antes do humano palpita (na ordem)
+        # bots antes do humano
         while st.session_state.bid_idx < len(st.session_state.ordem):
             atual = st.session_state.ordem[st.session_state.bid_idx]
             if atual.humano:
@@ -394,13 +460,9 @@ elif st.session_state.fase == "prognostico":
         for i, j in enumerate(st.session_state.ordem):
             if j.humano:
                 continue
-            if humano_e_pe:
+            if humano_e_pe or (i < idx_humano):
                 prog = "-" if j.prognostico is None else str(j.prognostico)
                 linhas.append((j.nome, prog))
-            else:
-                if i < idx_humano:
-                    prog = "-" if j.prognostico is None else str(j.prognostico)
-                    linhas.append((j.nome, prog))
         if linhas:
             st.table(linhas)
         else:
@@ -411,7 +473,7 @@ elif st.session_state.fase == "prognostico":
             humano.prognostico = int(prog)
             st.session_state.bid_idx += 1
 
-            # bots depois do humano palpita (sem mostrar antes)
+            # bots depois do humano (ocultos até você confirmar)
             while st.session_state.bid_idx < len(st.session_state.ordem):
                 atual = st.session_state.ordem[st.session_state.bid_idx]
                 if atual.prognostico is None:
@@ -420,34 +482,31 @@ elif st.session_state.fase == "prognostico":
 
             st.session_state.fase = "jogada"
             st.rerun()
-
         st.markdown("</div>", unsafe_allow_html=True)
 
     with right:
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
         st.subheader("🂡 Suas cartas")
-        st.markdown(render_cartinhas(humano.mao), unsafe_allow_html=True)
-        st.markdown("<div class='small'>Você só vê os prognósticos anteriores (a menos que seja o pé).</div>", unsafe_allow_html=True)
+        st.markdown("<div class='tableWrap'>", unsafe_allow_html=True)
+        st.markdown("<div class='tableCards'>" + "".join([carta_html_face(c) for c in ordenar_mao(humano.mao)]) + "</div>", unsafe_allow_html=True)
+        st.markdown("<div class='small'>Clique nas cartas quando for sua vez.</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
-# FASE: JOGADA (APP layout 2 colunas)
+# FASE: JOGADA (mesa centralizada + cartas clicáveis estilo carta)
 # =========================
 elif st.session_state.fase == "jogada":
     # resolve vaza se todos jogaram
     if st.session_state.indice_jogador >= len(st.session_state.ordem):
         vencedor = definir_vencedor(st.session_state.mesa, st.session_state.naipe_base)
         vencedor.vazas += 1
-
         st.session_state.historico_vazas.append({
             "mesa": [(x["jogador"].nome, x["carta"].texto()) for x in st.session_state.mesa],
             "vencedor": vencedor.nome
         })
-
-        # vencedor começa próxima vaza
         idx = st.session_state.ordem.index(vencedor)
         st.session_state.ordem = st.session_state.ordem[idx:] + st.session_state.ordem[:idx]
-
         st.session_state.vencedor = vencedor
         st.session_state.fase = "resultado_vaza"
         st.rerun()
@@ -455,23 +514,23 @@ elif st.session_state.fase == "jogada":
     humano = next(j for j in st.session_state.jogadores if j.humano)
     jogador = st.session_state.ordem[st.session_state.indice_jogador]
 
-    left, right = st.columns([1.05, 0.95], gap="large")
+    left, right = st.columns([1.20, 0.80], gap="large")
 
     with left:
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
         st.subheader(f"🧩 Vaza {st.session_state.numero_vaza}")
-        st.markdown(f"<span class='chip'>Mão: {st.session_state.ordem[0].nome}</span>"
-                    f"<span class='chip'>Vez: {jogador.nome}</span>", unsafe_allow_html=True)
+        st.markdown(
+            f"<span class='chip'>Mão: {st.session_state.ordem[0].nome}</span>"
+            f"<span class='chip'>Vez: {jogador.nome}</span>"
+            f"<span class='chip'>Naipe: {st.session_state.naipe_base or '-'}</span>",
+            unsafe_allow_html=True
+        )
 
-        if st.session_state.mesa:
-            st.markdown("### 🪑 Mesa")
-            for item in st.session_state.mesa:
-                st.markdown(f"- **{item['jogador'].nome}**: {item['carta'].render_html()}", unsafe_allow_html=True)
-            st.markdown(f"<div class='small'>Naipe da vaza: <b>{st.session_state.naipe_base}</b></div>", unsafe_allow_html=True)
-        else:
-            st.markdown("<div class='small'>Mesa vazia — o mão abre a vaza.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='tableWrap'>", unsafe_allow_html=True)
+        st.markdown("<div class='tableTitle'>🪑 Mesa</div>", unsafe_allow_html=True)
+        st.markdown(mesa_html(st.session_state.mesa), unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        # histórico compactado
         with st.expander("🧾 Histórico da rodada", expanded=False):
             if st.session_state.historico_vazas:
                 for i, h in enumerate(st.session_state.historico_vazas, start=1):
@@ -486,7 +545,6 @@ elif st.session_state.fase == "jogada":
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
         st.subheader("🂡 Sua mão")
 
-        # cartas legais do jogador atual
         legais = cartas_legais(
             jogador=jogador,
             naipe_base=st.session_state.naipe_base,
@@ -495,20 +553,34 @@ elif st.session_state.fase == "jogada":
         )
         legais_set = set(c.texto() for c in legais)
 
-        # HUMANO joga com botões travando inválidas
         if jogador.humano:
-            mao_ordenada = ordenar_mao(jogador.mao)
+            mao = ordenar_mao(jogador.mao)
 
-            st.markdown(render_cartinhas(mao_ordenada), unsafe_allow_html=True)
-            st.markdown("<div class='small'>Clique em uma carta. As inválidas ficam travadas.</div>", unsafe_allow_html=True)
-
-            cols = st.columns(8)
-            for i, carta in enumerate(mao_ordenada):
-                col = cols[i % 8]
+            # Grid de "cartas-botão"
+            cols = st.columns(7)
+            for i, carta in enumerate(mao):
+                col = cols[i % 7]
                 label = carta.texto()
                 disabled = label not in legais_set
-                key = f"btn_{st.session_state.numero_rodada}_{st.session_state.numero_vaza}_{st.session_state.indice_jogador}_{jogador.nome}_{label}_{i}"
-                if col.button(label, key=key, use_container_width=True, disabled=disabled):
+
+                # botão com classe cardBtn; label fica invisível mas precisamos de algo
+                key = f"card_{st.session_state.numero_rodada}_{st.session_state.numero_vaza}_{st.session_state.indice_jogador}_{jogador.nome}_{label}_{i}"
+                pressed = col.button(" ", key=key, use_container_width=False, disabled=disabled)
+                # aplicar classe cardBtn no botão recém-criado via hack CSS selector:
+                # Streamlit não permite class diretamente; usamos JS? não.
+                # Alternativa: estilo geral para botões e "card look" com :has não funciona.
+                # Então, usamos um truque: desenhar carta acima e botão transparente por cima NÃO é possível diretamente.
+                # Solução prática: manter o botão com cara de carta usando st.markdown + col.button(label) e ocultar texto.
+                # Para ficar 100% robusto, renderizamos a carta por markdown abaixo e colocamos o label no botão mesmo.
+
+                # Como não dá pra “vestir” o botão com CSS de forma seletiva sem JS,
+                # mostramos um botão com texto e uma carta visual acima (fica APP e funcional).
+                col.markdown(carta_html_face(carta), unsafe_allow_html=True)
+
+                # botão real com label (funcional)
+                # (fica logo abaixo da carta; discreto e clicável)
+                click_key = f"play_{key}"
+                if col.button(label, key=click_key, use_container_width=True, disabled=disabled):
                     jogar_carta(jogador, carta)
 
             if st.session_state.primeira_vaza and not somente_copas(jogador.mao):
@@ -516,14 +588,13 @@ elif st.session_state.fase == "jogada":
             if (not st.session_state.hearts_broken) and (st.session_state.naipe_base is None) and not somente_copas(jogador.mao):
                 st.caption("Regra: enquanto copas não quebrou, não pode abrir uma vaza com ♥.")
         else:
-            # Se não é humano, mostre mão humana só visual (pra ficar “APP”)
-            st.markdown(render_cartinhas(ordenar_mao(humano.mao)), unsafe_allow_html=True)
             st.markdown("<div class='small'>Aguarde: jogada automática dos bots.</div>", unsafe_allow_html=True)
+            st.markdown("<div class='tableCards'>" + "".join([carta_html_face(c) for c in ordenar_mao(humano.mao)]) + "</div>", unsafe_allow_html=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # IA joga automaticamente quando é a vez dela
-    if (not jogador.humano):
+    # IA joga automaticamente quando for a vez dela
+    if not jogador.humano:
         carta = escolher_carta_ia(jogador, legais, st.session_state.naipe_base, st.session_state.mesa)
         jogador.mao.remove(carta)
         st.session_state.mesa.append({"jogador": jogador, "carta": carta})
@@ -543,8 +614,9 @@ elif st.session_state.fase == "resultado_vaza":
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
     st.subheader("🏆 Resultado da Vaza")
 
-    for item in st.session_state.mesa:
-        st.markdown(f"- **{item['jogador'].nome}**: {item['carta'].render_html()}", unsafe_allow_html=True)
+    st.markdown("<div class='tableWrap'>", unsafe_allow_html=True)
+    st.markdown("<div class='tableCards'>" + "".join([carta_html_face(x["carta"], show_name=x["jogador"].nome) for x in st.session_state.mesa]) + "</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.success(f"Vencedor: **{st.session_state.vencedor.nome}**")
 
@@ -554,7 +626,6 @@ elif st.session_state.fase == "resultado_vaza":
         st.session_state.indice_jogador = 0
         st.session_state.numero_vaza += 1
 
-        # após terminar a vaza 1, não é mais primeira vaza
         if st.session_state.primeira_vaza:
             st.session_state.primeira_vaza = False
 
@@ -590,11 +661,11 @@ elif st.session_state.fase == "fim_rodada":
             st.write(f"Vaza {i} → [{jogadas_txt}] — 🏆 {h['vencedor']}")
 
     st.markdown("---")
-
     proxima_cartas = st.session_state.rodada_atual - 1
+
     if proxima_cartas >= 1:
         if st.button("▶ Próxima rodada", use_container_width=True):
-            # ✅ ROTACIONAR MÃO DA RODADA: próximo jogador (ao lado)
+            # gira mão da rodada
             n = len(st.session_state.jogadores)
             st.session_state.start_idx = (st.session_state.start_idx + 1) % n
 
@@ -613,3 +684,4 @@ elif st.session_state.fase == "fim_rodada":
             resetar_partida()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
