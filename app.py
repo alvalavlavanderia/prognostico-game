@@ -10,7 +10,7 @@ import streamlit as st
 st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="wide")
 
 # =========================
-# CSS PREMIUM (com animação de "sumir da mão")
+# CSS PREMIUM (com animações)
 # =========================
 APP_CSS = """
 <style>
@@ -52,16 +52,30 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   border:1px solid rgba(0,0,0,.08);
   font-size:12px;
   white-space:nowrap;
+  transition: box-shadow .15s ease, outline .15s ease, transform .15s ease;
 }
 .seat.you{ outline:2px solid rgba(0,120,90,.55); font-weight:900; }
 .seat.dealer{ border-color: rgba(0,120,90,.30); background: rgba(255,255,255,.92); }
+
+/* Winner glow */
+@keyframes winnerGlow {
+  0% { box-shadow: 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }
+  35% { box-shadow: 0 0 0 6px rgba(0,150,110,.20), 0 14px 28px rgba(0,0,0,.10); transform: translate(-50%,-50%) scale(1.03); }
+  100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }
+}
+.seat.winnerFlash{
+  animation: winnerGlow 1.2s ease-out;
+  outline: 2px solid rgba(0,150,110,.55);
+  background: rgba(255,255,255,.95);
+}
+
 .playCard{
   position:absolute;
   transform: translate(-50%,-50%);
   pointer-events:none;
 }
 
-/* Carta estática (mesa / visualização) */
+/* Carta estática */
 .card{
   width:76px;
   height:110px;
@@ -75,6 +89,13 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .card .tl{ position:absolute; top:8px; left:8px; font-weight:900; font-size:14px; line-height:14px; }
 .card .br{ position:absolute; bottom:8px; right:8px; font-weight:900; font-size:14px; line-height:14px; transform:rotate(180deg); }
 .card .mid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:900; opacity:.92; }
+
+/* Pop card on table */
+@keyframes popIn {
+  0% { transform: translate(-50%,-50%) scale(.92); opacity: .0; }
+  100% { transform: translate(-50%,-50%) scale(1.0); opacity: 1; }
+}
+.playCard.pop{ animation: popIn .16s ease-out; }
 
 /* Dock da mão */
 .handDock{
@@ -90,7 +111,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .handTitle h3{ margin:0; font-size:16px; }
 .hint{ font-size:12px; opacity:.70; font-weight:800; }
 
-/* Botão-carta (Streamlit nativo) */
+/* Botão-carta (Streamlit) */
 div[data-testid="column"] .stButton > button{
   border-radius: 14px !important;
   border: 1px solid rgba(0,0,0,.18) !important;
@@ -111,7 +132,7 @@ div[data-testid="column"] .stButton > button:disabled{
   box-shadow: 0 6px 14px rgba(0,0,0,.08) !important;
 }
 
-/* Conteúdo dentro do botão (o "rosto" da carta) */
+/* Face da carta dentro do botão */
 .cardBtnInner{
   width:100%;
   height:118px;
@@ -142,11 +163,9 @@ div[data-testid="column"] .stButton > button:disabled{
   55%  { transform: translateY(-26px) scale(1.03); opacity: .85; }
   100% { transform: translateY(-70px) scale(.96); opacity: 0; }
 }
-.flyAway{
-  animation: flyAway .25s ease-in forwards;
-}
+.flyAway{ animation: flyAway .25s ease-in forwards; }
 
-/* Overlay rápido de “Jogando...” */
+/* Overlay “Jogando...” */
 .playingOverlay{
   display:flex; align-items:center; gap:10px;
   padding:10px 12px; border-radius:14px;
@@ -216,16 +235,6 @@ def card_btn_html(c, extra_class=""):
 </div>
 """
 
-def serialize_card(c):
-    naipe, valor = c
-    return f"{naipe}|{valor}"
-
-def deserialize_card(s):
-    naipe, valor = s.split("|", 1)
-    if valor.isdigit():
-        valor = int(valor)
-    return (naipe, valor)
-
 # =========================
 # UTIL
 # =========================
@@ -276,7 +285,12 @@ def ss_init():
         "pontuou_rodada": False,
 
         # Premium: animação "sumir da mão"
-        "pending_play": None,  # carta clicada (tuple)
+        "pending_play": None,
+
+        # Premium: pop + winner flash
+        "table_pop_until": 0.0,      # timestamp
+        "winner_flash_name": None,
+        "winner_flash_until": 0.0,
     }
     for k,v in defaults.items():
         if k not in st.session_state:
@@ -356,17 +370,14 @@ def cartas_validas_para_jogar(nome):
     if not mao:
         return []
 
-    # seguir naipe se puder
     if naipe_base and tem_naipe(mao, naipe_base):
         return [c for c in mao if c[0] == naipe_base]
 
-    # descarte (não tem naipe da vaza)
     if naipe_base and not tem_naipe(mao, naipe_base):
         if primeira_vaza and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
         return mao[:]
 
-    # abrindo vaza
     if naipe_base is None:
         if primeira_vaza:
             if somente_trunfo(mao):
@@ -386,6 +397,9 @@ def jogar_carta(nome, carta):
     st.session_state.mesa.append((nome, carta))
     st.session_state.log.append(f"🃏 {nome} jogou {valor_str(carta[1])}{carta[0]}.")
 
+    # Pop na carta recém-jogada na mesa
+    st.session_state.table_pop_until = time.time() + 0.22
+
 def vencedor_da_vaza():
     mesa = st.session_state.mesa
     naipe_base = st.session_state.naipe_base
@@ -399,6 +413,11 @@ def fechar_vaza():
     win = vencedor_da_vaza()
     st.session_state.vazas_rodada[win] += 1
     st.session_state.log.append(f"🏅 {win} venceu a vaza.")
+
+    # Winner glow
+    st.session_state.winner_flash_name = win
+    st.session_state.winner_flash_until = time.time() + 1.2
+
     ordem = st.session_state.ordem
     st.session_state.turn_idx = ordem.index(win)
     st.session_state.mesa = []
@@ -512,7 +531,7 @@ st.markdown(
 <div class="titleRow">
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
-    <div class="smallMuted">Premium UI • Mesa central • Efeito de carta saindo da mão</div>
+    <div class="smallMuted">Premium UI • Pop na mesa • Highlight do vencedor</div>
   </div>
   <div class="badges">
     <span class="badge">Trunfo: ♥</span>
@@ -609,6 +628,10 @@ def render_mesa():
     humano = nomes[st.session_state.humano_idx]
     dealer = ordem[0]
 
+    now = time.time()
+    flash_name = st.session_state.winner_flash_name if now <= st.session_state.winner_flash_until else None
+    pop_active = now <= st.session_state.table_pop_until
+
     cx, cy = 50, 50
     rx, ry = 42, 36
 
@@ -626,17 +649,25 @@ def render_mesa():
         if nome == dealer:
             cls += " dealer"
             label = f"{label} • mão"
+        if flash_name and nome == flash_name:
+            cls += " winnerFlash"
 
         seats_html += f'<div class="{cls}" style="left:{x}%; top:{y}%; transform:translate(-50%,-50%);">{label}</div>'
 
     plays_html = ""
     pos_map = {nome:i for i,nome in enumerate(ordem)}
-    for nome, carta in st.session_state.mesa:
+    for idx, (nome, carta) in enumerate(st.session_state.mesa):
         i = pos_map.get(nome, 0)
         ang = (2*math.pi) * (i/n) - (math.pi/2)
         x = cx + (rx*0.55)*math.cos(ang)
         y = cy + (ry*0.55)*math.sin(ang)
-        plays_html += f'<div class="playCard" style="left:{x}%; top:{y}%;">{carta_html(carta)}</div>'
+
+        is_last = (idx == len(st.session_state.mesa) - 1)
+        cls = "playCard"
+        if pop_active and is_last:
+            cls += " pop"
+
+        plays_html += f'<div class="{cls}" style="left:{x}%; top:{y}%;">{carta_html(carta)}</div>'
 
     centro_txt = "Aguardando jogada" if not st.session_state.mesa else "Vaza em andamento"
     if st.session_state.naipe_base:
@@ -667,19 +698,16 @@ def render_hand_clickable_streamlit():
     st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
 
     mao_ord = sorted(mao, key=peso_carta)
-
     cols = st.columns(10)
     clicked = None
-
     pending = st.session_state.pending_play
 
     for i, c in enumerate(mao_ord):
         disabled = (c not in validas) or (atual != humano) or (pending is not None)
         with cols[i % 10]:
-            if st.button(" ", key=f"card_{st.session_state.rodada}_{serialize_card(c)}", disabled=disabled, use_container_width=True):
+            if st.button(" ", key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}", disabled=disabled, use_container_width=True):
                 clicked = c
 
-            # se esta carta foi a clicada, aplica classe flyAway
             extra = "flyAway" if (pending is not None and c == pending) else ""
             st.markdown(card_btn_html(c, extra_class=extra), unsafe_allow_html=True)
 
@@ -711,30 +739,27 @@ if st.session_state.fase == "jogo":
         else:
             humano = st.session_state.nomes[st.session_state.humano_idx]
 
-            # IA avança
             if atual != humano and st.session_state.pending_play is None:
                 st.warning("A IA está jogando. Clique para avançar.")
                 if st.button("▶️ Continuar", use_container_width=True):
                     avancar_ate_humano_ou_fim()
                     st.rerun()
 
-            # Sua mão (Premium)
             clicked = render_hand_clickable_streamlit()
 
-            # 1) Se clicou, primeiro dispara animação (sem aplicar jogada ainda)
+            # 1) clicou => dispara animação (sem aplicar ainda)
             if clicked is not None:
                 st.session_state.pending_play = clicked
                 st.rerun()
 
-            # 2) Se existe pending_play, mostramos overlay + aguardamos 0.25s e então aplicamos a jogada
+            # 2) aplica após 0.25s (tempo da animação)
             if st.session_state.pending_play is not None and atual == humano:
                 st.markdown('<div class="playingOverlay">✨ Jogando carta...</div>', unsafe_allow_html=True)
-                time.sleep(0.25)  # tempo da animação
+                time.sleep(0.25)
 
                 carta = st.session_state.pending_play
                 st.session_state.pending_play = None
 
-                # aplica jogada
                 jogar_carta(humano, carta)
                 st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
 
@@ -756,3 +781,4 @@ if st.session_state.fase == "jogo":
         st.markdown("### 🎯 Vazas na rodada")
         for n in st.session_state.nomes:
             st.write(f"• **{n}**: {st.session_state.vazas_rodada.get(n, 0)}")
+
