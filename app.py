@@ -1,6 +1,7 @@
 # app.py
 import random
 import math
+import time
 import streamlit as st
 
 # =========================
@@ -9,7 +10,7 @@ import streamlit as st
 st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="wide")
 
 # =========================
-# CSS PREMIUM (sem JS)
+# CSS PREMIUM (com animação de "sumir da mão")
 # =========================
 APP_CSS = """
 <style>
@@ -60,7 +61,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   pointer-events:none;
 }
 
-/* Carta estática (para mesa) */
+/* Carta estática (mesa / visualização) */
 .card{
   width:76px;
   height:110px;
@@ -89,7 +90,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .handTitle h3{ margin:0; font-size:16px; }
 .hint{ font-size:12px; opacity:.70; font-weight:800; }
 
-/* Botão-carta (clique real no Streamlit) */
+/* Botão-carta (Streamlit nativo) */
 div[data-testid="column"] .stButton > button{
   border-radius: 14px !important;
   border: 1px solid rgba(0,0,0,.18) !important;
@@ -110,7 +111,7 @@ div[data-testid="column"] .stButton > button:disabled{
   box-shadow: 0 6px 14px rgba(0,0,0,.08) !important;
 }
 
-/* Conteúdo dentro do botão */
+/* Conteúdo dentro do botão (o "rosto" da carta) */
 .cardBtnInner{
   width:100%;
   height:118px;
@@ -133,6 +134,27 @@ div[data-testid="column"] .stButton > button:disabled{
   font-size:34px; font-weight:900; opacity:.92;
 }
 
+/* =========================
+   ANIMAÇÃO: carta sumindo da mão
+   ========================= */
+@keyframes flyAway {
+  0%   { transform: translateY(0px) scale(1); opacity: 1; }
+  55%  { transform: translateY(-26px) scale(1.03); opacity: .85; }
+  100% { transform: translateY(-70px) scale(.96); opacity: 0; }
+}
+.flyAway{
+  animation: flyAway .25s ease-in forwards;
+}
+
+/* Overlay rápido de “Jogando...” */
+.playingOverlay{
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border-radius:14px;
+  border:1px solid rgba(0,0,0,.08);
+  background: rgba(255,255,255,.85);
+  font-weight:900;
+}
+
 /* Sidebar */
 .scoreItem{
   display:flex; justify-content:space-between;
@@ -153,9 +175,9 @@ st.markdown(APP_CSS, unsafe_allow_html=True)
 # BARALHO / ORDENAÇÃO
 # =========================
 VALORES = [2,3,4,5,6,7,8,9,10,"J","Q","K","A"]
-PESO_VALOR = {v:i for i,v in enumerate(VALORES)}  # 2 menor, A maior
-COR_NAIPE = {"♦":"#C1121F", "♥":"#C1121F", "♠":"#111827", "♣":"#111827"}  # vermelho/preto
-ORDEM_NAIPE = {"♦":0, "♠":1, "♣":2, "♥":3}  # ouro, espada, paus, copas
+PESO_VALOR = {v:i for i,v in enumerate(VALORES)}
+COR_NAIPE = {"♦":"#C1121F", "♥":"#C1121F", "♠":"#111827", "♣":"#111827"}
+ORDEM_NAIPE = {"♦":0, "♠":1, "♣":2, "♥":3}
 TRUNFO = "♥"
 
 def criar_baralho():
@@ -181,13 +203,13 @@ def carta_html(c):
         f'</div>'
     )
 
-def card_btn_html(c):
-    # HTML dentro do botão (fica lindo e colorido)
+def card_btn_html(c, extra_class=""):
     naipe, valor = c
     cor = COR_NAIPE[naipe]
     vv = valor_str(valor)
+    cls = f"cardBtnInner {extra_class}".strip()
     return f"""
-<div class="cardBtnInner">
+<div class="{cls}">
   <div class="cardBtnTL" style="color:{cor};">{vv}<br/>{naipe}</div>
   <div class="cardBtnMid" style="color:{cor};">{naipe}</div>
   <div class="cardBtnBR" style="color:{cor};">{vv}<br/>{naipe}</div>
@@ -252,6 +274,9 @@ def ss_init():
 
         "log": [],
         "pontuou_rodada": False,
+
+        # Premium: animação "sumir da mão"
+        "pending_play": None,  # carta clicada (tuple)
     }
     for k,v in defaults.items():
         if k not in st.session_state:
@@ -265,15 +290,12 @@ ss_init()
 def distribuir(cartas_alvo: int):
     nomes = st.session_state.nomes
     n = len(nomes)
-
     baralho = criar_baralho()
     random.shuffle(baralho)
 
     usadas = cartas_alvo * n
-    sobras = len(baralho) - usadas
-
+    st.session_state.sobras_monte = len(baralho) - usadas
     st.session_state.cartas_alvo = cartas_alvo
-    st.session_state.sobras_monte = sobras
 
     st.session_state.maos = {nome: [] for nome in nomes}
     for _ in range(cartas_alvo):
@@ -296,6 +318,7 @@ def distribuir(cartas_alvo: int):
     st.session_state.fase = "prognostico"
     st.session_state.log = []
     st.session_state.pontuou_rodada = False
+    st.session_state.pending_play = None
 
 def preparar_prognosticos_anteriores():
     nomes = st.session_state.nomes
@@ -333,14 +356,17 @@ def cartas_validas_para_jogar(nome):
     if not mao:
         return []
 
+    # seguir naipe se puder
     if naipe_base and tem_naipe(mao, naipe_base):
         return [c for c in mao if c[0] == naipe_base]
 
+    # descarte (não tem naipe da vaza)
     if naipe_base and not tem_naipe(mao, naipe_base):
         if primeira_vaza and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
         return mao[:]
 
+    # abrindo vaza
     if naipe_base is None:
         if primeira_vaza:
             if somente_trunfo(mao):
@@ -401,6 +427,7 @@ def avancar_ate_humano_ou_fim():
     ordem = st.session_state.ordem
     limit = 2500
     steps = 0
+
     while steps < limit:
         steps += 1
 
@@ -485,7 +512,7 @@ st.markdown(
 <div class="titleRow">
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
-    <div class="smallMuted">Premium UI • Mesa central • Cartas clicáveis (Streamlit nativo)</div>
+    <div class="smallMuted">Premium UI • Mesa central • Efeito de carta saindo da mão</div>
   </div>
   <div class="badges">
     <span class="badge">Trunfo: ♥</span>
@@ -573,7 +600,7 @@ if st.session_state.fase == "prognostico":
         st.rerun()
 
 # =========================
-# UI: Mesa e mão (clique real)
+# UI: Mesa e mão
 # =========================
 def render_mesa():
     ordem = st.session_state.ordem
@@ -641,18 +668,20 @@ def render_hand_clickable_streamlit():
 
     mao_ord = sorted(mao, key=peso_carta)
 
-    # grid compacto (10 por linha)
     cols = st.columns(10)
     clicked = None
 
+    pending = st.session_state.pending_play
+
     for i, c in enumerate(mao_ord):
-        disabled = (c not in validas) or (atual != humano)
+        disabled = (c not in validas) or (atual != humano) or (pending is not None)
         with cols[i % 10]:
-            # botão real (funciona sempre)
             if st.button(" ", key=f"card_{st.session_state.rodada}_{serialize_card(c)}", disabled=disabled, use_container_width=True):
                 clicked = c
-            # desenha o "rosto" da carta por cima (visual) - dentro do mesmo lugar
-            st.markdown(card_btn_html(c), unsafe_allow_html=True)
+
+            # se esta carta foi a clicada, aplica classe flyAway
+            extra = "flyAway" if (pending is not None and c == pending) else ""
+            st.markdown(card_btn_html(c, extra_class=extra), unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
     return clicked
@@ -676,29 +705,37 @@ if st.session_state.fase == "jogo":
             f"1ª vaza: **{'Sim' if st.session_state.primeira_vaza else 'Não'}**"
         )
 
-        with st.expander("📋 Ver prognósticos da rodada"):
-            st.table({
-                "Jogador": st.session_state.ordem,
-                "Prognóstico": [st.session_state.prognosticos.get(n, "-") for n in st.session_state.ordem]
-            })
-
         if rodada_terminou():
             pontuar_rodada()
             st.success("✅ Rodada finalizada (todos sem cartas). Use o botão no sidebar para ir à próxima.")
         else:
             humano = st.session_state.nomes[st.session_state.humano_idx]
-            if atual != humano:
+
+            # IA avança
+            if atual != humano and st.session_state.pending_play is None:
                 st.warning("A IA está jogando. Clique para avançar.")
                 if st.button("▶️ Continuar", use_container_width=True):
                     avancar_ate_humano_ou_fim()
                     st.rerun()
 
-            # Sua mão (Premium / clique real)
+            # Sua mão (Premium)
             clicked = render_hand_clickable_streamlit()
 
+            # 1) Se clicou, primeiro dispara animação (sem aplicar jogada ainda)
             if clicked is not None:
-                # joga a carta clicada
-                jogar_carta(humano, clicked)
+                st.session_state.pending_play = clicked
+                st.rerun()
+
+            # 2) Se existe pending_play, mostramos overlay + aguardamos 0.25s e então aplicamos a jogada
+            if st.session_state.pending_play is not None and atual == humano:
+                st.markdown('<div class="playingOverlay">✨ Jogando carta...</div>', unsafe_allow_html=True)
+                time.sleep(0.25)  # tempo da animação
+
+                carta = st.session_state.pending_play
+                st.session_state.pending_play = None
+
+                # aplica jogada
+                jogar_carta(humano, carta)
                 st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
 
                 if len(st.session_state.mesa) == len(ordem):
