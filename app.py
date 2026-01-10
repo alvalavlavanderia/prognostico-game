@@ -129,7 +129,7 @@ CSS = """
   }
 
   /* Sua mão embaixo: botões virando cartas */
-  .handZone { display:flex; justify-content:center; }
+  .handZone { display:flex; justify-content:center; flex-wrap: wrap; gap: 10px; }
   .handZone div[data-testid="stButton"] > button {
     width: 76px !important;
     height: 106px !important;
@@ -140,7 +140,7 @@ CSS = """
     padding: 0 !important;
     margin: 0 !important;
     font-weight: 950 !important;
-    font-size: 20px !important;
+    font-size: 18px !important;
     line-height: 1 !important;
     transition: transform .12s ease, opacity .12s ease;
   }
@@ -149,6 +149,15 @@ CSS = """
     opacity: 0.35 !important;
     transform: none !important;
     cursor: not-allowed !important;
+  }
+
+  /* Mão no prognóstico (somente visual) */
+  .handPreview {
+    display:flex;
+    justify-content:center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 6px 4px;
   }
 
   /* Pequena animação */
@@ -221,20 +230,20 @@ def carta_html_face(carta):
       </div>
     """
 
+def mao_preview_html(mao):
+    if not mao:
+        return "<div class='small'>Sem cartas.</div>"
+    cartas = "".join(carta_html_face(c) for c in mao)
+    return f"<div class='handPreview'>{cartas}</div>"
+
 def mesa_html_sem_nomes(mesa, jogadores, mao_nome, vez_nome):
-    # Assentos: top, right, left, bottom (bottom = humano)
-    # Para 4 jogadores fica perfeito. Para mais/menos, a gente simplifica.
     humano = next(j for j in jogadores if j.humano)
 
-    # monta uma ordem de "assentos" baseada na ordem atual da rodada
-    # bottom = humano; top = jogador oposto (se existir)
     others = [j for j in jogadores if j != humano]
-    # fallback
     seat_top = others[0].nome if len(others) > 0 else "-"
     seat_right = others[1].nome if len(others) > 1 else "-"
     seat_left = others[2].nome if len(others) > 2 else "-"
 
-    # destaca mão e vez no nome
     def nome_label(nome):
         extra = []
         if nome == mao_nome:
@@ -244,7 +253,6 @@ def mesa_html_sem_nomes(mesa, jogadores, mao_nome, vez_nome):
         tag = f" ({', '.join(extra)})" if extra else ""
         return f"{nome}{tag}"
 
-    # cartas no centro
     if not mesa:
         cards_html = "<div class='emptyTable'>Mesa vazia — o mão abre a vaza</div>"
     else:
@@ -280,18 +288,15 @@ def cartas_legais(jogador, naipe_base, hearts_broken, primeira_vaza):
     if not mao:
         return []
 
-    # 1ª vaza: trava ♥ (exceto só ♥)
     if primeira_vaza and not somente_copas(mao):
         sem_copas = [c for c in mao if c.naipe != TRUNFO]
         if sem_copas:
             mao = sem_copas
 
-    # seguir naipe se possível
     if naipe_base is not None:
         seguindo = [c for c in mao if c.naipe == naipe_base]
         return seguindo if seguindo else mao
 
-    # mão: não pode abrir ♥ enquanto não quebrou (exceto só ♥)
     if (not hearts_broken) and (not somente_copas(mao)):
         nao_copas = [c for c in mao if c.naipe != TRUNFO]
         if nao_copas:
@@ -536,6 +541,10 @@ elif st.session_state.fase == "prognostico":
         else:
             st.caption("Você é o primeiro a palpitar (ninguém antes de você).")
 
+        # ✅ MOSTRAR SUA MÃO NO PROGNÓSTICO (VISUAL)
+        st.markdown("### 🂡 Suas cartas (visualização)")
+        st.markdown(mao_preview_html(ordenar_mao(humano.mao)), unsafe_allow_html=True)
+
         prog = st.number_input("Seu prognóstico", 0, len(humano.mao), 0, step=1)
         if st.button("Confirmar meu prognóstico", use_container_width=True):
             humano.prognostico = int(prog)
@@ -568,7 +577,7 @@ elif st.session_state.fase == "prognostico":
         st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
-# FASE: JOGADA (MESA CENTRO + MÃO EMBAIXO)
+# FASE: JOGADA
 # =========================
 elif st.session_state.fase == "jogada":
     if st.session_state.indice_jogador >= len(st.session_state.ordem):
@@ -587,7 +596,6 @@ elif st.session_state.fase == "jogada":
     humano = next(j for j in st.session_state.jogadores if j.humano)
     jogador = st.session_state.ordem[st.session_state.indice_jogador]
 
-    # ====== MESA (CENTRO)
     st.markdown("<div class='tablePanel'>", unsafe_allow_html=True)
     st.markdown(
         f"<div class='tableTop'>"
@@ -608,7 +616,6 @@ elif st.session_state.fase == "jogada":
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ====== Ações / sua mão (EMBAIXO)
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
 
     if jogador.humano:
@@ -623,6 +630,7 @@ elif st.session_state.fase == "jogada":
         mao = ordenar_mao(jogador.mao)
 
         st.markdown("<div class='handZone'>", unsafe_allow_html=True)
+
         cols = st.columns(10, gap="small")
         for i, carta in enumerate(mao):
             disabled = (carta.texto() not in legais_set)
@@ -633,13 +641,11 @@ elif st.session_state.fase == "jogada":
                 disabled=disabled
             ):
                 jogar_carta(jogador, carta)
-        st.markdown("</div>", unsafe_allow_html=True)
 
+        st.markdown("</div>", unsafe_allow_html=True)
         st.caption("Cartas inválidas ficam apagadas (travadas).")
     else:
         st.subheader("🤖 Jogada dos adversários…")
-        st.caption("Aguarde: o jogo faz a jogada automática dos bots.")
-
         legais = cartas_legais(
             jogador=jogador,
             naipe_base=st.session_state.naipe_base,
@@ -720,7 +726,7 @@ elif st.session_state.fase == "fim_rodada":
         pontos_rodada = j.vazas + (5 if j.vazas == j.prognostico else 0)
         acertou = "✅" if j.vazas == j.prognostico else "❌"
         st.write(
-            f"**{j.nome}** — Vaz as: {j.vazas} | Prog.: {j.prognostico} {acertou} | "
+            f"**{j.nome}** — Vazas: {j.vazas} | Prog.: {j.prognostico} {acertou} | "
             f"Pontos na rodada: **{pontos_rodada}** | Total: **{j.pontos}**"
         )
 
@@ -746,3 +752,4 @@ elif st.session_state.fase == "fim_rodada":
             resetar_partida()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
