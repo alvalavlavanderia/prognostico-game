@@ -1,7 +1,6 @@
 # app.py
 import random
 import math
-import urllib.parse
 import streamlit as st
 
 # =========================
@@ -10,7 +9,7 @@ import streamlit as st
 st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="wide")
 
 # =========================
-# CSS PREMIUM
+# CSS PREMIUM (sem JS)
 # =========================
 APP_CSS = """
 <style>
@@ -61,7 +60,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   pointer-events:none;
 }
 
-/* Carta */
+/* Carta estática (para mesa) */
 .card{
   width:76px;
   height:110px;
@@ -89,40 +88,50 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .handTitle{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 6px; }
 .handTitle h3{ margin:0; font-size:16px; }
 .hint{ font-size:12px; opacity:.70; font-weight:800; }
-.handRow{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  align-items:flex-end;
-}
 
-/* Cartas clicáveis (Premium JS) */
-.cardLink{
-  display:inline-block;
-  cursor:pointer;
-  transition: transform .10s ease, filter .10s ease;
+/* Botão-carta (clique real no Streamlit) */
+div[data-testid="column"] .stButton > button{
+  border-radius: 14px !important;
+  border: 1px solid rgba(0,0,0,.18) !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f9f9f9 100%) !important;
+  box-shadow: 0 10px 22px rgba(0,0,0,.12) !important;
+  min-height: 118px !important;
+  width: 100% !important;
+  padding: 0 !important;
+  transition: transform .10s ease, box-shadow .10s ease, opacity .10s ease;
 }
-.cardLink:hover{
+div[data-testid="column"] .stButton > button:hover{
   transform: translateY(-4px);
-  filter: saturate(1.05);
+  box-shadow: 0 14px 26px rgba(0,0,0,.16) !important;
 }
-.cardLink.disabled{
-  pointer-events:none;
-  opacity:.28;
-  transform:none;
-  filter:none;
-  cursor:default;
-}
-.cardLink.disabled .card{
-  box-shadow: 0 6px 14px rgba(0,0,0,.08);
+div[data-testid="column"] .stButton > button:disabled{
+  opacity: .28 !important;
+  transform:none !important;
+  box-shadow: 0 6px 14px rgba(0,0,0,.08) !important;
 }
 
-/* Pop */
-@keyframes popIn {
-  0% { transform: translate(-50%,-50%) scale(.92); opacity: .0; }
-  100% { transform: translate(-50%,-50%) scale(1.0); opacity: 1; }
+/* Conteúdo dentro do botão */
+.cardBtnInner{
+  width:100%;
+  height:118px;
+  position:relative;
+  border-radius:14px;
+  overflow:hidden;
 }
-.playCard.pop { animation: popIn .14s ease-out; }
+.cardBtnTL{
+  position:absolute; top:10px; left:10px;
+  font-weight:900; font-size:14px; line-height:14px;
+}
+.cardBtnBR{
+  position:absolute; bottom:10px; right:10px;
+  font-weight:900; font-size:14px; line-height:14px;
+  transform: rotate(180deg);
+}
+.cardBtnMid{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:34px; font-weight:900; opacity:.92;
+}
 
 /* Sidebar */
 .scoreItem{
@@ -145,7 +154,7 @@ st.markdown(APP_CSS, unsafe_allow_html=True)
 # =========================
 VALORES = [2,3,4,5,6,7,8,9,10,"J","Q","K","A"]
 PESO_VALOR = {v:i for i,v in enumerate(VALORES)}  # 2 menor, A maior
-COR_NAIPE = {"♦":"red", "♥":"red", "♠":"black", "♣":"black"}
+COR_NAIPE = {"♦":"#C1121F", "♥":"#C1121F", "♠":"#111827", "♣":"#111827"}  # vermelho/preto
 ORDEM_NAIPE = {"♦":0, "♠":1, "♣":2, "♥":3}  # ouro, espada, paus, copas
 TRUNFO = "♥"
 
@@ -171,6 +180,19 @@ def carta_html(c):
         f'<div class="br" style="color:{cor};">{vv}<br/>{naipe}</div>'
         f'</div>'
     )
+
+def card_btn_html(c):
+    # HTML dentro do botão (fica lindo e colorido)
+    naipe, valor = c
+    cor = COR_NAIPE[naipe]
+    vv = valor_str(valor)
+    return f"""
+<div class="cardBtnInner">
+  <div class="cardBtnTL" style="color:{cor};">{vv}<br/>{naipe}</div>
+  <div class="cardBtnMid" style="color:{cor};">{naipe}</div>
+  <div class="cardBtnBR" style="color:{cor};">{vv}<br/>{naipe}</div>
+</div>
+"""
 
 def serialize_card(c):
     naipe, valor = c
@@ -205,7 +227,6 @@ def ss_init():
 
         "pontos": {},
         "vazas_rodada": {},
-
         "maos": {},
         "rodada": 1,
 
@@ -231,8 +252,6 @@ def ss_init():
 
         "log": [],
         "pontuou_rodada": False,
-
-        "last_play": None,
     }
     for k,v in defaults.items():
         if k not in st.session_state:
@@ -264,7 +283,6 @@ def distribuir(cartas_alvo: int):
     for nome in nomes:
         st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=peso_carta)
 
-    # mão da rodada
     if not st.session_state.mao_primeira_sorteada:
         st.session_state.mao_da_rodada = random.randint(0, n - 1)
         st.session_state.mao_primeira_sorteada = True
@@ -275,18 +293,15 @@ def distribuir(cartas_alvo: int):
     st.session_state.progn_pre = {}
     st.session_state.progn_pos = {}
     st.session_state.vazas_rodada = {nome: 0 for nome in nomes}
-
     st.session_state.fase = "prognostico"
     st.session_state.log = []
     st.session_state.pontuou_rodada = False
-    st.session_state.last_play = None
 
 def preparar_prognosticos_anteriores():
     nomes = st.session_state.nomes
     ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
     humano = nomes[st.session_state.humano_idx]
     pos_h = ordem.index(humano)
-
     prev = ordem[:pos_h]
     st.session_state.progn_pre = {n: random.randint(0, len(st.session_state.maos[n])) for n in prev}
 
@@ -295,20 +310,17 @@ def preparar_prognosticos_posteriores():
     ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
     humano = nomes[st.session_state.humano_idx]
     pos_h = ordem.index(humano)
-
     post = ordem[pos_h+1:]
     st.session_state.progn_pos = {n: random.randint(0, len(st.session_state.maos[n])) for n in post}
 
 def iniciar_fase_jogo():
     nomes = st.session_state.nomes
     st.session_state.ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
-
     st.session_state.turn_idx = 0
     st.session_state.naipe_base = None
     st.session_state.mesa = []
     st.session_state.primeira_vaza = True
     st.session_state.copas_quebrada = False
-
     st.session_state.fase = "jogo"
     st.session_state.log.append(f"🎬 Início da rodada — mão: {st.session_state.ordem[0]}.")
 
@@ -321,23 +333,19 @@ def cartas_validas_para_jogar(nome):
     if not mao:
         return []
 
-    # seguir naipe
     if naipe_base and tem_naipe(mao, naipe_base):
         return [c for c in mao if c[0] == naipe_base]
 
-    # descartar (não tem naipe da vaza)
     if naipe_base and not tem_naipe(mao, naipe_base):
         if primeira_vaza and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
         return mao[:]
 
-    # abrindo vaza
     if naipe_base is None:
         if primeira_vaza:
             if somente_trunfo(mao):
                 return mao[:]
             return [c for c in mao if c[0] != TRUNFO]
-
         if not copas_quebrada and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
 
@@ -345,15 +353,11 @@ def cartas_validas_para_jogar(nome):
 
 def jogar_carta(nome, carta):
     st.session_state.maos[nome].remove(carta)
-
     if st.session_state.naipe_base is None:
         st.session_state.naipe_base = carta[0]
-
     if carta[0] == TRUNFO and not st.session_state.primeira_vaza:
         st.session_state.copas_quebrada = True
-
     st.session_state.mesa.append((nome, carta))
-    st.session_state.last_play = (nome, carta)
     st.session_state.log.append(f"🃏 {nome} jogou {valor_str(carta[1])}{carta[0]}.")
 
 def vencedor_da_vaza():
@@ -369,7 +373,6 @@ def fechar_vaza():
     win = vencedor_da_vaza()
     st.session_state.vazas_rodada[win] += 1
     st.session_state.log.append(f"🏅 {win} venceu a vaza.")
-
     ordem = st.session_state.ordem
     st.session_state.turn_idx = ordem.index(win)
     st.session_state.mesa = []
@@ -396,7 +399,6 @@ def ai_escolhe_carta(nome):
 def avancar_ate_humano_ou_fim():
     humano = st.session_state.nomes[st.session_state.humano_idx]
     ordem = st.session_state.ordem
-
     limit = 2500
     steps = 0
     while steps < limit:
@@ -434,53 +436,6 @@ def start_next_round():
     prox = st.session_state.cartas_alvo - 1
     distribuir(prox)
     preparar_prognosticos_anteriores()
-
-# =========================
-# QUERY PARAM HANDLER (Premium click)
-# =========================
-def consume_play_query():
-    qp = st.experimental_get_query_params()
-    if "play" not in qp:
-        return False
-
-    raw = qp.get("play", [""])[0]
-    st.experimental_set_query_params()  # limpa
-
-    if not raw or st.session_state.fase != "jogo":
-        return False
-
-    humano = st.session_state.nomes[st.session_state.humano_idx]
-    ordem = st.session_state.ordem
-    atual = ordem[st.session_state.turn_idx]
-    if atual != humano:
-        return False
-
-    try:
-        carta = deserialize_card(raw)
-    except Exception:
-        return False
-
-    mao = st.session_state.maos[humano]
-    if carta not in mao:
-        return False
-
-    if carta not in cartas_validas_para_jogar(humano):
-        return False
-
-    jogar_carta(humano, carta)
-    st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
-
-    if len(st.session_state.mesa) == len(ordem):
-        fechar_vaza()
-
-    avancar_ate_humano_ou_fim()
-    if rodada_terminou():
-        pontuar_rodada()
-
-    return True
-
-if consume_play_query():
-    st.rerun()
 
 # =========================
 # SIDEBAR
@@ -530,7 +485,7 @@ st.markdown(
 <div class="titleRow">
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
-    <div class="smallMuted">Premium UI • Mesa central • Cartas clicáveis • Animação leve</div>
+    <div class="smallMuted">Premium UI • Mesa central • Cartas clicáveis (Streamlit nativo)</div>
   </div>
   <div class="badges">
     <span class="badge">Trunfo: ♥</span>
@@ -587,10 +542,9 @@ if st.session_state.fase == "prognostico":
     st.markdown(f"### 📌 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador")
 
     mao_humano = st.session_state.maos.get(humano_nome, [])
-
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
     st.markdown('<div class="handTitle"><h3>🃏 Suas cartas (prognóstico)</h3><div class="hint">Ordenadas por naipe e valor</div></div>', unsafe_allow_html=True)
-    st.markdown('<div class="handRow">' + "".join(carta_html(c) for c in sorted(mao_humano, key=peso_carta)) + "</div>", unsafe_allow_html=True)
+    st.markdown('<div style="display:flex; flex-wrap:wrap; gap:10px;">' + "".join(carta_html(c) for c in sorted(mao_humano, key=peso_carta)) + "</div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("#### ✅ Prognósticos visíveis (anteriores na mesa)")
@@ -619,7 +573,7 @@ if st.session_state.fase == "prognostico":
         st.rerun()
 
 # =========================
-# UI: Mesa e mão premium
+# UI: Mesa e mão (clique real)
 # =========================
 def render_mesa():
     ordem = st.session_state.ordem
@@ -674,7 +628,7 @@ def render_mesa():
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-def render_hand_clickable():
+def render_hand_clickable_streamlit():
     ordem = st.session_state.ordem
     humano = st.session_state.nomes[st.session_state.humano_idx]
     atual = ordem[st.session_state.turn_idx]
@@ -685,34 +639,23 @@ def render_hand_clickable():
     hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez"
     st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
 
-    # JS: atualiza query param na URL atual, sem perder caminho do app e sem abrir aba
-    # (isso corrige exatamente seu problema)
-    parts = ['<div class="handRow">']
-    for c in sorted(mao, key=peso_carta):
-        cid = serialize_card(c)
-        cid_enc = urllib.parse.quote(cid, safe="")  # segura para URL
+    mao_ord = sorted(mao, key=peso_carta)
+
+    # grid compacto (10 por linha)
+    cols = st.columns(10)
+    clicked = None
+
+    for i, c in enumerate(mao_ord):
         disabled = (c not in validas) or (atual != humano)
+        with cols[i % 10]:
+            # botão real (funciona sempre)
+            if st.button(" ", key=f"card_{st.session_state.rodada}_{serialize_card(c)}", disabled=disabled, use_container_width=True):
+                clicked = c
+            # desenha o "rosto" da carta por cima (visual) - dentro do mesmo lugar
+            st.markdown(card_btn_html(c), unsafe_allow_html=True)
 
-        if disabled:
-            parts.append(f'<div class="cardLink disabled">{carta_html(c)}</div>')
-        else:
-            parts.append(
-                f"""
-<div class="cardLink" onclick="
-  (function(){{
-    const url = new URL(window.location.href);
-    url.searchParams.set('play', '{cid_enc}');
-    window.location.href = url.toString();
-  }})()
-">
-  {carta_html(c)}
-</div>
-"""
-            )
-    parts.append("</div>")
-
-    st.markdown("".join(parts), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+    return clicked
 
 # =========================
 # JOGO
@@ -750,7 +693,22 @@ if st.session_state.fase == "jogo":
                     avancar_ate_humano_ou_fim()
                     st.rerun()
 
-            render_hand_clickable()
+            # Sua mão (Premium / clique real)
+            clicked = render_hand_clickable_streamlit()
+
+            if clicked is not None:
+                # joga a carta clicada
+                jogar_carta(humano, clicked)
+                st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
+
+                if len(st.session_state.mesa) == len(ordem):
+                    fechar_vaza()
+
+                avancar_ate_humano_ou_fim()
+                if rodada_terminou():
+                    pontuar_rodada()
+
+                st.rerun()
 
     with col2:
         st.markdown("### 🧾 Registro")
@@ -761,4 +719,3 @@ if st.session_state.fase == "jogo":
         st.markdown("### 🎯 Vazas na rodada")
         for n in st.session_state.nomes:
             st.write(f"• **{n}**: {st.session_state.vazas_rodada.get(n, 0)}")
-
