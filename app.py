@@ -1,6 +1,7 @@
 # app.py
 import random
 import math
+import urllib.parse
 import streamlit as st
 
 # =========================
@@ -13,7 +14,6 @@ st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="
 # =========================
 APP_CSS = """
 <style>
-/* Layout geral: menos scroll */
 .block-container { padding-top: .8rem !important; padding-bottom: .8rem !important; max-width: 1200px; }
 header[data-testid="stHeader"] { height: .4rem; }
 div[data-testid="stSidebarContent"] { padding-top: 1rem; }
@@ -23,9 +23,9 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .titleRow{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 6px; }
 .titleRow h1{ margin:0; font-size: 28px; }
 .badges{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-.badge{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(0,0,0,.06); font-size:12px; font-weight:700; }
+.badge{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(0,0,0,.06); font-size:12px; font-weight:800; }
 
-/* Mesa (centro) */
+/* Mesa */
 .mesaWrap{ margin-top: 6px; }
 .mesa{
   border-radius:20px;
@@ -61,7 +61,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   pointer-events:none;
 }
 
-/* Card visual */
+/* Carta */
 .card{
   width:76px;
   height:110px;
@@ -76,7 +76,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .card .br{ position:absolute; bottom:8px; right:8px; font-weight:900; font-size:14px; line-height:14px; transform:rotate(180deg); }
 .card .mid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:900; opacity:.92; }
 
-/* MÃO DO JOGADOR (dock embaixo) */
+/* Dock da mão */
 .handDock{
   margin-top: 10px;
   border-radius: 18px;
@@ -88,7 +88,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 }
 .handTitle{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 6px; }
 .handTitle h3{ margin:0; font-size:16px; }
-.hint{ font-size:12px; opacity:.70; font-weight:700; }
+.hint{ font-size:12px; opacity:.70; font-weight:800; }
 .handRow{
   display:flex;
   flex-wrap:wrap;
@@ -96,34 +96,35 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   align-items:flex-end;
 }
 
-/* Cartas clicáveis (Premium) */
-a.cardLink{
-  text-decoration:none !important;
+/* Cartas clicáveis (Premium JS) */
+.cardLink{
   display:inline-block;
+  cursor:pointer;
   transition: transform .10s ease, filter .10s ease;
 }
-a.cardLink:hover{
+.cardLink:hover{
   transform: translateY(-4px);
   filter: saturate(1.05);
 }
-a.cardLink.disabled{
+.cardLink.disabled{
   pointer-events:none;
   opacity:.28;
   transform:none;
   filter:none;
+  cursor:default;
 }
-a.cardLink.disabled .card{
+.cardLink.disabled .card{
   box-shadow: 0 6px 14px rgba(0,0,0,.08);
 }
 
-/* Pequena animação de carta jogada */
+/* Pop */
 @keyframes popIn {
   0% { transform: translate(-50%,-50%) scale(.92); opacity: .0; }
   100% { transform: translate(-50%,-50%) scale(1.0); opacity: 1; }
 }
 .playCard.pop { animation: popIn .14s ease-out; }
 
-/* Sidebar placar */
+/* Sidebar */
 .scoreItem{
   display:flex; justify-content:space-between;
   padding:8px 10px;
@@ -135,12 +136,6 @@ a.cardLink.disabled .card{
 .scoreName{ font-weight:900; }
 .scorePts{ font-weight:900; }
 .smallMuted{ opacity:.70; font-size:12px; }
-
-/* Remove tabelas pesadas */
-table { font-size: 13px; }
-
-/* Mensagens compactas */
-div[data-testid="stAlert"]{ border-radius: 14px; }
 </style>
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
@@ -178,7 +173,6 @@ def carta_html(c):
     )
 
 def serialize_card(c):
-    # ex: "♥|A" ou "♦|10"
     naipe, valor = c
     return f"{naipe}|{valor}"
 
@@ -238,7 +232,7 @@ def ss_init():
         "log": [],
         "pontuou_rodada": False,
 
-        "last_play": None,   # (nome, carta) para animar
+        "last_play": None,
     }
     for k,v in defaults.items():
         if k not in st.session_state:
@@ -247,7 +241,7 @@ def ss_init():
 ss_init()
 
 # =========================
-# REGRAS / JOGO
+# GAME CORE
 # =========================
 def distribuir(cartas_alvo: int):
     nomes = st.session_state.nomes
@@ -309,7 +303,7 @@ def iniciar_fase_jogo():
     nomes = st.session_state.nomes
     st.session_state.ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
 
-    st.session_state.turn_idx = 0  # começa no mão
+    st.session_state.turn_idx = 0
     st.session_state.naipe_base = None
     st.session_state.mesa = []
     st.session_state.primeira_vaza = True
@@ -327,26 +321,23 @@ def cartas_validas_para_jogar(nome):
     if not mao:
         return []
 
-    # 1) Seguir naipe se puder
+    # seguir naipe
     if naipe_base and tem_naipe(mao, naipe_base):
         return [c for c in mao if c[0] == naipe_base]
 
-    # 2) Se NÃO tem o naipe da vaza (vai descartar):
+    # descartar (não tem naipe da vaza)
     if naipe_base and not tem_naipe(mao, naipe_base):
-        # 1ª vaza: NÃO pode jogar ♥, exceto se só tiver ♥
         if primeira_vaza and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
         return mao[:]
 
-    # 3) Abrindo vaza:
+    # abrindo vaza
     if naipe_base is None:
-        # 1ª vaza: NÃO abre com ♥, exceto se só ♥
         if primeira_vaza:
             if somente_trunfo(mao):
                 return mao[:]
             return [c for c in mao if c[0] != TRUNFO]
 
-        # demais: não abre com ♥ se não quebrou, exceto se só ♥
         if not copas_quebrada and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
 
@@ -358,7 +349,6 @@ def jogar_carta(nome, carta):
     if st.session_state.naipe_base is None:
         st.session_state.naipe_base = carta[0]
 
-    # quebra ♥ apenas após 1ª vaza
     if carta[0] == TRUNFO and not st.session_state.primeira_vaza:
         st.session_state.copas_quebrada = True
 
@@ -382,7 +372,6 @@ def fechar_vaza():
 
     ordem = st.session_state.ordem
     st.session_state.turn_idx = ordem.index(win)
-
     st.session_state.mesa = []
     st.session_state.naipe_base = None
     st.session_state.primeira_vaza = False
@@ -413,28 +402,23 @@ def avancar_ate_humano_ou_fim():
     while steps < limit:
         steps += 1
 
-        # fecha vaza se completa
         if len(st.session_state.mesa) == len(ordem):
             fechar_vaza()
             continue
 
-        # fim de rodada
         if rodada_terminou():
             pontuar_rodada()
             return
 
         atual = ordem[st.session_state.turn_idx]
 
-        # pula quem não tem carta
         if len(st.session_state.maos[atual]) == 0:
             st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
             continue
 
-        # se é o humano e ele tem cartas, para para UI
         if atual == humano and len(st.session_state.maos[humano]) > 0:
             return
 
-        # IA joga
         carta = ai_escolhe_carta(atual)
         if carta is None:
             st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
@@ -442,8 +426,6 @@ def avancar_ate_humano_ou_fim():
 
         jogar_carta(atual, carta)
         st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
-
-    st.session_state.log.append("⚠️ Proteção: limite de automação atingido.")
 
 def start_next_round():
     if st.session_state.cartas_alvo <= 1:
@@ -457,25 +439,19 @@ def start_next_round():
 # QUERY PARAM HANDLER (Premium click)
 # =========================
 def consume_play_query():
-    # captura ?play=... e executa jogada se for válida
     qp = st.experimental_get_query_params()
     if "play" not in qp:
         return False
 
     raw = qp.get("play", [""])[0]
-    # limpa para não repetir
-    st.experimental_set_query_params()
+    st.experimental_set_query_params()  # limpa
 
-    if not raw:
-        return False
-
-    if st.session_state.fase != "jogo":
+    if not raw or st.session_state.fase != "jogo":
         return False
 
     humano = st.session_state.nomes[st.session_state.humano_idx]
     ordem = st.session_state.ordem
     atual = ordem[st.session_state.turn_idx]
-
     if atual != humano:
         return False
 
@@ -484,31 +460,25 @@ def consume_play_query():
     except Exception:
         return False
 
-    # valida se está na mão e se é válida
     mao = st.session_state.maos[humano]
     if carta not in mao:
         return False
 
-    validas = cartas_validas_para_jogar(humano)
-    if carta not in validas:
+    if carta not in cartas_validas_para_jogar(humano):
         return False
 
-    # joga
     jogar_carta(humano, carta)
     st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
 
-    # fecha vaza se completou
     if len(st.session_state.mesa) == len(ordem):
         fechar_vaza()
 
-    # deixa a IA avançar até voltar
     avancar_ate_humano_ou_fim()
     if rodada_terminou():
         pontuar_rodada()
 
     return True
 
-# Se uma carta foi clicada, processa e dá rerun
 if consume_play_query():
     st.rerun()
 
@@ -616,8 +586,8 @@ if st.session_state.fase == "prognostico":
     ordem_preview = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
     st.markdown(f"### 📌 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador")
 
-    # sua mão (visual)
     mao_humano = st.session_state.maos.get(humano_nome, [])
+
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
     st.markdown('<div class="handTitle"><h3>🃏 Suas cartas (prognóstico)</h3><div class="hint">Ordenadas por naipe e valor</div></div>', unsafe_allow_html=True)
     st.markdown('<div class="handRow">' + "".join(carta_html(c) for c in sorted(mao_humano, key=peso_carta)) + "</div>", unsafe_allow_html=True)
@@ -649,7 +619,7 @@ if st.session_state.fase == "prognostico":
         st.rerun()
 
 # =========================
-# MESA + JOGO
+# UI: Mesa e mão premium
 # =========================
 def render_mesa():
     ordem = st.session_state.ordem
@@ -687,13 +657,6 @@ def render_mesa():
         y = cy + (ry*0.55)*math.sin(ang)
         plays_html += f'<div class="playCard" style="left:{x}%; top:{y}%;">{carta_html(carta)}</div>'
 
-    # animação da última carta jogada (apenas visual)
-    if st.session_state.last_play and st.session_state.mesa:
-        # a última carta já está no plays_html; aplicamos pop na última via CSS class
-        # (simples: duplicar um "pop" bem discreto no centro)
-        _, last_c = st.session_state.last_play
-        plays_html += f'<div class="playCard pop" style="left:50%; top:50%;">{carta_html(last_c)}</div>'
-
     centro_txt = "Aguardando jogada" if not st.session_state.mesa else "Vaza em andamento"
     if st.session_state.naipe_base:
         centro_txt = f"Naipe da vaza: {st.session_state.naipe_base}"
@@ -719,26 +682,40 @@ def render_hand_clickable():
     validas = set(cartas_validas_para_jogar(humano))
 
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
-    title = "🂠 Sua mão"
     hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez"
-    st.markdown(f'<div class="handTitle"><h3>{title}</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
 
-    # mão como HTML clicável
+    # JS: atualiza query param na URL atual, sem perder caminho do app e sem abrir aba
+    # (isso corrige exatamente seu problema)
     parts = ['<div class="handRow">']
     for c in sorted(mao, key=peso_carta):
         cid = serialize_card(c)
+        cid_enc = urllib.parse.quote(cid, safe="")  # segura para URL
         disabled = (c not in validas) or (atual != humano)
+
         if disabled:
-            parts.append(f'<a class="cardLink disabled">{carta_html(c)}</a>')
+            parts.append(f'<div class="cardLink disabled">{carta_html(c)}</div>')
         else:
-            parts.append(f'<a class="cardLink" href="?play={cid}">{carta_html(c)}</a>')
+            parts.append(
+                f"""
+<div class="cardLink" onclick="
+  (function(){{
+    const url = new URL(window.location.href);
+    url.searchParams.set('play', '{cid_enc}');
+    window.location.href = url.toString();
+  }})()
+">
+  {carta_html(c)}
+</div>
+"""
+            )
     parts.append("</div>")
 
     st.markdown("".join(parts), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
-# JOGO (vazas)
+# JOGO
 # =========================
 if st.session_state.fase == "jogo":
     st.markdown(f"### 🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador")
@@ -766,7 +743,6 @@ if st.session_state.fase == "jogo":
             pontuar_rodada()
             st.success("✅ Rodada finalizada (todos sem cartas). Use o botão no sidebar para ir à próxima.")
         else:
-            # se não for sua vez, deixe a IA avançar com botão
             humano = st.session_state.nomes[st.session_state.humano_idx]
             if atual != humano:
                 st.warning("A IA está jogando. Clique para avançar.")
@@ -774,7 +750,6 @@ if st.session_state.fase == "jogo":
                     avancar_ate_humano_ou_fim()
                     st.rerun()
 
-            # mão sempre visível e clicável (Premium)
             render_hand_clickable()
 
     with col2:
@@ -786,3 +761,4 @@ if st.session_state.fase == "jogo":
         st.markdown("### 🎯 Vazas na rodada")
         for n in st.session_state.nomes:
             st.write(f"• **{n}**: {st.session_state.vazas_rodada.get(n, 0)}")
+
