@@ -1,129 +1,140 @@
 import streamlit as st
 import random
+import streamlit.components.v1 as components
 
 # =========================
 # CONFIG
 # =========================
 st.set_page_config(page_title="Jogo de Prognóstico", layout="wide")
 
-st.markdown(
+CSS = """
+<style>
+  .block-container { padding-top: 0.5rem; padding-bottom: 0.35rem; max-width: 1500px; }
+  h1 { margin: 0.2rem 0 0.2rem 0; }
+  h2, h3 { margin: 0.55rem 0 0.3rem 0; }
+  footer { visibility: hidden; }
+
+  /* Painéis */
+  .panel {
+    border: 1px solid rgba(60,60,60,.10);
+    border-radius: 18px;
+    padding: 14px;
+    background: rgba(255,255,255,.80);
+    box-shadow: 0 1px 8px rgba(0,0,0,.05);
+  }
+  .chip {
+    display:inline-block; padding: 6px 10px; border-radius: 999px;
+    background: rgba(0,0,0,0.06); margin-right: 6px; font-weight: 800;
+  }
+  .small { font-size: 12px; opacity: 0.85; }
+
+  /* Mesa central */
+  .tableWrap {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:10px;
+    padding: 8px 6px;
+  }
+  .tableTitle { font-weight: 900; opacity: 0.9; }
+  .tableCards {
+    display:flex; flex-wrap:wrap; justify-content:center; gap:10px;
+    min-height: 88px;
+    width: 100%;
+  }
+
+  /* Cartas (visual) - para HTML (mesa/histórico) */
+  .cardFace {
+    width: 64px; height: 90px;
+    border-radius: 14px;
+    border: 1px solid rgba(30,30,30,.18);
+    background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,248,248,0.98) 100%);
+    box-shadow: 0 2px 10px rgba(0,0,0,.08);
+    position: relative;
+    overflow: hidden;
+    animation: fadeInUp .18s ease-out both;
+  }
+  .cardFace:hover { transform: translateY(-2px); transition: .12s ease; }
+
+  .cornerTL, .cornerBR {
+    position:absolute;
+    font-weight: 950;
+    font-size: 15px;
+    line-height: 1;
+  }
+  .cornerTL { top: 8px; left: 9px; text-align:left; }
+  .cornerBR { bottom: 8px; right: 9px; text-align:right; transform: rotate(180deg); }
+
+  .suitCenter {
+    position:absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    font-size: 30px;
+    font-weight: 950;
+    opacity: 0.9;
+  }
+
+  .nameTag {
+    margin-top: 4px;
+    text-align:center;
+    font-size: 12px;
+    font-weight: 800;
+    opacity: 0.9;
+  }
+
+  /* Botões virando cartas (mão do jogador) */
+  .handZone div[data-testid="stButton"] > button {
+    width: 64px !important;
+    height: 90px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(30,30,30,.18) !important;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,248,248,0.98) 100%) !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-weight: 950 !important;
+    font-size: 18px !important;
+    line-height: 1 !important;
+    transition: transform .12s ease, opacity .12s ease;
+  }
+  .handZone div[data-testid="stButton"] > button:hover {
+    transform: translateY(-2px);
+  }
+  .handZone div[data-testid="stButton"] > button:disabled {
+    opacity: 0.35 !important;
+    transform: none !important;
+    cursor: not-allowed !important;
+  }
+
+  /* Pequena animação */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Compactar sidebar */
+  section[data-testid="stSidebar"] .block-container { padding-top: 0.6rem; }
+</style>
+"""
+
+st.markdown(CSS, unsafe_allow_html=True)
+
+def render_html_fragment(html_fragment: str, height: int = 160):
+    """Renderiza HTML de forma estável no Streamlit sem virar texto."""
+    full = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>{CSS}</head>
+    <body style="margin:0; padding:0; font-family: sans-serif;">
+      {html_fragment}
+    </body>
+    </html>
     """
-    <style>
-      .block-container { padding-top: 0.5rem; padding-bottom: 0.35rem; max-width: 1500px; }
-      h1 { margin: 0.2rem 0 0.2rem 0; }
-      h2, h3 { margin: 0.55rem 0 0.3rem 0; }
-      footer { visibility: hidden; }
-
-      /* Painéis */
-      .panel {
-        border: 1px solid rgba(60,60,60,.10);
-        border-radius: 18px;
-        padding: 14px;
-        background: rgba(255,255,255,.80);
-        box-shadow: 0 1px 8px rgba(0,0,0,.05);
-      }
-      .chip {
-        display:inline-block; padding: 6px 10px; border-radius: 999px;
-        background: rgba(0,0,0,0.06); margin-right: 6px; font-weight: 800;
-      }
-      .small { font-size: 12px; opacity: 0.85; }
-
-      /* Mesa central */
-      .tableWrap {
-        display:flex; flex-direction:column; align-items:center; justify-content:center;
-        gap:10px;
-        padding: 8px 6px;
-      }
-      .tableTitle { font-weight: 900; opacity: 0.9; }
-      .tableCards {
-        display:flex; flex-wrap:wrap; justify-content:center; gap:10px;
-        min-height: 88px;
-        width: 100%;
-      }
-
-      /* Cartas (visual) */
-      .cardFace {
-        width: 64px; height: 90px;
-        border-radius: 14px;
-        border: 1px solid rgba(30,30,30,.18);
-        background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,248,248,0.98) 100%);
-        box-shadow: 0 2px 10px rgba(0,0,0,.08);
-        position: relative;
-        overflow: hidden;
-
-        animation: fadeInUp .18s ease-out both;
-      }
-      .cardFace:hover { transform: translateY(-2px); transition: .12s ease; }
-
-      .cornerTL, .cornerBR {
-        position:absolute;
-        font-weight: 950;
-        font-size: 15px;
-        line-height: 1;
-      }
-      .cornerTL { top: 8px; left: 9px; text-align:left; }
-      .cornerBR { bottom: 8px; right: 9px; text-align:right; transform: rotate(180deg); }
-
-      .suitCenter {
-        position:absolute;
-        top: 50%; left: 50%;
-        transform: translate(-50%,-50%);
-        font-size: 30px;
-        font-weight: 950;
-        opacity: 0.9;
-      }
-
-      .nameTag {
-        margin-top: 4px;
-        text-align:center;
-        font-size: 12px;
-        font-weight: 800;
-        opacity: 0.9;
-      }
-
-      /* Cartas clicáveis (botão com cara de carta) */
-      div.stButton > button.cardBtn {
-        width: 64px !important;
-        height: 90px !important;
-        padding: 0 !important;
-        border-radius: 14px !important;
-        border: 1px solid rgba(30,30,30,.18) !important;
-        background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,248,248,0.98) 100%) !important;
-        box-shadow: 0 2px 10px rgba(0,0,0,.08) !important;
-        font-weight: 950 !important;
-        position: relative !important;
-        overflow: hidden !important;
-        animation: fadeInUp .18s ease-out both;
-      }
-      div.stButton > button.cardBtn:hover {
-        transform: translateY(-2px) !important;
-        transition: .12s ease !important;
-      }
-      div.stButton > button.cardBtn:disabled {
-        opacity: 0.35 !important;
-        box-shadow: none !important;
-        transform: none !important;
-      }
-
-      /* Pequena animação */
-      @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(4px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      /* Compactar sidebar */
-      section[data-testid="stSidebar"] .block-container { padding-top: 0.6rem; }
-
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+    components.html(full, height=height, scrolling=False)
 
 # =========================
 # CONSTANTES
 # =========================
 TRUNFO = "♥"
-NAIPES = ["♦", "♠", "♣", "♥"]  # visual: ouro, espada, paus, copas
+NAIPES = ["♦", "♠", "♣", "♥"]  # ouro, espada, paus, copas
 NAIPE_ORDEM = {"♦": 0, "♠": 1, "♣": 2, "♥": 3}
 NAIPE_COR = {"♦": "red", "♥": "red", "♠": "black", "♣": "black"}
 
@@ -181,6 +192,9 @@ def carta_html_face(carta, show_name=None):
       </div>
     """
 
+def mao_html(mao):
+    return "<div class='tableCards'>" + "".join([carta_html_face(c) for c in ordenar_mao(mao)]) + "</div>"
+
 def mesa_html(mesa):
     if not mesa:
         return "<div class='small'>Mesa vazia — o mão abre a vaza.</div>"
@@ -197,7 +211,7 @@ def cartas_legais(jogador, naipe_base, hearts_broken, primeira_vaza):
     if not mao:
         return []
 
-    # 1ª vaza: trava ♥ geral (exceto só ♥)
+    # 1ª vaza: trava ♥ (exceto só ♥)
     if primeira_vaza and not somente_copas(mao):
         sem_copas = [c for c in mao if c.naipe != TRUNFO]
         if sem_copas:
@@ -237,7 +251,7 @@ def melhor_rank_na_mesa(mesa, naipe_base):
     return max(rank_carta_para_vaza(x["carta"], naipe_base) for x in mesa)
 
 # =========================
-# IA (mais esperta)
+# IA
 # =========================
 def escolher_carta_ia(jogador, legais, naipe_base, mesa):
     legais = ordenar_mao(legais)
@@ -245,7 +259,6 @@ def escolher_carta_ia(jogador, legais, naipe_base, mesa):
     falta = alvo - jogador.vazas
     quer_ganhar = falta > 0
 
-    # mão abrindo
     if not mesa:
         if quer_ganhar:
             return max(legais, key=lambda c: rank_carta_para_vaza(c, c.naipe))
@@ -295,6 +308,11 @@ def pontuar_rodada_uma_vez():
         j.pontos += pontos_rodada
     st.session_state.rodada_pontuada = True
 
+def simbolo_colorido(carta: Carta) -> str:
+    """Texto curto com cor (para o botão-carta)."""
+    cor = NAIPE_COR[carta.naipe]
+    return f"{carta.valor}{carta.naipe}", cor
+
 # =========================
 # ESTADO
 # =========================
@@ -313,7 +331,7 @@ defaults = {
     "numero_rodada": 1,
     "rodada_pontuada": False,
     "primeira_vaza": True,
-    "start_idx": None,  # 1ª aleatório, depois gira
+    "start_idx": None,
     "bid_idx": 0,
 }
 for k, v in defaults.items():
@@ -391,7 +409,7 @@ if st.session_state.fase == "inicio":
         st.session_state.jogadores = [Jogador(nome, humano=(i == 0)) for i, nome in enumerate(lista)]
         st.session_state.rodada_atual = int(cartas_por_jogador)
         st.session_state.numero_rodada = 1
-        st.session_state.start_idx = None  # 1ª rodada aleatória
+        st.session_state.start_idx = None
         st.session_state.fase = "distribuir"
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
@@ -431,7 +449,7 @@ elif st.session_state.fase == "distribuir":
     st.rerun()
 
 # =========================
-# FASE: PROGNÓSTICO (mostra só anteriores, se você for pé mostra todos)
+# FASE: PROGNÓSTICO
 # =========================
 elif st.session_state.fase == "prognostico":
     humano = next(j for j in st.session_state.jogadores if j.humano)
@@ -443,7 +461,6 @@ elif st.session_state.fase == "prognostico":
         st.subheader(f"📌 Rodada {st.session_state.numero_rodada} — {st.session_state.rodada_atual} cartas")
         st.info(f"🂡 Mão da rodada: **{st.session_state.ordem[0].nome}**")
 
-        # bots antes do humano
         while st.session_state.bid_idx < len(st.session_state.ordem):
             atual = st.session_state.ordem[st.session_state.bid_idx]
             if atual.humano:
@@ -473,7 +490,6 @@ elif st.session_state.fase == "prognostico":
             humano.prognostico = int(prog)
             st.session_state.bid_idx += 1
 
-            # bots depois do humano (ocultos até você confirmar)
             while st.session_state.bid_idx < len(st.session_state.ordem):
                 atual = st.session_state.ordem[st.session_state.bid_idx]
                 if atual.prognostico is None:
@@ -486,18 +502,16 @@ elif st.session_state.fase == "prognostico":
 
     with right:
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
-        st.subheader("🂡 Suas cartas")
-        st.markdown("<div class='tableWrap'>", unsafe_allow_html=True)
-        st.markdown("<div class='tableCards'>" + "".join([carta_html_face(c) for c in ordenar_mao(humano.mao)]) + "</div>", unsafe_allow_html=True)
-        st.markdown("<div class='small'>Clique nas cartas quando for sua vez.</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.subheader("🂡 Suas cartas (visual)")
+        html = f"<div class='tableWrap'>{mao_html(humano.mao)}</div>"
+        render_html_fragment(html, height=220)
+        st.caption("As cartas acima são só visual. Na fase de jogada, você clica nas cartas (botões estilizados).")
         st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
-# FASE: JOGADA (mesa centralizada + cartas clicáveis estilo carta)
+# FASE: JOGADA
 # =========================
 elif st.session_state.fase == "jogada":
-    # resolve vaza se todos jogaram
     if st.session_state.indice_jogador >= len(st.session_state.ordem):
         vencedor = definir_vencedor(st.session_state.mesa, st.session_state.naipe_base)
         vencedor.vazas += 1
@@ -526,10 +540,8 @@ elif st.session_state.fase == "jogada":
             unsafe_allow_html=True
         )
 
-        st.markdown("<div class='tableWrap'>", unsafe_allow_html=True)
-        st.markdown("<div class='tableTitle'>🪑 Mesa</div>", unsafe_allow_html=True)
-        st.markdown(mesa_html(st.session_state.mesa), unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        html = f"<div class='tableWrap'><div class='tableTitle'>🪑 Mesa</div>{mesa_html(st.session_state.mesa)}</div>"
+        render_html_fragment(html, height=240)
 
         with st.expander("🧾 Histórico da rodada", expanded=False):
             if st.session_state.historico_vazas:
@@ -543,8 +555,7 @@ elif st.session_state.fase == "jogada":
 
     with right:
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
-        st.subheader("🂡 Sua mão")
-
+        st.subheader("🂡 Sua mão (clique na carta)")
         legais = cartas_legais(
             jogador=jogador,
             naipe_base=st.session_state.naipe_base,
@@ -556,32 +567,30 @@ elif st.session_state.fase == "jogada":
         if jogador.humano:
             mao = ordenar_mao(jogador.mao)
 
-            # Grid de "cartas-botão"
-            cols = st.columns(7)
+            # Zona onde os botões viram cartas (CSS)
+            st.markdown("<div class='handZone'>", unsafe_allow_html=True)
+
+            cols = st.columns(6, gap="small")
             for i, carta in enumerate(mao):
-                col = cols[i % 7]
-                label = carta.texto()
-                disabled = label not in legais_set
+                label, cor = simbolo_colorido(carta)
+                disabled = (carta.texto() not in legais_set)
 
-                # botão com classe cardBtn; label fica invisível mas precisamos de algo
-                key = f"card_{st.session_state.numero_rodada}_{st.session_state.numero_vaza}_{st.session_state.indice_jogador}_{jogador.nome}_{label}_{i}"
-                pressed = col.button(" ", key=key, use_container_width=False, disabled=disabled)
-                # aplicar classe cardBtn no botão recém-criado via hack CSS selector:
-                # Streamlit não permite class diretamente; usamos JS? não.
-                # Alternativa: estilo geral para botões e "card look" com :has não funciona.
-                # Então, usamos um truque: desenhar carta acima e botão transparente por cima NÃO é possível diretamente.
-                # Solução prática: manter o botão com cara de carta usando st.markdown + col.button(label) e ocultar texto.
-                # Para ficar 100% robusto, renderizamos a carta por markdown abaixo e colocamos o label no botão mesmo.
-
-                # Como não dá pra “vestir” o botão com CSS de forma seletiva sem JS,
-                # mostramos um botão com texto e uma carta visual acima (fica APP e funcional).
-                col.markdown(carta_html_face(carta), unsafe_allow_html=True)
-
-                # botão real com label (funcional)
-                # (fica logo abaixo da carta; discreto e clicável)
-                click_key = f"play_{key}"
-                if col.button(label, key=click_key, use_container_width=True, disabled=disabled):
+                # O botão é a "carta". O label já mostra valor e naipe.
+                # A cor do texto do botão é controlada via markdown? Não direto.
+                # Então usamos truque: prefixar símbolo e deixar CSS do botão neutro
+                # e colorimos com emoji/naipes (♦/♥ já ajudam). Visual principal é o formato.
+                col = cols[i % 6]
+                if col.button(
+                    label,
+                    key=f"card_{st.session_state.numero_rodada}_{st.session_state.numero_vaza}_{i}_{carta.texto()}",
+                    use_container_width=False,
+                    disabled=disabled
+                ):
                     jogar_carta(jogador, carta)
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            st.caption("Cartas inválidas ficam apagadas (não clicáveis).")
 
             if st.session_state.primeira_vaza and not somente_copas(jogador.mao):
                 st.caption("Regra: na 1ª vaza, ♥ é proibida (exceto se você só tiver ♥).")
@@ -589,11 +598,11 @@ elif st.session_state.fase == "jogada":
                 st.caption("Regra: enquanto copas não quebrou, não pode abrir uma vaza com ♥.")
         else:
             st.markdown("<div class='small'>Aguarde: jogada automática dos bots.</div>", unsafe_allow_html=True)
-            st.markdown("<div class='tableCards'>" + "".join([carta_html_face(c) for c in ordenar_mao(humano.mao)]) + "</div>", unsafe_allow_html=True)
+            html = f"<div class='tableWrap'>{mao_html(humano.mao)}</div>"
+            render_html_fragment(html, height=220)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # IA joga automaticamente quando for a vez dela
     if not jogador.humano:
         carta = escolher_carta_ia(jogador, legais, st.session_state.naipe_base, st.session_state.mesa)
         jogador.mao.remove(carta)
@@ -614,9 +623,10 @@ elif st.session_state.fase == "resultado_vaza":
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
     st.subheader("🏆 Resultado da Vaza")
 
-    st.markdown("<div class='tableWrap'>", unsafe_allow_html=True)
-    st.markdown("<div class='tableCards'>" + "".join([carta_html_face(x["carta"], show_name=x["jogador"].nome) for x in st.session_state.mesa]) + "</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    html = "<div class='tableWrap'>" + "<div class='tableCards'>" + "".join(
+        [carta_html_face(x["carta"], show_name=x["jogador"].nome) for x in st.session_state.mesa]
+    ) + "</div></div>"
+    render_html_fragment(html, height=240)
 
     st.success(f"Vencedor: **{st.session_state.vencedor.nome}**")
 
@@ -665,10 +675,8 @@ elif st.session_state.fase == "fim_rodada":
 
     if proxima_cartas >= 1:
         if st.button("▶ Próxima rodada", use_container_width=True):
-            # gira mão da rodada
             n = len(st.session_state.jogadores)
             st.session_state.start_idx = (st.session_state.start_idx + 1) % n
-
             st.session_state.rodada_atual = proxima_cartas
             st.session_state.numero_rodada += 1
             st.session_state.fase = "distribuir"
@@ -684,4 +692,5 @@ elif st.session_state.fase == "fim_rodada":
             resetar_partida()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
