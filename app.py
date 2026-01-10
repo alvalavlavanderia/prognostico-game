@@ -10,7 +10,7 @@ import streamlit as st
 st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="wide")
 
 # =========================
-# CSS PREMIUM (chips pequenos + chips múltiplos + monte menor)
+# CSS PREMIUM (felt verde + mini-monte + avatar)
 # =========================
 APP_CSS = """
 <style>
@@ -25,17 +25,43 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .badges{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 .badge{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(0,0,0,.06); font-size:12px; font-weight:800; }
 
-/* Mesa */
+/* Mesa (felt verde profissional) */
 .mesaWrap{ margin-top: 6px; }
 .mesa{
-  border-radius:20px;
-  border:1px solid rgba(0,0,0,.10);
-  background: radial-gradient(circle at 30% 20%, rgba(0,150,110,.30) 0%, rgba(0,120,90,.18) 28%, rgba(0,0,0,.03) 60%, rgba(0,0,0,.02) 100%);
+  border-radius:22px;
+  border:1px solid rgba(0,0,0,.14);
+
+  /* fundo felt: camadas */
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,.12) 0%, rgba(255,255,255,0) 42%),
+    radial-gradient(circle at 70% 80%, rgba(0,0,0,.10) 0%, rgba(0,0,0,0) 48%),
+    linear-gradient(180deg, rgba(18,90,55,1) 0%, rgba(13,72,45,1) 55%, rgba(10,58,36,1) 100%);
+
   height: 470px;
   position:relative;
   overflow:hidden;
-  box-shadow: 0 18px 40px rgba(0,0,0,.10);
+  box-shadow: 0 18px 42px rgba(0,0,0,.18);
 }
+
+/* textura leve (sem imagem) */
+.mesa:before{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, rgba(255,255,255,0) 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.016) 0 1px, rgba(0,0,0,0) 1px 4px);
+  opacity:.55;
+  pointer-events:none;
+}
+
+.mesa:after{
+  content:"";
+  position:absolute; inset:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.10);
+  pointer-events:none;
+}
+
 .mesaCenter{
   position:absolute; inset:0;
   display:flex; align-items:center; justify-content:center;
@@ -43,32 +69,45 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   pointer-events:none;
   text-transform: uppercase;
   letter-spacing: .08em;
+  color: rgba(255,255,255,.90);
 }
 
-/* Assentos (nomes sempre visíveis) */
+/* Assentos (nome + avatar sempre visíveis) */
 .seat{
   position:absolute;
   padding:6px 10px;
   border-radius:999px;
-  background:rgba(255,255,255,.84);
-  border:1px solid rgba(0,0,0,.08);
+  background:rgba(255,255,255,.88);
+  border:1px solid rgba(0,0,0,.10);
   font-size:12px;
   white-space:nowrap;
-  z-index: 20;
+  z-index: 25;
+  display:flex;
+  align-items:center;
+  gap:8px;
 }
-.seat.you{ outline:2px solid rgba(0,120,90,.55); font-weight:900; }
-.seat.dealer{ border-color: rgba(0,120,90,.30); background: rgba(255,255,255,.94); }
+.seat.you{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }
+.seat.dealer{ border-color: rgba(34,197,94,.35); background: rgba(255,255,255,.95); }
+
+.avatar{
+  width:22px; height:22px;
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px;
+  background: rgba(0,0,0,.06);
+  border: 1px solid rgba(0,0,0,.08);
+}
 
 /* Winner glow */
 @keyframes winnerGlow {
   0% { box-shadow: 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }
-  35% { box-shadow: 0 0 0 6px rgba(0,150,110,.20), 0 14px 28px rgba(0,0,0,.10); transform: translate(-50%,-50%) scale(1.03); }
+  35% { box-shadow: 0 0 0 6px rgba(34,197,94,.22), 0 14px 28px rgba(0,0,0,.14); transform: translate(-50%,-50%) scale(1.03); }
   100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }
 }
 .seat.winnerFlash{
   animation: winnerGlow 1.2s ease-out;
-  outline: 2px solid rgba(0,150,110,.55);
-  background: rgba(255,255,255,.96);
+  outline: 2px solid rgba(34,197,94,.55);
+  background: rgba(255,255,255,.97);
 }
 
 /* Cartas na mesa */
@@ -76,7 +115,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   position:absolute;
   transform: translate(-50%,-50%);
   pointer-events:none;
-  z-index: 14;
+  z-index: 18;
 }
 @keyframes popIn {
   0% { transform: translate(-50%,-50%) scale(.92); opacity: .0; }
@@ -84,7 +123,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 }
 .playCard.pop{ animation: popIn .16s ease-out; }
 
-/* Carta (frente) menor */
+/* Carta (frente) */
 .card{
   width:70px;
   height:102px;
@@ -101,9 +140,8 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 
 /* =========================
    CHIPS PEQUENOS (PROGNÓSTICO)
-   1 chip = 1 prognóstico
    ========================= */
-.chipWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 10; }
+.chipWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 16; }
 .chipRow{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width: 140px; }
 .chipMini{
   width:22px; height:22px;
@@ -150,41 +188,46 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   margin-top: 6px;
   font-size: 10px;
   font-weight: 900;
-  opacity: .70;
-  background: rgba(255,255,255,.70);
-  border: 1px solid rgba(0,0,0,.06);
+  opacity: .72;
+  background: rgba(255,255,255,.76);
+  border: 1px solid rgba(0,0,0,.08);
   padding: 3px 8px;
   border-radius: 999px;
   display:inline-block;
 }
 
 /* =========================
-   MONTINHO PEQUENO (VAZAS GANHAS)
-   - fica abaixo dos chips
+   MONTINHO MINI-CARTAS (VAZAS GANHAS)
    ========================= */
-.pileWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 9; }
-.pileStack{ position:relative; width:34px; height:52px; }
+.pileWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 15; }
+
+/* mini stack MUITO menor */
+.pileStack{ position:relative; width:26px; height:40px; }
+
+/* mini carta virada */
 .cardBackLayer{
   position:absolute;
-  width:34px; height:52px;
-  border-radius:10px;
-  border:1px solid rgba(0,0,0,.14);
-  background: linear-gradient(180deg, rgba(0,120,90,.95) 0%, rgba(0,90,70,.95) 100%);
-  box-shadow: 0 8px 12px rgba(0,0,0,.12);
+  width:26px; height:40px;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,.18);
+  background: linear-gradient(180deg, rgba(12,110,80,.95) 0%, rgba(7,86,64,.95) 100%);
+  box-shadow: 0 6px 10px rgba(0,0,0,.12);
   overflow:hidden;
 }
 .cardBackLayer:before{
   content:"";
-  position:absolute; inset:-22%;
-  background: repeating-linear-gradient(45deg, rgba(255,255,255,.14) 0 8px, rgba(255,255,255,0) 8px 16px);
-  transform: rotate(12deg);
+  position:absolute; inset:-28%;
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 8px, rgba(255,255,255,0) 8px 16px);
+  transform: rotate(14deg);
 }
 .pileLabel{
-  margin-top:5px;
+  margin-top:4px;
   text-align:center;
   font-weight:900;
   font-size:10px;
-  opacity:.70;
+  opacity:.74;
+  color: rgba(255,255,255,.92);
+  text-shadow: 0 2px 6px rgba(0,0,0,.25);
 }
 
 /* Dock da mão */
@@ -649,7 +692,7 @@ st.markdown(
 <div class="titleRow">
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
-    <div style="opacity:.70;font-weight:800;font-size:12px;">Prognóstico = chips pequenos (1 chip = 1) • Vazas em montinho pequeno</div>
+    <div style="opacity:.72;font-weight:800;font-size:12px;color:rgba(255,255,255,.0);"></div>
   </div>
   <div class="badges">
     <span class="badge">Trunfo: ♥</span>
@@ -737,7 +780,7 @@ if st.session_state.fase == "prognostico":
         st.rerun()
 
 # =========================
-# UI: Mesa + chips (prognóstico) + montinho (vazas)
+# UI: Mesa + chips (prognóstico) + montinho mini-cartas + avatar
 # =========================
 def chip_color_for_index(idx: int) -> str:
     palette = [
@@ -752,31 +795,34 @@ def chip_color_for_index(idx: int) -> str:
     ]
     return palette[idx % len(palette)]
 
-def render_progn_chips_html(prog: int, color: str) -> str:
-    # 1 chip = 1 prognóstico
+def avatar_for_index(idx: int) -> str:
+    # avatares simples (não dependem de imagem externa)
+    avatars = ["🙂","😎","🤠","🧠","🤖","🦊","🐼","🐯","🐸","🦁","🐵","🐙","🦄","🐰"]
+    return avatars[idx % len(avatars)]
+
+def render_progn_chips_html(prog, color: str) -> str:
     if isinstance(prog, str) or prog is None:
-        return '<div class="chipNote">—</div>'
+        return '<span class="chipNote">—</span>'
 
     p = max(0, int(prog))
-    # para não explodir visualmente, mostramos até 12 chips e depois "+N"
     show = min(p, 12)
     chips = "".join([f'<div class="chipMini" style="--chip-base:{color};"></div>' for _ in range(show)])
     extra = f'<span class="chipNote">+{p-12}</span>' if p > 12 else ''
     return f'<div class="chipRow">{chips}</div>{extra}'
 
 def render_small_pile_html(won: int) -> str:
-    # montinho pequeno (camadas) - sempre discreto
-    layers = min(max(won, 0), 8)
+    # mini stack bem pequeno; mostra número só se ficar grande
+    layers = min(max(won, 0), 10)
     parts = []
     for i in range(layers):
-        dx = i * 1.5
-        dy = -i * 1.5
+        dx = i * 1.1
+        dy = -i * 1.2
         rot = (i % 3 - 1) * 2
         parts.append(
             f'<div class="cardBackLayer" style="left:{dx}px; top:{dy}px; transform: rotate({rot}deg);"></div>'
         )
-    label = f"{won}" if won > 8 else ""  # só mostra número se passar de 8
-    label_html = f'<div class="pileLabel">{label}</div>' if label else '<div class="pileLabel"></div>'
+    label = f"{won}" if won > 10 else ""
+    label_html = f'<div class="pileLabel">{label}</div>' if label else ''
     return f'<div class="pileStack">{"".join(parts)}</div>{label_html}'
 
 def render_mesa():
@@ -805,7 +851,6 @@ def render_mesa():
     for i, nome in enumerate(ordem):
         ang = (2*math.pi) * (i/n) - (math.pi/2)
 
-        # Nome (mais pra fora)
         x = cx + rx*math.cos(ang)
         y = cy + ry*math.sin(ang)
 
@@ -820,9 +865,15 @@ def render_mesa():
         if flash_name and nome == flash_name:
             cls += " winnerFlash"
 
-        seats_html += f'<div class="{cls}" style="left:{x}%; top:{y}%; transform:translate(-50%,-50%);">{label}</div>'
+        avatar = avatar_for_index(i)
+        seats_html += f'''
+<div class="{cls}" style="left:{x}%; top:{y}%; transform:translate(-50%,-50%);">
+  <span class="avatar">{avatar}</span>
+  <span>{label}</span>
+</div>
+'''
 
-        # Chips (mais pra dentro)
+        # chips (mais pra dentro)
         tx = cx + (rx*0.70)*math.cos(ang)
         ty = cy + (ry*0.70)*math.sin(ang)
 
@@ -836,7 +887,7 @@ def render_mesa():
 </div>
 """
 
-        # Montinho pequeno (embaixo dos chips)
+        # montinho mini-cartas (bem pequeno) embaixo dos chips
         if won > 0:
             px = tx
             py = ty + 12
@@ -846,7 +897,7 @@ def render_mesa():
 </div>
 """
 
-    # Cartas na mesa (perto do centro)
+    # Cartas na mesa
     for idx, (nome, carta) in enumerate(mesa_to_render):
         i = pos_map.get(nome, 0)
         ang = (2*math.pi) * (i/n) - (math.pi/2)
