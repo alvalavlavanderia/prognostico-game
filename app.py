@@ -3,7 +3,6 @@ import random
 import math
 import time
 import base64
-import urllib.parse
 import streamlit as st
 
 # =========================
@@ -12,7 +11,7 @@ import streamlit as st
 st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="wide")
 
 # =========================
-# CSS PREMIUM (felt verde + mini-monte + avatar imagem)
+# CSS PREMIUM (felt verde + mini-monte + avatar imagem + animação do montinho)
 # =========================
 APP_CSS = """
 <style>
@@ -59,7 +58,6 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   border:1px solid rgba(255,255,255,.10);
   pointer-events:none;
 }
-
 .mesaCenter{
   position:absolute; inset:0;
   display:flex; align-items:center; justify-content:center;
@@ -322,6 +320,8 @@ COR_NAIPE = {"♦":"#C1121F", "♥":"#C1121F", "♠":"#111827", "♣":"#111827"}
 ORDEM_NAIPE = {"♦":0, "♠":1, "♣":2, "♥":3}
 TRUNFO = "♥"
 
+HIGH_POINTS = {"A": 1.40, "K": 1.05, "Q": 0.80, "J": 0.55, 10: 0.35, 9: 0.20}
+
 def criar_baralho():
     naipes = ["♠", "♦", "♣", "♥"]
     return [(n, v) for n in naipes for v in VALORES]
@@ -374,7 +374,6 @@ def tem_naipe(mao, naipe):
 # AVATAR CARTOON (SVG inline)
 # =========================
 def avatar_svg_data_uri(idx: int) -> str:
-    # Paletas simples (cartoon)
     skins = ["#F6D3B3", "#E9BE9D", "#D9A074", "#C6865F"]
     hairs = ["#2F2F2F", "#5B3A29", "#C8A14A", "#7A4B2B", "#1F2937"]
     shirts = ["#60A5FA", "#F59E0B", "#34D399", "#F472B6", "#A78BFA", "#FB7185", "#22C55E"]
@@ -385,7 +384,6 @@ def avatar_svg_data_uri(idx: int) -> str:
     shirt = shirts[idx % len(shirts)]
     b = bg[idx % len(bg)]
 
-    # SVG 64x64 cartoon
     svg = f"""
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <defs>
@@ -396,37 +394,98 @@ def avatar_svg_data_uri(idx: int) -> str:
 
   <circle cx="32" cy="32" r="30" fill="{b}" filter="url(#s)"/>
 
-  <!-- shirt -->
   <path d="M14 58c3-13 14-16 18-16s15 3 18 16" fill="{shirt}"/>
   <path d="M23 44c3 3 6 4 9 4s6-1 9-4" fill="none" stroke="rgba(0,0,0,.12)" stroke-width="2" stroke-linecap="round"/>
 
-  <!-- neck -->
   <rect x="28" y="36" width="8" height="10" rx="4" fill="{skin}"/>
 
-  <!-- head -->
   <circle cx="32" cy="28" r="16" fill="{skin}"/>
 
-  <!-- hair -->
   <path d="M16 28c2-12 10-18 16-18s14 6 16 18c-4-7-10-9-16-9s-12 2-16 9z" fill="{hair}"/>
 
-  <!-- eyes -->
   <circle cx="26" cy="28" r="2.2" fill="#111827"/>
   <circle cx="38" cy="28" r="2.2" fill="#111827"/>
   <circle cx="25.3" cy="27.4" r="0.7" fill="#fff"/>
   <circle cx="37.3" cy="27.4" r="0.7" fill="#fff"/>
 
-  <!-- smile -->
   <path d="M26 34c2.2 2 4.4 3 6 3s3.8-1 6-3" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
 
-  <!-- cheek -->
   <circle cx="22" cy="33" r="2.1" fill="rgba(244,114,182,.35)"/>
   <circle cx="42" cy="33" r="2.1" fill="rgba(244,114,182,.35)"/>
 </svg>
 """.strip()
 
-    # Data URI: encode to base64 (mais confiável que utf8 in-line em alguns browsers)
     svg_b64 = base64.b64encode(svg.encode("utf-8")).decode("ascii")
     return f"data:image/svg+xml;base64,{svg_b64}"
+
+# =========================
+# IA: PROGNÓSTICO MAIS AVANÇADO
+# =========================
+def ai_prognostico(mao, cartas_por_jogador: int) -> int:
+    """
+    Heurística forte (não perfeita):
+    - Trunfos valem bem mais
+    - Cartas altas por naipe contam
+    - Naipe curto aumenta chance de cortar com trunfo
+    - Escala final para 0..cartas_por_jogador
+    """
+    if not mao:
+        return 0
+
+    # Contagens
+    suit_counts = {"♠": 0, "♦": 0, "♣": 0, "♥": 0}
+    for n, v in mao:
+        suit_counts[n] += 1
+
+    trumps = suit_counts["♥"]
+    non_trumps = cartas_por_jogador - trumps
+
+    # força base: trunfo
+    strength = 0.0
+    strength += trumps * 0.95
+
+    # pontos por cartas altas (trunfo pontua mais)
+    for n, v in mao:
+        base = HIGH_POINTS.get(v, 0.0)
+        if n == "♥":
+            strength += base * 1.35
+        else:
+            strength += base * 1.00
+
+    # bônus por naipes curtos (chance de cortar)
+    # quanto menor o naipe, maior a chance de "ficar sem" e cortar com ♥
+    for s in ["♠", "♦", "♣"]:
+        c = suit_counts[s]
+        if c == 0:
+            strength += 0.55 + (0.25 if trumps >= 2 else 0.0)
+        elif c == 1:
+            strength += 0.30 + (0.18 if trumps >= 2 else 0.0)
+        elif c == 2:
+            strength += 0.12
+
+    # penalidade leve se quase sem trunfo e mão "espalhada"
+    distinct_nontrump_suits = sum(1 for s in ["♠", "♦", "♣"] if suit_counts[s] > 0)
+    if trumps == 0 and distinct_nontrump_suits >= 3:
+        strength -= 0.25
+
+    # Ajuste para tamanho de mão
+    # expectativa aproximada: força / 2.4, mas com limite
+    expected = strength / 2.4
+
+    # Pequena aleatoriedade controlada para não virar "robô perfeito"
+    jitter = random.uniform(-0.25, 0.25)
+    expected += jitter
+
+    guess = int(round(expected))
+
+    # clamp
+    guess = max(0, min(cartas_por_jogador, guess))
+
+    # Evita palpite 0/100% o tempo todo em mãos grandes
+    if cartas_por_jogador >= 9:
+        guess = max(0, min(cartas_por_jogador, guess))
+
+    return guess
 
 # =========================
 # STATE
@@ -470,18 +529,20 @@ def ss_init():
         "winner_flash_name": None,
         "winner_flash_until": 0.0,
 
+        # Animação da vaza indo pro vencedor
         "trick_pending": False,
-        "trick_resolve_at": 0.0,
+        "trick_phase": None,          # "show" -> "fly"
+        "trick_resolve_at": 0.0,      # quando sai do show e entra no fly
+        "trick_fly_until": 0.0,       # quando termina o fly e contabiliza
         "trick_winner": None,
         "trick_snapshot": [],
 
         "pile_counts": {},
 
-        # throttle para não ficar loopando sem parar no autoplay
-        "autoplay_tick": 0,
+        # autoplay
         "autoplay_last": 0.0,
     }
-    for k,v in defaults.items():
+    for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
@@ -525,7 +586,9 @@ def distribuir(cartas_alvo: int):
     st.session_state.pending_play = None
 
     st.session_state.trick_pending = False
+    st.session_state.trick_phase = None
     st.session_state.trick_resolve_at = 0.0
+    st.session_state.trick_fly_until = 0.0
     st.session_state.trick_winner = None
     st.session_state.trick_snapshot = []
 
@@ -535,7 +598,12 @@ def preparar_prognosticos_anteriores():
     humano = nomes[st.session_state.humano_idx]
     pos_h = ordem.index(humano)
     prev = ordem[:pos_h]
-    st.session_state.progn_pre = {n: random.randint(0, len(st.session_state.maos[n])) for n in prev}
+
+    # IA mais inteligente (usa a própria mão)
+    st.session_state.progn_pre = {
+        n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo)
+        for n in prev
+    }
 
 def preparar_prognosticos_posteriores():
     nomes = st.session_state.nomes
@@ -543,7 +611,11 @@ def preparar_prognosticos_posteriores():
     humano = nomes[st.session_state.humano_idx]
     pos_h = ordem.index(humano)
     post = ordem[pos_h+1:]
-    st.session_state.progn_pos = {n: random.randint(0, len(st.session_state.maos[n])) for n in post}
+
+    st.session_state.progn_pos = {
+        n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo)
+        for n in post
+    }
 
 def iniciar_fase_jogo():
     nomes = st.session_state.nomes
@@ -564,19 +636,24 @@ def cartas_validas_para_jogar(nome):
     if not mao:
         return []
 
+    # Seguir naipe se tiver
     if naipe_base and tem_naipe(mao, naipe_base):
         return [c for c in mao if c[0] == naipe_base]
 
+    # Não tem naipe base
     if naipe_base and not tem_naipe(mao, naipe_base):
+        # 1ª vaza: não pode jogar trunfo se tiver outras (exceto só trunfo)
         if primeira_vaza and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
         return mao[:]
 
+    # Mão abrindo
     if naipe_base is None:
         if primeira_vaza:
             if somente_trunfo(mao):
                 return mao[:]
             return [c for c in mao if c[0] != TRUNFO]
+        # após 1ª vaza: só pode abrir com trunfo se já quebrou ou só trunfo
         if not copas_quebrada and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
 
@@ -588,49 +665,85 @@ def jogar_carta(nome, carta):
         st.session_state.naipe_base = carta[0]
     if carta[0] == TRUNFO and not st.session_state.primeira_vaza:
         st.session_state.copas_quebrada = True
-
     st.session_state.mesa.append((nome, carta))
     st.session_state.table_pop_until = time.time() + 0.22
 
 def vencedor_da_vaza(mesa_snapshot, naipe_base_snapshot):
-    copas = [(n,c) for (n,c) in mesa_snapshot if c[0] == TRUNFO]
+    # se tem trunfo, maior trunfo vence
+    copas = [(n, c) for (n, c) in mesa_snapshot if c[0] == TRUNFO]
     if copas:
         return max(copas, key=lambda x: PESO_VALOR[x[1][1]])[0]
-    base = [(n,c) for (n,c) in mesa_snapshot if c[0] == naipe_base_snapshot]
+    # senão, maior do naipe base
+    base = [(n, c) for (n, c) in mesa_snapshot if c[0] == naipe_base_snapshot]
     return max(base, key=lambda x: PESO_VALOR[x[1][1]])[0]
 
-def schedule_trick_resolution(delay_seconds=1.4):
+def schedule_trick_resolution():
+    """
+    Quando a última carta é jogada:
+    1) fica tudo na mesa (show)
+    2) depois voa pro vencedor (fly)
+    3) depois contabiliza e limpa mesa
+    """
     if st.session_state.trick_pending:
         return
+
+    now = time.time()
     st.session_state.trick_pending = True
-    st.session_state.trick_resolve_at = time.time() + float(delay_seconds)
+    st.session_state.trick_phase = "show"
     st.session_state.trick_snapshot = st.session_state.mesa[:]
     st.session_state.trick_winner = vencedor_da_vaza(st.session_state.trick_snapshot, st.session_state.naipe_base)
 
+    # tempos (ajustáveis)
+    show_seconds = 1.10
+    fly_seconds = 0.55
+    st.session_state.trick_resolve_at = now + show_seconds
+    st.session_state.trick_fly_until = now + show_seconds + fly_seconds
+
 def resolve_trick_if_due():
+    """
+    Controla as fases: show -> fly -> contabiliza
+    """
     if not st.session_state.trick_pending:
         return False
-    if time.time() < st.session_state.trick_resolve_at:
-        return False
 
-    win = st.session_state.trick_winner
-    st.session_state.vazas_rodada[win] += 1
-    st.session_state.pile_counts[win] = st.session_state.pile_counts.get(win, 0) + 1
+    now = time.time()
 
-    st.session_state.winner_flash_name = win
-    st.session_state.winner_flash_until = time.time() + 1.2
+    # ainda mostrando
+    if st.session_state.trick_phase == "show":
+        if now < st.session_state.trick_resolve_at:
+            return False
+        st.session_state.trick_phase = "fly"
+        return True  # força rerun pra começar a animação
 
-    ordem = st.session_state.ordem
-    st.session_state.turn_idx = ordem.index(win)
-    st.session_state.mesa = []
-    st.session_state.naipe_base = None
-    st.session_state.primeira_vaza = False
+    # animando voo
+    if st.session_state.trick_phase == "fly":
+        if now < st.session_state.trick_fly_until:
+            return False
 
-    st.session_state.trick_pending = False
-    st.session_state.trick_resolve_at = 0.0
-    st.session_state.trick_winner = None
-    st.session_state.trick_snapshot = []
-    return True
+        # contabiliza
+        win = st.session_state.trick_winner
+        st.session_state.vazas_rodada[win] += 1
+        st.session_state.pile_counts[win] = st.session_state.pile_counts.get(win, 0) + 1
+
+        st.session_state.winner_flash_name = win
+        st.session_state.winner_flash_until = time.time() + 1.2
+
+        ordem = st.session_state.ordem
+        st.session_state.turn_idx = ordem.index(win)
+        st.session_state.mesa = []
+        st.session_state.naipe_base = None
+        st.session_state.primeira_vaza = False
+
+        # reseta trick state
+        st.session_state.trick_pending = False
+        st.session_state.trick_phase = None
+        st.session_state.trick_resolve_at = 0.0
+        st.session_state.trick_fly_until = 0.0
+        st.session_state.trick_winner = None
+        st.session_state.trick_snapshot = []
+        return True
+
+    return False
 
 def rodada_terminou():
     return all(len(st.session_state.maos[n]) == 0 for n in st.session_state.nomes)
@@ -645,6 +758,7 @@ def pontuar_rodada():
     st.session_state.pontuou_rodada = True
 
 def ai_escolhe_carta(nome):
+    # (mantemos simples por enquanto)
     validas = cartas_validas_para_jogar(nome)
     return random.choice(validas) if validas else None
 
@@ -661,7 +775,8 @@ def avancar_ate_humano_ou_fim():
         steps += 1
 
         if resolve_trick_if_due():
-            pass
+            return
+
         if st.session_state.trick_pending:
             return
 
@@ -670,6 +785,7 @@ def avancar_ate_humano_ou_fim():
             return
 
         atual = ordem[st.session_state.turn_idx]
+
         if len(st.session_state.maos[atual]) == 0:
             st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
             continue
@@ -686,7 +802,7 @@ def avancar_ate_humano_ou_fim():
         st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
 
         if len(st.session_state.mesa) == len(ordem):
-            schedule_trick_resolution(delay_seconds=1.4)
+            schedule_trick_resolution()
             return
 
 def start_next_round():
@@ -784,7 +900,7 @@ st.markdown(
 <div class="titleRow">
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
-    <div style="opacity:.70;font-weight:800;font-size:12px;">Premium UI • Avatares cartoon • IA automática</div>
+    <div style="opacity:.70;font-weight:800;font-size:12px;">Premium UI • Avatares cartoon • Montinho animado</div>
   </div>
   <div class="badges">
     <span class="badge">Trunfo: ♥</span>
@@ -872,36 +988,52 @@ if st.session_state.fase == "prognostico":
         st.rerun()
 
 # =========================
-# RENDER MESA
+# RENDER MESA + animação do "montinho voando"
 # =========================
+def seat_positions(ordem):
+    n = len(ordem)
+    cx, cy = 50, 50
+    rx, ry = 42, 36
+    pos = {}
+    for i, nome in enumerate(ordem):
+        ang = (2*math.pi) * (i/n) - (math.pi/2)
+        x = cx + rx*math.cos(ang)
+        y = cy + ry*math.sin(ang)
+        # chips/pile target "mais pra dentro"
+        tx = cx + (rx*0.70)*math.cos(ang)
+        ty = cy + (ry*0.70)*math.sin(ang)
+        pos[nome] = {"seat": (x, y), "target": (tx, ty)}
+    return pos
+
 def render_mesa():
     ordem = st.session_state.ordem
     n = len(ordem)
     humano = st.session_state.nomes[st.session_state.humano_idx]
     dealer = ordem[0]
+    pos = seat_positions(ordem)
 
     now = time.time()
     flash_name = st.session_state.winner_flash_name if now <= st.session_state.winner_flash_until else None
     pop_active = now <= st.session_state.table_pop_until
 
-    mesa_to_render = st.session_state.trick_snapshot if st.session_state.trick_pending else st.session_state.mesa
-    naipe_base_show = st.session_state.naipe_base
+    # qual conjunto de cartas mostrar?
+    if st.session_state.trick_pending:
+        mesa_to_render = st.session_state.trick_snapshot
+    else:
+        mesa_to_render = st.session_state.mesa
 
-    cx, cy = 50, 50
-    rx, ry = 42, 36
+    naipe_base_show = st.session_state.naipe_base
 
     seats_html = ""
     chips_html = ""
     piles_html = ""
     plays_html = ""
+    anim_css = ""  # keyframes geradas dinamicamente
 
-    pos_map = {nome:i for i,nome in enumerate(ordem)}
-
+    # assentos + chips + piles
     for i, nome in enumerate(ordem):
-        ang = (2*math.pi) * (i/n) - (math.pi/2)
-
-        x = cx + rx*math.cos(ang)
-        y = cy + ry*math.sin(ang)
+        x, y = pos[nome]["seat"]
+        tx, ty = pos[nome]["target"]
 
         cls = "seat"
         label = nome
@@ -923,10 +1055,6 @@ def render_mesa():
 </div>
 '''
 
-        # chips (mais pra dentro)
-        tx = cx + (rx*0.70)*math.cos(ang)
-        ty = cy + (ry*0.70)*math.sin(ang)
-
         prog = st.session_state.prognosticos.get(nome, None)
         won = st.session_state.pile_counts.get(nome, 0)
         color = chip_color_for_index(i)
@@ -937,7 +1065,6 @@ def render_mesa():
 </div>
 """
 
-        # montinho mini-cartas embaixo dos chips
         if won > 0:
             px = tx
             py = ty + 12
@@ -947,25 +1074,63 @@ def render_mesa():
 </div>
 """
 
-    # cartas na mesa
+    # cartas na mesa (ou animando para o vencedor)
+    # posição da carta na mesa é próxima do jogador
+    winner = st.session_state.trick_winner
+    winner_target = None
+    if winner:
+        wx, wy = pos[winner]["target"]
+        winner_target = (wx, wy + 12)  # onde fica o montinho (abaixo dos chips)
+
     for idx, (nome, carta) in enumerate(mesa_to_render):
-        i = pos_map.get(nome, 0)
+        # ponto inicial (onde a carta fica na mesa)
+        i = ordem.index(nome)
         ang = (2*math.pi) * (i/n) - (math.pi/2)
+        cx, cy = 50, 50
+        rx, ry = 42, 36
         x = cx + (rx*0.47)*math.cos(ang)
         y = cy + (ry*0.47)*math.sin(ang)
 
         is_last = (idx == len(mesa_to_render) - 1)
         cls = "playCard"
+        extra_style = f"left:{x}%; top:{y}%;"
+
+        # Pop de entrada
         if pop_active and is_last and not st.session_state.trick_pending:
             cls += " pop"
-        plays_html += f'<div class="{cls}" style="left:{x}%; top:{y}%;">{carta_html(carta)}</div>'
 
+        # Se estiver na fase "fly", anima para o vencedor
+        if st.session_state.trick_pending and st.session_state.trick_phase == "fly" and winner_target:
+            tx, ty = winner_target
+            anim_name = f"flyToWinner_{idx}"
+            anim_css += f"""
+@keyframes {anim_name} {{
+  0% {{ left:{x}%; top:{y}%; opacity:1; transform:translate(-50%,-50%) scale(1); }}
+  70% {{ opacity:.85; }}
+  100% {{ left:{tx}%; top:{ty}%; opacity:.22; transform:translate(-50%,-50%) scale(.70); }}
+}}
+"""
+            extra_style = f"left:{x}%; top:{y}%; animation:{anim_name} .55s ease-in forwards;"
+            # (sem pop na fase fly)
+            cls = "playCard"
+
+        plays_html += f'<div class="{cls}" style="{extra_style}">{carta_html(carta)}</div>'
+
+    # label central
     if st.session_state.trick_pending:
-        centro_txt = "Vaza completa — aguardando..."
+        if st.session_state.trick_phase == "show":
+            centro_txt = "Vaza completa — mostrando..."
+        else:
+            centro_txt = "Vaza completa — indo ao vencedor..."
     else:
         centro_txt = "Aguardando jogada" if not st.session_state.mesa else "Vaza em andamento"
+
     if naipe_base_show:
         centro_txt = f"{centro_txt} • Naipe: {naipe_base_show}"
+
+    # injeta as keyframes se existirem
+    if anim_css.strip():
+        st.markdown(f"<style>{anim_css}</style>", unsafe_allow_html=True)
 
     st.markdown('<div class="mesaWrap">', unsafe_allow_html=True)
     st.markdown(
@@ -992,7 +1157,7 @@ def render_hand_clickable_streamlit():
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
     hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
     if st.session_state.trick_pending:
-        hint = "Vaza completa — aguardando 1–2s"
+        hint = "Vaza completa — animação"
     st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
 
     mao_ord = sorted(mao, key=peso_carta)
@@ -1022,6 +1187,7 @@ def render_hand_clickable_streamlit():
 if st.session_state.fase == "jogo":
     st.markdown(f"### 🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador")
 
+    # controla fases da animação (show->fly->contabiliza)
     if resolve_trick_if_due():
         st.rerun()
 
@@ -1042,22 +1208,18 @@ if st.session_state.fase == "jogo":
         st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
         st.stop()
 
-    # Se vaza completa, só espera resolver (mantém cartas visíveis 1-2s)
+    # Se animação de vaza ativa, só esperar e rerunar
     if st.session_state.trick_pending:
-        time.sleep(0.10)
+        time.sleep(0.06)
         st.rerun()
 
-    # =========================
     # AUTOPLAY IA (sem botão)
-    # =========================
-    # Se não é sua vez e não tem animação pendente, a IA avança automaticamente.
     if atual != humano and st.session_state.pending_play is None:
         now = time.time()
-        # throttle pequeno para não "engasgar" o browser
         if now - st.session_state.autoplay_last > 0.08:
             st.session_state.autoplay_last = now
             avancar_ate_humano_ou_fim()
-            time.sleep(0.04)
+            time.sleep(0.03)
             st.rerun()
 
     clicked = render_hand_clickable_streamlit()
@@ -1068,7 +1230,7 @@ if st.session_state.fase == "jogo":
 
     if st.session_state.pending_play is not None and atual == humano:
         st.markdown('<div class="playingOverlay">✨ Jogando carta...</div>', unsafe_allow_html=True)
-        time.sleep(0.20)
+        time.sleep(0.18)
 
         carta = st.session_state.pending_play
         st.session_state.pending_play = None
@@ -1077,7 +1239,7 @@ if st.session_state.fase == "jogo":
         st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
 
         if len(st.session_state.mesa) == len(ordem):
-            schedule_trick_resolution(delay_seconds=1.4)
+            schedule_trick_resolution()
 
         avancar_ate_humano_ou_fim()
         st.rerun()
