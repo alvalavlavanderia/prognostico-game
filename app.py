@@ -1,6 +1,5 @@
 import streamlit as st
 import random
-import streamlit.components.v1 as components
 
 # =========================
 # CONFIG
@@ -51,21 +50,54 @@ CSS = """
   .tableTitle { font-weight: 950; letter-spacing: .2px; }
   .tableMeta { opacity: .9; font-weight: 800; }
 
+  /* Layout "mesa real": nomes ao redor + cartas no centro */
+  .tableArea {
+    position: relative;
+    min-height: 340px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(0,0,0,.08);
+    overflow: hidden;
+  }
+  .seat {
+    position: absolute;
+    padding: 8px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.10);
+    color: rgba(255,255,255,.92);
+    font-weight: 900;
+    font-size: 13px;
+    text-shadow: 0 1px 2px rgba(0,0,0,.35);
+    border: 1px solid rgba(255,255,255,.18);
+    backdrop-filter: blur(4px);
+    white-space: nowrap;
+  }
+  .seat.you { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.28); }
+  .seat.top { top: 12px; left: 50%; transform: translateX(-50%); }
+  .seat.bottom { bottom: 12px; left: 50%; transform: translateX(-50%); }
+  .seat.left { left: 12px; top: 50%; transform: translateY(-50%); }
+  .seat.right { right: 12px; top: 50%; transform: translateY(-50%); }
+
   .tableCards {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%,-50%);
     display:flex; flex-wrap:wrap; justify-content:center; gap:12px;
-    min-height: 140px;
+    min-width: 240px;
     padding: 10px 8px;
   }
   .emptyTable {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%,-50%);
     text-align:center;
-    color: rgba(255,255,255,.85);
-    font-weight: 800;
+    color: rgba(255,255,255,.92);
+    font-weight: 900;
     opacity: .95;
-    padding: 36px 10px;
+    padding: 16px 12px;
   }
 
-  /* Cartas (visual) - para HTML (mesa) */
-  .cardWrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  /* Cartas (visual) */
   .cardFace {
     width: 76px; height: 106px;
     border-radius: 16px;
@@ -94,13 +126,6 @@ CSS = """
     font-size: 36px;
     font-weight: 950;
     opacity: 0.9;
-  }
-
-  .nameTag {
-    font-size: 12px;
-    font-weight: 900;
-    color: rgba(255,255,255,.92);
-    text-shadow: 0 1px 2px rgba(0,0,0,.35);
   }
 
   /* Sua mão embaixo: botões virando cartas */
@@ -137,18 +162,6 @@ CSS = """
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
-
-def render_html_fragment(html_fragment: str, height: int = 210):
-    full = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>{CSS}</head>
-    <body style="margin:0; padding:0; font-family: sans-serif;">
-      {html_fragment}
-    </body>
-    </html>
-    """
-    components.html(full, height=height, scrolling=False)
 
 # =========================
 # CONSTANTES
@@ -196,27 +209,56 @@ def ordenar_mao(mao):
 def somente_copas(mao):
     return all(c.naipe == TRUNFO for c in mao) if mao else False
 
-def carta_html_face(carta, show_name=None):
+def carta_html_face(carta):
     cor = NAIPE_COR[carta.naipe]
     valor = str(carta.valor)
     naipe = carta.naipe
-    name = f"<div class='nameTag'>{show_name}</div>" if show_name else ""
     return f"""
-      <div class="cardWrap">
-        <div class="cardFace">
-          <div class="cornerTL" style="color:{cor};">{valor}<br>{naipe}</div>
-          <div class="suitCenter" style="color:{cor};">{naipe}</div>
-          <div class="cornerBR" style="color:{cor};">{valor}<br>{naipe}</div>
-        </div>
-        {name}
+      <div class="cardFace">
+        <div class="cornerTL" style="color:{cor};">{valor}<br>{naipe}</div>
+        <div class="suitCenter" style="color:{cor};">{naipe}</div>
+        <div class="cornerBR" style="color:{cor};">{valor}<br>{naipe}</div>
       </div>
     """
 
-def mesa_html(mesa):
+def mesa_html_sem_nomes(mesa, jogadores, mao_nome, vez_nome):
+    # Assentos: top, right, left, bottom (bottom = humano)
+    # Para 4 jogadores fica perfeito. Para mais/menos, a gente simplifica.
+    humano = next(j for j in jogadores if j.humano)
+
+    # monta uma ordem de "assentos" baseada na ordem atual da rodada
+    # bottom = humano; top = jogador oposto (se existir)
+    others = [j for j in jogadores if j != humano]
+    # fallback
+    seat_top = others[0].nome if len(others) > 0 else "-"
+    seat_right = others[1].nome if len(others) > 1 else "-"
+    seat_left = others[2].nome if len(others) > 2 else "-"
+
+    # destaca mão e vez no nome
+    def nome_label(nome):
+        extra = []
+        if nome == mao_nome:
+            extra.append("mão")
+        if nome == vez_nome:
+            extra.append("vez")
+        tag = f" ({', '.join(extra)})" if extra else ""
+        return f"{nome}{tag}"
+
+    # cartas no centro
     if not mesa:
-        return "<div class='emptyTable'>Mesa vazia — o mão abre a vaza</div>"
-    parts = [carta_html_face(x["carta"], show_name=x["jogador"].nome) for x in mesa]
-    return "<div class='tableCards'>" + "".join(parts) + "</div>"
+        cards_html = "<div class='emptyTable'>Mesa vazia — o mão abre a vaza</div>"
+    else:
+        cards_html = "<div class='tableCards'>" + "".join(carta_html_face(x["carta"]) for x in mesa) + "</div>"
+
+    return f"""
+      <div class="tableArea">
+        <div class="seat top">{nome_label(seat_top)}</div>
+        <div class="seat right">{nome_label(seat_right)}</div>
+        <div class="seat left">{nome_label(seat_left)}</div>
+        <div class="seat bottom you">{nome_label(humano.nome)}</div>
+        {cards_html}
+      </div>
+    """
 
 def rank_carta_para_vaza(carta, naipe_base):
     if carta.naipe == TRUNFO:
@@ -488,9 +530,9 @@ elif st.session_state.fase == "prognostico":
                 continue
             if humano_e_pe or (i < idx_humano):
                 prog = "-" if j.prognostico is None else str(j.prognostico)
-                linhas.append((j.nome, prog))
+                linhas.append({"Jogador": j.nome, "Prognóstico": prog})
         if linhas:
-            st.table(linhas)
+            st.dataframe(linhas, use_container_width=True, hide_index=True)
         else:
             st.caption("Você é o primeiro a palpitar (ninguém antes de você).")
 
@@ -514,7 +556,15 @@ elif st.session_state.fase == "prognostico":
             f"<div class='tableMeta'>Aguardando início da 1ª vaza</div></div>",
             unsafe_allow_html=True
         )
-        render_html_fragment(mesa_html([]), height=210)
+        st.markdown(
+            mesa_html_sem_nomes(
+                mesa=[],
+                jogadores=st.session_state.jogadores,
+                mao_nome=st.session_state.ordem[0].nome if st.session_state.ordem else "-",
+                vez_nome=st.session_state.ordem[0].nome if st.session_state.ordem else "-"
+            ),
+            unsafe_allow_html=True
+        )
         st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
@@ -547,7 +597,15 @@ elif st.session_state.fase == "jogada":
         f"</div>",
         unsafe_allow_html=True
     )
-    render_html_fragment(mesa_html(st.session_state.mesa), height=260)
+    st.markdown(
+        mesa_html_sem_nomes(
+            mesa=st.session_state.mesa,
+            jogadores=st.session_state.jogadores,
+            mao_nome=st.session_state.ordem[0].nome,
+            vez_nome=jogador.nome
+        ),
+        unsafe_allow_html=True
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
     # ====== Ações / sua mão (EMBAIXO)
@@ -581,13 +639,7 @@ elif st.session_state.fase == "jogada":
     else:
         st.subheader("🤖 Jogada dos adversários…")
         st.caption("Aguarde: o jogo faz a jogada automática dos bots.")
-        # mostra suas cartas (visual) para não ficar tela “vazia”
-        html = "<div style='display:flex; justify-content:center;'>" + \
-               "<div class='small' style='margin-right:10px; align-self:center;'>Sua mão:</div>" + \
-               "</div>"
-        st.markdown(html, unsafe_allow_html=True)
 
-        # bots jogam agora
         legais = cartas_legais(
             jogador=jogador,
             naipe_base=st.session_state.naipe_base,
@@ -626,7 +678,15 @@ elif st.session_state.fase == "resultado_vaza":
         f"<div class='tableMeta'>Vencedor: <b>{st.session_state.vencedor.nome}</b></div></div>",
         unsafe_allow_html=True
     )
-    render_html_fragment(mesa_html(st.session_state.mesa), height=260)
+    st.markdown(
+        mesa_html_sem_nomes(
+            mesa=st.session_state.mesa,
+            jogadores=st.session_state.jogadores,
+            mao_nome=st.session_state.ordem[0].nome if st.session_state.ordem else "-",
+            vez_nome=st.session_state.vencedor.nome if st.session_state.vencedor else "-"
+        ),
+        unsafe_allow_html=True
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
