@@ -4,12 +4,75 @@ import math
 import time
 import base64
 import urllib.parse
+import uuid
+import copy
 import streamlit as st
 
 # =========================
 # CONFIG
 # =========================
 st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="wide")
+
+# =========================
+# STORE PERSISTENTE (resolve reload/Streamlit Cloud)
+# =========================
+@st.cache_resource
+def get_game_store():
+    # dict em memória do processo: sid -> dict(state)
+    return {}
+
+STATE_KEYS = [
+    "started", "nomes", "humano_idx",
+    "pontos", "vazas_rodada", "maos", "rodada",
+    "cartas_inicio", "cartas_alvo", "sobras_monte",
+    "mao_da_rodada", "mao_primeira_sorteada",
+    "fase",
+    "prognosticos", "progn_pre", "progn_pos",
+    "ordem", "turn_idx", "naipe_base", "mesa",
+    "primeira_vaza", "copas_quebrada",
+    "pontuou_rodada",
+    "pending_play",
+    "table_pop_until", "winner_flash_name", "winner_flash_until",
+    "trick_pending", "trick_phase", "trick_resolve_at", "trick_fly_until",
+    "trick_winner", "trick_snapshot",
+    "pile_counts",
+    "autoplay_last",
+    # sid não é parte do jogo, mas guardamos no session_state para facilitar
+    "sid",
+]
+
+def get_sid_from_url() -> str | None:
+    qp = st.query_params
+    sid = qp.get("sid", None)
+    if isinstance(sid, list):
+        sid = sid[0] if sid else None
+    return sid
+
+def set_url_sid(sid: str):
+    # mantém só sid na URL (sem play)
+    st.query_params.clear()
+    st.query_params["sid"] = sid
+
+def save_state():
+    sid = st.session_state.get("sid", None)
+    if not sid:
+        return
+    store = get_game_store()
+    snapshot = {}
+    for k in STATE_KEYS:
+        if k in st.session_state:
+            snapshot[k] = copy.deepcopy(st.session_state[k])
+    store[sid] = snapshot
+
+def load_state(sid: str) -> bool:
+    store = get_game_store()
+    if sid not in store:
+        return False
+    snap = store[sid]
+    for k, v in snap.items():
+        st.session_state[k] = copy.deepcopy(v)
+    st.session_state["sid"] = sid
+    return True
 
 # =========================
 # CSS PREMIUM (felt verde + mini-monte + avatar imagem + animação do montinho)
@@ -257,7 +320,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .scorePts{ font-weight:900; }
 .smallMuted{ opacity:.70; font-size:12px; }
 
-/* ===== MÃO CLICÁVEL (clique direto na carta, sem botão/retângulo) ===== */
+/* ===== MÃO CLICÁVEL (clique direto na carta) ===== */
 .handLinksRow{
   display:flex;
   gap:10px;
@@ -320,7 +383,6 @@ def carta_html(c):
         f'</div>'
     )
 
-# ============ clique via query_params ============
 def encode_carta(c):
     naipe, valor = c
     payload = f"{naipe}|{valor}"
@@ -439,6 +501,7 @@ def ai_prognostico(mao, cartas_por_jogador: int) -> int:
 # =========================
 def ss_init():
     defaults = {
+        "sid": None,
         "started": False,
         "nomes": ["Ana", "Bruno", "Carlos", "Você"],
         "humano_idx": 3,
@@ -494,6 +557,15 @@ def ss_init():
 ss_init()
 
 # =========================
+# AUTO-RESTORE: se recarregar e voltar pro início, recupera via sid
+# =========================
+sid_url = get_sid_from_url()
+if sid_url and (not st.session_state.get("started", False)):
+    if load_state(sid_url):
+        # garante que a URL fique só com sid, sem play velho
+        set_url_sid(sid_url)
+
+# =========================
 # GAME CORE
 # =========================
 def distribuir(cartas_alvo: int):
@@ -537,6 +609,8 @@ def distribuir(cartas_alvo: int):
     st.session_state.trick_winner = None
     st.session_state.trick_snapshot = []
 
+    save_state()
+
 def preparar_prognosticos_anteriores():
     nomes = st.session_state.nomes
     ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
@@ -544,6 +618,7 @@ def preparar_prognosticos_anteriores():
     pos_h = ordem.index(humano)
     prev = ordem[:pos_h]
     st.session_state.progn_pre = {n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo) for n in prev}
+    save_state()
 
 def preparar_prognosticos_posteriores():
     nomes = st.session_state.nomes
@@ -552,6 +627,7 @@ def preparar_prognosticos_posteriores():
     pos_h = ordem.index(humano)
     post = ordem[pos_h+1:]
     st.session_state.progn_pos = {n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo) for n in post}
+    save_state()
 
 def iniciar_fase_jogo():
     nomes = st.session_state.nomes
@@ -562,6 +638,7 @@ def iniciar_fase_jogo():
     st.session_state.primeira_vaza = True
     st.session_state.copas_quebrada = False
     st.session_state.fase = "jogo"
+    save_state()
 
 def cartas_validas_para_jogar(nome):
     mao = st.session_state.maos[nome]
@@ -598,6 +675,7 @@ def jogar_carta(nome, carta):
         st.session_state.copas_quebrada = True
     st.session_state.mesa.append((nome, carta))
     st.session_state.table_pop_until = time.time() + 0.22
+    save_state()
 
 def vencedor_da_vaza(mesa_snapshot, naipe_base_snapshot):
     copas = [(n, c) for (n, c) in mesa_snapshot if c[0] == TRUNFO]
@@ -619,6 +697,7 @@ def schedule_trick_resolution():
     fly_seconds = 0.55
     st.session_state.trick_resolve_at = now + show_seconds
     st.session_state.trick_fly_until = now + show_seconds + fly_seconds
+    save_state()
 
 def resolve_trick_if_due():
     if not st.session_state.trick_pending:
@@ -630,6 +709,7 @@ def resolve_trick_if_due():
         if now < st.session_state.trick_resolve_at:
             return False
         st.session_state.trick_phase = "fly"
+        save_state()
         return True
 
     if st.session_state.trick_phase == "fly":
@@ -655,6 +735,7 @@ def resolve_trick_if_due():
         st.session_state.trick_fly_until = 0.0
         st.session_state.trick_winner = None
         st.session_state.trick_snapshot = []
+        save_state()
         return True
 
     return False
@@ -670,6 +751,7 @@ def pontuar_rodada():
         p = v + (5 if st.session_state.prognosticos.get(n) == v else 0)
         st.session_state.pontos[n] = st.session_state.pontos.get(n, 0) + p
     st.session_state.pontuou_rodada = True
+    save_state()
 
 def ai_escolhe_carta(nome):
     validas = cartas_validas_para_jogar(nome)
@@ -725,6 +807,7 @@ def start_next_round():
     prox = st.session_state.cartas_alvo - 1
     distribuir(prox)
     preparar_prognosticos_anteriores()
+    save_state()
 
 # =========================
 # UI helpers: chips + pile
@@ -758,9 +841,7 @@ def render_small_pile_html(won: int) -> str:
         dx = i * 1.1
         dy = -i * 1.2
         rot = (i % 3 - 1) * 2
-        parts.append(
-            f'<div class="cardBackLayer" style="left:{dx}px; top:{dy}px; transform: rotate({rot}deg);"></div>'
-        )
+        parts.append(f'<div class="cardBackLayer" style="left:{dx}px; top:{dy}px; transform: rotate({rot}deg);"></div>')
     label = f"{won}" if won > 10 else ""
     label_html = f'<div class="pileLabel">{label}</div>' if label else ''
     return f'<div class="pileStack">{"".join(parts)}</div>{label_html}'
@@ -791,6 +872,7 @@ with st.sidebar:
             if st.session_state.cartas_alvo > 1:
                 if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
                     start_next_round()
+                    save_state()
                     st.rerun()
             else:
                 vencedor, pts = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)[0]
@@ -798,9 +880,15 @@ with st.sidebar:
 
         st.markdown("---")
         if st.button("🔁 Reiniciar", use_container_width=True):
+            sid_keep = st.session_state.get("sid", None)
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             ss_init()
+            # apaga do store também
+            if sid_keep:
+                store = get_game_store()
+                store.pop(sid_keep, None)
+            st.query_params.clear()
             st.rerun()
     else:
         st.info("Inicie uma partida.")
@@ -847,6 +935,11 @@ if not st.session_state.started:
             st.session_state.pontos = {n: 0 for n in nomes}
             st.session_state.started = True
 
+            # cria sid único e fixa na URL
+            sid = uuid.uuid4().hex[:12]
+            st.session_state.sid = sid
+            set_url_sid(sid)
+
             n = len(nomes)
             cartas_inicio = 52 // n
             st.session_state.cartas_inicio = cartas_inicio
@@ -855,6 +948,7 @@ if not st.session_state.started:
 
             distribuir(cartas_inicio)
             preparar_prognosticos_anteriores()
+            save_state()
             st.rerun()
 
     st.stop()
@@ -898,10 +992,11 @@ if st.session_state.fase == "prognostico":
 
         iniciar_fase_jogo()
         avancar_ate_humano_ou_fim()
+        save_state()
         st.rerun()
 
 # =========================
-# RENDER MESA + animação do "montinho voando"
+# MESA
 # =========================
 def seat_positions(ordem):
     n = len(ordem)
@@ -1043,7 +1138,7 @@ def render_mesa():
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
-# MÃO: clique direto na carta via <a href="?play=...">
+# MÃO: clique direto na carta com sid preservado
 # =========================
 def render_hand_clickable_html():
     ordem = st.session_state.ordem
@@ -1051,6 +1146,7 @@ def render_hand_clickable_html():
     atual = ordem[st.session_state.turn_idx]
     mao = st.session_state.maos[humano]
     validas = set(cartas_validas_para_jogar(humano))
+    sid = st.session_state.get("sid", None) or get_sid_from_url()
 
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
     hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
@@ -1072,7 +1168,7 @@ def render_hand_clickable_html():
             cards_html.append(f'<a class="handCardLink disabled" href="#" target="_self">{carta_html(c)}</a>')
         else:
             token = encode_carta(c)
-            cards_html.append(f'<a class="handCardLink" href="?play={token}" target="_self">{carta_html(c)}</a>')
+            cards_html.append(f'<a class="handCardLink" href="?sid={sid}&play={token}" target="_self">{carta_html(c)}</a>')
     cards_html.append('</div>')
 
     st.markdown("".join(cards_html), unsafe_allow_html=True)
@@ -1084,8 +1180,8 @@ def render_hand_clickable_html():
 if st.session_state.fase == "jogo":
     st.markdown(f"### 🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador")
 
-    # resolve animação show->fly->contabiliza
     if resolve_trick_if_due():
+        save_state()
         st.rerun()
 
     render_mesa()
@@ -1100,12 +1196,10 @@ if st.session_state.fase == "jogo":
         f"1ª vaza: **{'Sim' if st.session_state.primeira_vaza else 'Não'}**"
     )
 
-    # se a vaza está pendente, aguarda animação
     if st.session_state.trick_pending:
         time.sleep(0.06)
         st.rerun()
 
-    # se acabou a rodada (e não há vaza pendente), pontua e finaliza
     if rodada_terminou():
         pontuar_rodada()
         st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
@@ -1117,29 +1211,35 @@ if st.session_state.fase == "jogo":
         if now - st.session_state.autoplay_last > 0.08:
             st.session_state.autoplay_last = now
             avancar_ate_humano_ou_fim()
+            save_state()
             time.sleep(0.03)
             st.rerun()
 
-    # ===== Captura clique na carta via query param =====
+    # ===== Captura clique na carta via query param play (com sid) =====
     qp = st.query_params
     play_token = qp.get("play", None)
+    sid_now = st.session_state.get("sid", None) or get_sid_from_url()
+
     if play_token is not None and st.session_state.pending_play is None:
         try:
             carta = decode_carta(play_token)
-            # limpa o query param para não repetir a jogada no próximo rerun
-            st.query_params.clear()
 
-            # validações de segurança
+            # limpa play e mantém sid
+            st.query_params.clear()
+            if sid_now:
+                st.query_params["sid"] = sid_now
+
             if atual == humano and (carta in st.session_state.maos[humano]):
                 validas = set(cartas_validas_para_jogar(humano))
                 if carta in validas and not st.session_state.trick_pending:
                     st.session_state.pending_play = carta
+                    save_state()
                     st.rerun()
         except Exception:
-            # se der qualquer erro de decode, só limpa e segue
             st.query_params.clear()
+            if sid_now:
+                st.query_params["sid"] = sid_now
 
-    # Renderiza a mão como cartas clicáveis (sem retângulo)
     render_hand_clickable_html()
 
     # Executa jogada pendente do humano
@@ -1157,4 +1257,5 @@ if st.session_state.fase == "jogo":
             schedule_trick_resolution()
 
         avancar_ate_humano_ou_fim()
+        save_state()
         st.rerun()
