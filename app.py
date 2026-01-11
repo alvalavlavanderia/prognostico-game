@@ -308,6 +308,35 @@ div[data-testid="column"] .stButton > button:disabled{
 .scorePts{ font-weight:900; }
 .smallMuted{ opacity:.70; font-size:12px; }
 </style>
+APP_CSS += """
+<style>
+/* Mão clicável sem botão */
+.handLinksRow{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:flex-start;
+}
+.handCardLink{
+  display:block;
+  text-decoration:none !important;
+  color:inherit !important;
+}
+.handCardLink .card{
+  cursor:pointer;
+  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+.handCardLink:hover .card{
+  transform: translateY(-4px);
+  box-shadow: 0 14px 26px rgba(0,0,0,.16);
+}
+.handCardLink.disabled{
+  pointer-events:none;
+  opacity:.28;
+  filter: grayscale(.15);
+}
+</style>
+"""
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
 
@@ -1181,6 +1210,92 @@ def render_hand_clickable_streamlit():
     st.markdown('</div>', unsafe_allow_html=True)
     return clicked
 
+def get_query_params():
+    # compatível com streamlit novo e antigo
+    try:
+        return dict(st.query_params)
+    except Exception:
+        return st.experimental_get_query_params()
+
+def clear_play_param():
+    try:
+        qp = dict(st.query_params)
+        if "play" in qp:
+            del qp["play"]
+            st.query_params.clear()
+            for k, v in qp.items():
+                st.query_params[k] = v
+    except Exception:
+        qp = st.experimental_get_query_params()
+        if "play" in qp:
+            qp.pop("play", None)
+            st.experimental_set_query_params(**qp)
+
+def render_hand_clickable_html():
+    """
+    Renderiza a mão como CARTAS clicáveis (links) e
+    retorna a carta clicada via query param (?play=...).
+    """
+    ordem = st.session_state.ordem
+    humano = st.session_state.nomes[st.session_state.humano_idx]
+    atual = ordem[st.session_state.turn_idx]
+
+    mao = st.session_state.maos[humano]
+    validas = set(cartas_validas_para_jogar(humano))
+
+    # 1) Verifica clique (query param)
+    qp = get_query_params()
+    clicked = None
+    if "play" in qp and qp["play"]:
+        raw = qp["play"]
+        # pode vir como lista ou string
+        if isinstance(raw, list):
+            raw = raw[0]
+        try:
+            naipe, valor = raw.split("|", 1)
+            # converte valor
+            if valor.isdigit():
+                valor = int(valor)
+            clicked = (naipe, valor)
+        except Exception:
+            clicked = None
+        # limpa para não repetir no rerun
+        clear_play_param()
+
+    # 2) Renderiza cartas como <a href="?play=...">
+    st.markdown('<div class="handDock">', unsafe_allow_html=True)
+
+    hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
+    if st.session_state.trick_pending:
+        hint = "Vaza completa — animação"
+
+    st.markdown(
+        f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>',
+        unsafe_allow_html=True
+    )
+
+    mao_ord = sorted(mao, key=peso_carta)
+    cards_html = ['<div class="handLinksRow">']
+    for c in mao_ord:
+        disabled = (
+            (c not in validas) or
+            (atual != humano) or
+            st.session_state.trick_pending or
+            (st.session_state.pending_play is not None)
+        )
+
+        key = f"{c[0]}|{c[1]}"
+        cls = "handCardLink disabled" if disabled else "handCardLink"
+        href = "#" if disabled else f"?play={key}"
+        cards_html.append(f'<a class="{cls}" href="{href}">{carta_html(c)}</a>')
+    cards_html.append("</div>")
+
+    st.markdown("".join(cards_html), unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    return clicked
+
+
 # =========================
 # JOGO
 # =========================
@@ -1222,7 +1337,7 @@ if st.session_state.fase == "jogo":
             time.sleep(0.03)
             st.rerun()
 
-    clicked = render_hand_clickable_streamlit()
+    clicked = render_hand_clickable_html()
 
     if clicked is not None:
         st.session_state.pending_play = clicked
