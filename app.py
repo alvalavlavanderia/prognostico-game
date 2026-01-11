@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 # =========================
-# CSS GLOBAL (OK)
+# CSS GLOBAL
 # =========================
 APP_CSS = """
 <style>
@@ -139,22 +139,30 @@ def distribuir_cartas(jogadores, qtd):
 
     for j in jogadores:
         j["mao"] = []
-        j["vazas"] = 0  # zera vazas da rodada
+        j["vazas"] = 0
 
-    # distribui igual para todos
     for _ in range(qtd):
         for j in jogadores:
             j["mao"].append(baralho.pop())
 
 def pontuar_rodada(jogadores):
-    # Pontuação: 1 ponto por vaza + 5 se acertar prognóstico
     for j in jogadores:
         j["pontos"] += j["vazas"]
         if j["vazas"] == j["prognostico"]:
             j["pontos"] += 5
 
+def get_humano(jogadores):
+    # 1) tenta achar explicitamente humano=True
+    for j in jogadores:
+        if j.get("humano", False):
+            return j
+    # 2) fallback: último jogador é o humano
+    if jogadores:
+        jogadores[-1]["humano"] = True
+        return jogadores[-1]
+    return None
+
 def rerun_safe():
-    # Compatível com versões novas do Streamlit
     st.rerun()
 
 # =========================
@@ -179,33 +187,47 @@ if "jogadores" in st.session_state:
 # =========================
 if st.session_state.fase == "setup":
     st.title("🃏 Jogo de Prognóstico")
-
     st.write("As cartas serão distribuídas igualmente até acabar o baralho.")
 
     nomes = st.text_input(
-        "Jogadores (separados por vírgula — você por último)",
-        "Ana, Bruno, Carlos, Você"
+        "Jogadores (separados por vírgula — o último será Você)",
+        "Ana, Bruno, Carlos, Mauro"
     )
 
     if st.button("▶ Iniciar jogo"):
         lista = [n.strip() for n in nomes.split(",") if n.strip()]
         if len(lista) < 3:
-            st.error("Informe pelo menos 3 jogadores (incluindo Você).")
+            st.error("Informe pelo menos 3 jogadores.")
             st.stop()
 
         jogadores = []
-        for n in lista:
+        for idx, n in enumerate(lista):
+            is_humano = False
+            # considera humano se for o último
+            if idx == len(lista) - 1:
+                is_humano = True
+            # ou se o nome indicar "você/voce"
+            if n.lower() in ["voce", "você", "vc"]:
+                is_humano = True
+
             jogadores.append({
                 "nome": n,
                 "mao": [],
                 "vazas": 0,
                 "prognostico": None,
                 "pontos": 0,
-                "humano": n.lower() in ["voce", "você"]
+                "humano": is_humano
             })
 
+        # se por algum motivo ninguém marcou humano, força o último
+        if not any(j["humano"] for j in jogadores):
+            jogadores[-1]["humano"] = True
+
         st.session_state.jogadores = jogadores
-        st.session_state.rodada = len(jogadores)  # começando simples
+
+        # por enquanto (simples): começa com N cartas
+        st.session_state.rodada = len(jogadores)
+
         st.session_state.fase = "prognostico"
         rerun_safe()
 
@@ -217,7 +239,10 @@ elif st.session_state.fase == "prognostico":
 
     distribuir_cartas(st.session_state.jogadores, st.session_state.rodada)
 
-    humano = next(j for j in st.session_state.jogadores if j["humano"])
+    humano = get_humano(st.session_state.jogadores)
+    if humano is None:
+        st.error("Não foi possível identificar o jogador humano.")
+        st.stop()
 
     st.markdown("### Suas cartas")
     st.markdown("<div class='handRow'>", unsafe_allow_html=True)
@@ -257,16 +282,12 @@ elif st.session_state.fase == "prognostico":
 elif st.session_state.fase == "fim_rodada":
     st.subheader("🧮 Final da rodada")
 
-    # Simulação provisória: atribui vazas aleatórias
-    # (a lógica real de jogo vai entrar depois)
     for j in st.session_state.jogadores:
         j["vazas"] = random.randint(0, st.session_state.rodada)
 
-    # Pontua (inclui a última mão)
     pontuar_rodada(st.session_state.jogadores)
 
     st.success("Rodada pontuada! Indo para a próxima...")
-
     time.sleep(1)
 
     if st.session_state.rodada > 1:
