@@ -229,7 +229,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   box-shadow: 0 14px 34px rgba(0,0,0,.08);
   padding: 12px;
 }
-.handTitle{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 6px; }
+.handTitle{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 6px; }
 .handTitle h3{ margin:0; font-size:16px; }
 .hint{ font-size:12px; opacity:.70; font-weight:800; }
 
@@ -422,29 +422,18 @@ def avatar_svg_data_uri(idx: int) -> str:
 # IA: PROGNÓSTICO MAIS AVANÇADO
 # =========================
 def ai_prognostico(mao, cartas_por_jogador: int) -> int:
-    """
-    Heurística forte (não perfeita):
-    - Trunfos valem bem mais
-    - Cartas altas por naipe contam
-    - Naipe curto aumenta chance de cortar com trunfo
-    - Escala final para 0..cartas_por_jogador
-    """
     if not mao:
         return 0
 
-    # Contagens
     suit_counts = {"♠": 0, "♦": 0, "♣": 0, "♥": 0}
     for n, v in mao:
         suit_counts[n] += 1
 
     trumps = suit_counts["♥"]
-    non_trumps = cartas_por_jogador - trumps
 
-    # força base: trunfo
     strength = 0.0
     strength += trumps * 0.95
 
-    # pontos por cartas altas (trunfo pontua mais)
     for n, v in mao:
         base = HIGH_POINTS.get(v, 0.0)
         if n == "♥":
@@ -452,8 +441,6 @@ def ai_prognostico(mao, cartas_por_jogador: int) -> int:
         else:
             strength += base * 1.00
 
-    # bônus por naipes curtos (chance de cortar)
-    # quanto menor o naipe, maior a chance de "ficar sem" e cortar com ♥
     for s in ["♠", "♦", "♣"]:
         c = suit_counts[s]
         if c == 0:
@@ -463,28 +450,17 @@ def ai_prognostico(mao, cartas_por_jogador: int) -> int:
         elif c == 2:
             strength += 0.12
 
-    # penalidade leve se quase sem trunfo e mão "espalhada"
     distinct_nontrump_suits = sum(1 for s in ["♠", "♦", "♣"] if suit_counts[s] > 0)
     if trumps == 0 and distinct_nontrump_suits >= 3:
         strength -= 0.25
 
-    # Ajuste para tamanho de mão
-    # expectativa aproximada: força / 2.4, mas com limite
     expected = strength / 2.4
-
-    # Pequena aleatoriedade controlada para não virar "robô perfeito"
-    jitter = random.uniform(-0.25, 0.25)
-    expected += jitter
+    expected += random.uniform(-0.25, 0.25)
 
     guess = int(round(expected))
-
-    # clamp
     guess = max(0, min(cartas_por_jogador, guess))
-
-    # Evita palpite 0/100% o tempo todo em mãos grandes
     if cartas_por_jogador >= 9:
         guess = max(0, min(cartas_por_jogador, guess))
-
     return guess
 
 # =========================
@@ -529,17 +505,15 @@ def ss_init():
         "winner_flash_name": None,
         "winner_flash_until": 0.0,
 
-        # Animação da vaza indo pro vencedor
         "trick_pending": False,
-        "trick_phase": None,          # "show" -> "fly"
-        "trick_resolve_at": 0.0,      # quando sai do show e entra no fly
-        "trick_fly_until": 0.0,       # quando termina o fly e contabiliza
+        "trick_phase": None,
+        "trick_resolve_at": 0.0,
+        "trick_fly_until": 0.0,
         "trick_winner": None,
         "trick_snapshot": [],
 
         "pile_counts": {},
 
-        # autoplay
         "autoplay_last": 0.0,
     }
     for k, v in defaults.items():
@@ -599,7 +573,6 @@ def preparar_prognosticos_anteriores():
     pos_h = ordem.index(humano)
     prev = ordem[:pos_h]
 
-    # IA mais inteligente (usa a própria mão)
     st.session_state.progn_pre = {
         n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo)
         for n in prev
@@ -636,24 +609,19 @@ def cartas_validas_para_jogar(nome):
     if not mao:
         return []
 
-    # Seguir naipe se tiver
     if naipe_base and tem_naipe(mao, naipe_base):
         return [c for c in mao if c[0] == naipe_base]
 
-    # Não tem naipe base
     if naipe_base and not tem_naipe(mao, naipe_base):
-        # 1ª vaza: não pode jogar trunfo se tiver outras (exceto só trunfo)
         if primeira_vaza and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
         return mao[:]
 
-    # Mão abrindo
     if naipe_base is None:
         if primeira_vaza:
             if somente_trunfo(mao):
                 return mao[:]
             return [c for c in mao if c[0] != TRUNFO]
-        # após 1ª vaza: só pode abrir com trunfo se já quebrou ou só trunfo
         if not copas_quebrada and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
 
@@ -669,21 +637,13 @@ def jogar_carta(nome, carta):
     st.session_state.table_pop_until = time.time() + 0.22
 
 def vencedor_da_vaza(mesa_snapshot, naipe_base_snapshot):
-    # se tem trunfo, maior trunfo vence
     copas = [(n, c) for (n, c) in mesa_snapshot if c[0] == TRUNFO]
     if copas:
         return max(copas, key=lambda x: PESO_VALOR[x[1][1]])[0]
-    # senão, maior do naipe base
     base = [(n, c) for (n, c) in mesa_snapshot if c[0] == naipe_base_snapshot]
     return max(base, key=lambda x: PESO_VALOR[x[1][1]])[0]
 
 def schedule_trick_resolution():
-    """
-    Quando a última carta é jogada:
-    1) fica tudo na mesa (show)
-    2) depois voa pro vencedor (fly)
-    3) depois contabiliza e limpa mesa
-    """
     if st.session_state.trick_pending:
         return
 
@@ -693,34 +653,27 @@ def schedule_trick_resolution():
     st.session_state.trick_snapshot = st.session_state.mesa[:]
     st.session_state.trick_winner = vencedor_da_vaza(st.session_state.trick_snapshot, st.session_state.naipe_base)
 
-    # tempos (ajustáveis)
     show_seconds = 1.10
     fly_seconds = 0.55
     st.session_state.trick_resolve_at = now + show_seconds
     st.session_state.trick_fly_until = now + show_seconds + fly_seconds
 
 def resolve_trick_if_due():
-    """
-    Controla as fases: show -> fly -> contabiliza
-    """
     if not st.session_state.trick_pending:
         return False
 
     now = time.time()
 
-    # ainda mostrando
     if st.session_state.trick_phase == "show":
         if now < st.session_state.trick_resolve_at:
             return False
         st.session_state.trick_phase = "fly"
-        return True  # força rerun pra começar a animação
+        return True
 
-    # animando voo
     if st.session_state.trick_phase == "fly":
         if now < st.session_state.trick_fly_until:
             return False
 
-        # contabiliza
         win = st.session_state.trick_winner
         st.session_state.vazas_rodada[win] += 1
         st.session_state.pile_counts[win] = st.session_state.pile_counts.get(win, 0) + 1
@@ -734,7 +687,6 @@ def resolve_trick_if_due():
         st.session_state.naipe_base = None
         st.session_state.primeira_vaza = False
 
-        # reseta trick state
         st.session_state.trick_pending = False
         st.session_state.trick_phase = None
         st.session_state.trick_resolve_at = 0.0
@@ -758,7 +710,6 @@ def pontuar_rodada():
     st.session_state.pontuou_rodada = True
 
 def ai_escolhe_carta(nome):
-    # (mantemos simples por enquanto)
     validas = cartas_validas_para_jogar(nome)
     return random.choice(validas) if validas else None
 
@@ -780,7 +731,8 @@ def avancar_ate_humano_ou_fim():
         if st.session_state.trick_pending:
             return
 
-        if rodada_terminou():
+        # IMPORTANTE: só pontuar quando NÃO estiver com vaza pendente (última vaza!)
+        if rodada_terminou() and not st.session_state.trick_pending:
             pontuar_rodada()
             return
 
@@ -818,14 +770,14 @@ def start_next_round():
 # =========================
 def chip_color_for_index(idx: int) -> str:
     palette = [
-        "rgba(16,185,129,.88)",   # verde
-        "rgba(59,130,246,.88)",   # azul
-        "rgba(245,158,11,.88)",   # âmbar
-        "rgba(239,68,68,.88)",    # vermelho
-        "rgba(168,85,247,.88)",   # roxo
-        "rgba(20,184,166,.88)",   # teal
-        "rgba(100,116,139,.88)",  # slate
-        "rgba(236,72,153,.88)",   # pink
+        "rgba(16,185,129,.88)",
+        "rgba(59,130,246,.88)",
+        "rgba(245,158,11,.88)",
+        "rgba(239,68,68,.88)",
+        "rgba(168,85,247,.88)",
+        "rgba(20,184,166,.88)",
+        "rgba(100,116,139,.88)",
+        "rgba(236,72,153,.88)",
     ]
     return palette[idx % len(palette)]
 
@@ -873,7 +825,8 @@ with st.sidebar:
             unsafe_allow_html=True
         )
 
-        if st.session_state.fase == "jogo" and rodada_terminou():
+        # só permitir "Próxima rodada" quando a rodada terminou E NÃO há vaza pendente
+        if st.session_state.fase == "jogo" and rodada_terminou() and not st.session_state.trick_pending:
             st.markdown("---")
             if st.session_state.cartas_alvo > 1:
                 if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
@@ -999,7 +952,6 @@ def seat_positions(ordem):
         ang = (2*math.pi) * (i/n) - (math.pi/2)
         x = cx + rx*math.cos(ang)
         y = cy + ry*math.sin(ang)
-        # chips/pile target "mais pra dentro"
         tx = cx + (rx*0.70)*math.cos(ang)
         ty = cy + (ry*0.70)*math.sin(ang)
         pos[nome] = {"seat": (x, y), "target": (tx, ty)}
@@ -1016,7 +968,6 @@ def render_mesa():
     flash_name = st.session_state.winner_flash_name if now <= st.session_state.winner_flash_until else None
     pop_active = now <= st.session_state.table_pop_until
 
-    # qual conjunto de cartas mostrar?
     if st.session_state.trick_pending:
         mesa_to_render = st.session_state.trick_snapshot
     else:
@@ -1028,9 +979,8 @@ def render_mesa():
     chips_html = ""
     piles_html = ""
     plays_html = ""
-    anim_css = ""  # keyframes geradas dinamicamente
+    anim_css = ""
 
-    # assentos + chips + piles
     for i, nome in enumerate(ordem):
         x, y = pos[nome]["seat"]
         tx, ty = pos[nome]["target"]
@@ -1074,16 +1024,13 @@ def render_mesa():
 </div>
 """
 
-    # cartas na mesa (ou animando para o vencedor)
-    # posição da carta na mesa é próxima do jogador
     winner = st.session_state.trick_winner
     winner_target = None
     if winner:
         wx, wy = pos[winner]["target"]
-        winner_target = (wx, wy + 12)  # onde fica o montinho (abaixo dos chips)
+        winner_target = (wx, wy + 12)
 
     for idx, (nome, carta) in enumerate(mesa_to_render):
-        # ponto inicial (onde a carta fica na mesa)
         i = ordem.index(nome)
         ang = (2*math.pi) * (i/n) - (math.pi/2)
         cx, cy = 50, 50
@@ -1095,11 +1042,9 @@ def render_mesa():
         cls = "playCard"
         extra_style = f"left:{x}%; top:{y}%;"
 
-        # Pop de entrada
         if pop_active and is_last and not st.session_state.trick_pending:
             cls += " pop"
 
-        # Se estiver na fase "fly", anima para o vencedor
         if st.session_state.trick_pending and st.session_state.trick_phase == "fly" and winner_target:
             tx, ty = winner_target
             anim_name = f"flyToWinner_{idx}"
@@ -1111,12 +1056,10 @@ def render_mesa():
 }}
 """
             extra_style = f"left:{x}%; top:{y}%; animation:{anim_name} .55s ease-in forwards;"
-            # (sem pop na fase fly)
             cls = "playCard"
 
         plays_html += f'<div class="{cls}" style="{extra_style}">{carta_html(carta)}</div>'
 
-    # label central
     if st.session_state.trick_pending:
         if st.session_state.trick_phase == "show":
             centro_txt = "Vaza completa — mostrando..."
@@ -1128,7 +1071,6 @@ def render_mesa():
     if naipe_base_show:
         centro_txt = f"{centro_txt} • Naipe: {naipe_base_show}"
 
-    # injeta as keyframes se existirem
     if anim_css.strip():
         st.markdown(f"<style>{anim_css}</style>", unsafe_allow_html=True)
 
@@ -1187,7 +1129,7 @@ def render_hand_clickable_streamlit():
 if st.session_state.fase == "jogo":
     st.markdown(f"### 🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador")
 
-    # controla fases da animação (show->fly->contabiliza)
+    # 1) controla animação show->fly->contabiliza
     if resolve_trick_if_due():
         st.rerun()
 
@@ -1203,15 +1145,17 @@ if st.session_state.fase == "jogo":
         f"1ª vaza: **{'Sim' if st.session_state.primeira_vaza else 'Não'}**"
     )
 
+    # 2) Se a vaza está pendente (show ou fly), não finalize rodada.
+    #    Isso corrige a ÚLTIMA RODADA (1 carta) onde as mãos ficam vazias antes da vaza ser contabilizada.
+    if st.session_state.trick_pending:
+        time.sleep(0.06)
+        st.rerun()
+
+    # 3) Agora sim: se acabou a rodada (e NÃO tem vaza pendente), pontua e finaliza
     if rodada_terminou():
         pontuar_rodada()
         st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
         st.stop()
-
-    # Se animação de vaza ativa, só esperar e rerunar
-    if st.session_state.trick_pending:
-        time.sleep(0.06)
-        st.rerun()
 
     # AUTOPLAY IA (sem botão)
     if atual != humano and st.session_state.pending_play is None:
