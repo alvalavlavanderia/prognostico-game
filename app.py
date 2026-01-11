@@ -22,31 +22,15 @@ header[data-testid="stHeader"] { height: .3rem; }
   background: radial-gradient(circle at 20% 10%, rgba(0,150,110,.12), transparent 40%);
 }
 
-/* ===== MESA ===== */
-.mesa{
-  border-radius:22px;
-  border:1px solid rgba(0,0,0,.14);
-  height: 460px;
-  position:relative;
-  overflow:hidden;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(255,255,255,.12), rgba(255,255,255,0) 45%),
-    linear-gradient(180deg, #125a37 0%, #0d482d 55%, #0a3a24 100%);
-  box-shadow: 0 18px 42px rgba(0,0,0,.18);
-}
-
-.mesaCenter{
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:900;
-  color:rgba(255,255,255,.85);
-  letter-spacing:.08em;
-}
-
 /* ===== CARTAS ===== */
+.handRow{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:flex-start;
+  justify-content:flex-start;
+}
+
 .card{
   width:72px;
   height:108px;
@@ -56,9 +40,6 @@ header[data-testid="stHeader"] { height: .3rem; }
   box-shadow:0 10px 22px rgba(0,0,0,.14);
   position:relative;
   user-select:none;
-  display:inline-block;
-  margin-right:10px;
-  margin-bottom:10px;
 }
 
 .card .tl{
@@ -86,14 +67,6 @@ header[data-testid="stHeader"] { height: .3rem; }
   justify-content:center;
   font-size:30px;
   font-weight:900;
-}
-
-/* ===== MÃO ===== */
-.handRow{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:flex-start;
 }
 
 /* ===== SIDEBAR ===== */
@@ -127,8 +100,15 @@ class Carta:
     def peso(self):
         return VALOR_PESO[self.valor]
 
+    def to_dict(self):
+        return {"naipe": self.naipe, "valor": self.valor}
+
+    @staticmethod
+    def from_dict(d):
+        return Carta(d["naipe"], d["valor"])
+
 # =========================
-# FUNÇÕES DE JOGO
+# FUNÇÕES
 # =========================
 def criar_baralho():
     return [Carta(n, v) for n in NAIPES for v in VALORES]
@@ -156,13 +136,28 @@ def get_humano(jogadores):
     for j in jogadores:
         if j.get("humano", False):
             return j
-    # 2) fallback: último jogador é o humano
+    # 2) fallback: último jogador
     if jogadores:
         jogadores[-1]["humano"] = True
         return jogadores[-1]
     return None
 
-def rerun_safe():
+def render_mao_html(cartas):
+    # Renderiza TODAS as cartas em um único bloco HTML (não quebra o flex)
+    cards_html = []
+    for c in cartas:
+        cards_html.append(
+            f"""
+            <div class="card">
+              <div class="tl" style="color:{COR[c.naipe]}">{c.valor}{c.naipe}</div>
+              <div class="mid" style="color:{COR[c.naipe]}">{c.naipe}</div>
+              <div class="br" style="color:{COR[c.naipe]}">{c.valor}{c.naipe}</div>
+            </div>
+            """
+        )
+    return f"""<div class="handRow">{''.join(cards_html)}</div>"""
+
+def rerun():
     st.rerun()
 
 # =========================
@@ -170,6 +165,11 @@ def rerun_safe():
 # =========================
 if "fase" not in st.session_state:
     st.session_state.fase = "setup"
+
+# mão fixa da rodada (pra não mudar no +)
+# st.session_state.rodada_deal_id identifica se já distribuímos praquela rodada
+if "rodada_deal_id" not in st.session_state:
+    st.session_state.rodada_deal_id = None
 
 # =========================
 # SIDEBAR (PLACAR)
@@ -202,14 +202,7 @@ if st.session_state.fase == "setup":
 
         jogadores = []
         for idx, n in enumerate(lista):
-            is_humano = False
-            # considera humano se for o último
-            if idx == len(lista) - 1:
-                is_humano = True
-            # ou se o nome indicar "você/voce"
-            if n.lower() in ["voce", "você", "vc"]:
-                is_humano = True
-
+            is_humano = (idx == len(lista) - 1) or (n.lower() in ["voce", "você", "vc"])
             jogadores.append({
                 "nome": n,
                 "mao": [],
@@ -219,17 +212,19 @@ if st.session_state.fase == "setup":
                 "humano": is_humano
             })
 
-        # se por algum motivo ninguém marcou humano, força o último
         if not any(j["humano"] for j in jogadores):
             jogadores[-1]["humano"] = True
 
         st.session_state.jogadores = jogadores
 
-        # por enquanto (simples): começa com N cartas
+        # começa com N cartas (igual ao número de jogadores) — só pra demo
         st.session_state.rodada = len(jogadores)
 
+        # força redistribuição ao entrar no prognóstico
+        st.session_state.rodada_deal_id = None
+
         st.session_state.fase = "prognostico"
-        rerun_safe()
+        rerun()
 
 # =========================
 # PROGNÓSTICO
@@ -237,44 +232,41 @@ if st.session_state.fase == "setup":
 elif st.session_state.fase == "prognostico":
     st.subheader(f"🎯 Rodada — {st.session_state.rodada} cartas")
 
-    distribuir_cartas(st.session_state.jogadores, st.session_state.rodada)
-
-    humano = get_humano(st.session_state.jogadores)
+    jogadores = st.session_state.jogadores
+    humano = get_humano(jogadores)
     if humano is None:
         st.error("Não foi possível identificar o jogador humano.")
         st.stop()
 
+    # ✅ Distribui cartas UMA ÚNICA VEZ por rodada (não muda ao clicar no +)
+    current_deal_id = f"rodada_{st.session_state.rodada}"
+    if st.session_state.rodada_deal_id != current_deal_id:
+        distribuir_cartas(jogadores, st.session_state.rodada)
+        # zera prognósticos pra rodada
+        for j in jogadores:
+            j["prognostico"] = None
+        st.session_state.rodada_deal_id = current_deal_id
+
+    # ✅ Render em linha (um único HTML)
     st.markdown("### Suas cartas")
-    st.markdown("<div class='handRow'>", unsafe_allow_html=True)
-    for c in humano["mao"]:
-        st.markdown(
-            f"""
-            <div class='card'>
-              <div class='tl' style='color:{COR[c.naipe]}'>{c.valor}{c.naipe}</div>
-              <div class='mid' style='color:{COR[c.naipe]}'>{c.naipe}</div>
-              <div class='br' style='color:{COR[c.naipe]}'>{c.valor}{c.naipe}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown(render_mao_html(humano["mao"]), unsafe_allow_html=True)
 
     prog = st.number_input(
         "Seu prognóstico",
         min_value=0,
         max_value=st.session_state.rodada,
-        step=1
+        step=1,
+        key=f"prog_{st.session_state.rodada}"  # key por rodada
     )
 
     if st.button("Confirmar prognóstico"):
         humano["prognostico"] = int(prog)
-
-        for j in st.session_state.jogadores:
+        for j in jogadores:
             if not j["humano"]:
                 j["prognostico"] = random.randint(0, st.session_state.rodada)
 
         st.session_state.fase = "fim_rodada"
-        rerun_safe()
+        rerun()
 
 # =========================
 # FIM DA RODADA (SIMULAÇÃO)
@@ -282,21 +274,25 @@ elif st.session_state.fase == "prognostico":
 elif st.session_state.fase == "fim_rodada":
     st.subheader("🧮 Final da rodada")
 
-    for j in st.session_state.jogadores:
+    jogadores = st.session_state.jogadores
+
+    # simula vazas
+    for j in jogadores:
         j["vazas"] = random.randint(0, st.session_state.rodada)
 
-    pontuar_rodada(st.session_state.jogadores)
+    pontuar_rodada(jogadores)
 
     st.success("Rodada pontuada! Indo para a próxima...")
     time.sleep(1)
 
     if st.session_state.rodada > 1:
         st.session_state.rodada -= 1
+        st.session_state.rodada_deal_id = None  # libera novo deal
         st.session_state.fase = "prognostico"
     else:
         st.session_state.fase = "fim_jogo"
 
-    rerun_safe()
+    rerun()
 
 # =========================
 # FIM DO JOGO
@@ -311,4 +307,5 @@ elif st.session_state.fase == "fim_jogo":
         for k in list(st.session_state.keys()):
             del st.session_state[k]
         st.session_state.fase = "setup"
-        rerun_safe()
+        rerun()
+
