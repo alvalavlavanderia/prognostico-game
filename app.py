@@ -5,8 +5,9 @@ import time
 import base64
 import urllib.parse
 import uuid
-import copy
+
 import streamlit as st
+import streamlit.components.v1 as components
 
 # =========================
 # CONFIG
@@ -14,70 +15,7 @@ import streamlit as st
 st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="wide")
 
 # =========================
-# STORE PERSISTENTE (resolve reload/Streamlit Cloud)
-# =========================
-@st.cache_resource
-def get_game_store():
-    return {}  # sid -> snapshot dict
-
-STATE_KEYS = [
-    "started", "nomes", "humano_idx",
-    "pontos", "vazas_rodada", "maos", "rodada",
-    "cartas_inicio", "cartas_alvo", "sobras_monte",
-    "mao_da_rodada", "mao_primeira_sorteada",
-    "fase",
-    "prognosticos", "progn_pre", "progn_pos",
-    "ordem", "turn_idx", "naipe_base", "mesa",
-    "primeira_vaza", "copas_quebrada",
-    "pontuou_rodada",
-    "pending_play",
-    "table_pop_until", "winner_flash_name", "winner_flash_until",
-    "trick_pending", "trick_phase", "trick_resolve_at", "trick_fly_until",
-    "trick_winner", "trick_snapshot",
-    "pile_counts",
-    "autoplay_last",
-    "sid",
-]
-
-def _qp_get_one(key: str):
-    qp = st.query_params
-    if key not in qp:
-        return None
-    val = qp.get(key)
-    if isinstance(val, list):
-        return val[0] if val else None
-    return val
-
-def get_sid_from_url():
-    return _qp_get_one("sid")
-
-def set_url_sid(sid: str):
-    st.query_params.clear()
-    st.query_params["sid"] = sid
-
-def save_state():
-    sid = st.session_state.get("sid", None)
-    if not sid:
-        return
-    store = get_game_store()
-    snapshot = {}
-    for k in STATE_KEYS:
-        if k in st.session_state:
-            snapshot[k] = copy.deepcopy(st.session_state[k])
-    store[sid] = snapshot
-
-def load_state(sid: str) -> bool:
-    store = get_game_store()
-    if sid not in store:
-        return False
-    snap = store[sid]
-    for k, v in snap.items():
-        st.session_state[k] = copy.deepcopy(v)
-    st.session_state["sid"] = sid
-    return True
-
-# =========================
-# CSS PREMIUM
+# CSS PREMIUM (felt verde + mini-monte + avatar imagem + animação do montinho)
 # =========================
 APP_CSS = """
 <style>
@@ -92,15 +30,17 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .badges{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 .badge{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(0,0,0,.06); font-size:12px; font-weight:800; }
 
-/* Mesa */
+/* Mesa (felt verde profissional) */
 .mesaWrap{ margin-top: 6px; }
 .mesa{
   border-radius:22px;
   border:1px solid rgba(0,0,0,.14);
+
   background:
     radial-gradient(circle at 30% 20%, rgba(255,255,255,.12) 0%, rgba(255,255,255,0) 42%),
     radial-gradient(circle at 70% 80%, rgba(0,0,0,.10) 0%, rgba(0,0,0,0) 48%),
     linear-gradient(180deg, rgba(18,90,55,1) 0%, rgba(13,72,45,1) 55%, rgba(10,58,36,1) 100%);
+
   height: 470px;
   position:relative;
   overflow:hidden;
@@ -132,7 +72,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   color: rgba(255,255,255,.90);
 }
 
-/* Assentos */
+/* Assentos (nome + avatar sempre visíveis) */
 .seat{
   position:absolute;
   padding:6px 10px;
@@ -148,6 +88,8 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 }
 .seat.you{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }
 .seat.dealer{ border-color: rgba(34,197,94,.35); background: rgba(255,255,255,.95); }
+
+/* Avatar imagem cartoon */
 .avatarImg{
   width:26px; height:26px;
   border-radius:50%;
@@ -157,7 +99,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   flex: 0 0 auto;
 }
 
-/* Winner */
+/* Winner glow */
 @keyframes winnerGlow {
   0% { box-shadow: 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }
   35% { box-shadow: 0 0 0 6px rgba(34,197,94,.22), 0 14px 28px rgba(0,0,0,.14); transform: translate(-50%,-50%) scale(1.03); }
@@ -182,7 +124,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 }
 .playCard.pop{ animation: popIn .16s ease-out; }
 
-/* Carta */
+/* Carta (frente) */
 .card{
   width:70px;
   height:102px;
@@ -197,7 +139,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .card .br{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }
 .card .mid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }
 
-/* Chips */
+/* Chips pequenos */
 .chipWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 16; }
 .chipRow{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width: 140px; }
 .chipMini{
@@ -253,7 +195,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   display:inline-block;
 }
 
-/* Pile */
+/* Montinho mini-cartas (bem pequeno) */
 .pileWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 15; }
 .pileStack{ position:relative; width:26px; height:40px; }
 .cardBackLayer{
@@ -281,7 +223,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   text-shadow: 0 2px 6px rgba(0,0,0,.25);
 }
 
-/* Dock */
+/* Dock da mão */
 .handDock{
   margin-top: 12px;
   border-radius: 18px;
@@ -317,32 +259,6 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .scoreName{ font-weight:900; }
 .scorePts{ font-weight:900; }
 .smallMuted{ opacity:.70; font-size:12px; }
-
-/* MÃO clicável (link) */
-.handLinksRow{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:flex-start;
-}
-.handCardLink{
-  display:block;
-  text-decoration:none !important;
-  color:inherit !important;
-}
-.handCardLink .card{
-  cursor:pointer;
-  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
-}
-.handCardLink:hover .card{
-  transform: translateY(-4px);
-  box-shadow: 0 14px 26px rgba(0,0,0,.16);
-}
-.handCardLink.disabled{
-  pointer-events:none;
-  opacity:.28;
-  filter: grayscale(.15);
-}
 </style>
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
@@ -350,10 +266,10 @@ st.markdown(APP_CSS, unsafe_allow_html=True)
 # =========================
 # BARALHO / REGRAS
 # =========================
-VALORES = [2, 3, 4, 5, 6, 7, 8, 9, 10, "J", "Q", "K", "A"]
-PESO_VALOR = {v: i for i, v in enumerate(VALORES)}
-COR_NAIPE = {"♦": "#C1121F", "♥": "#C1121F", "♠": "#111827", "♣": "#111827"}
-ORDEM_NAIPE = {"♦": 0, "♠": 1, "♣": 2, "♥": 3}
+VALORES = [2,3,4,5,6,7,8,9,10,"J","Q","K","A"]
+PESO_VALOR = {v:i for i,v in enumerate(VALORES)}
+COR_NAIPE = {"♦":"#C1121F", "♥":"#C1121F", "♠":"#111827", "♣":"#111827"}
+ORDEM_NAIPE = {"♦":0, "♠":1, "♣":2, "♥":3}
 TRUNFO = "♥"
 HIGH_POINTS = {"A": 1.40, "K": 1.05, "Q": 0.80, "J": 0.55, 10: 0.35, 9: 0.20}
 
@@ -451,12 +367,11 @@ def avatar_svg_data_uri(idx: int) -> str:
     return f"data:image/svg+xml;base64,{svg_b64}"
 
 # =========================
-# IA: PROGNÓSTICO
+# IA: PROGNÓSTICO MAIS AVANÇADO
 # =========================
 def ai_prognostico(mao, cartas_por_jogador: int) -> int:
     if not mao:
         return 0
-
     suit_counts = {"♠": 0, "♦": 0, "♣": 0, "♥": 0}
     for n, v in mao:
         suit_counts[n] += 1
@@ -487,11 +402,10 @@ def ai_prognostico(mao, cartas_por_jogador: int) -> int:
     return max(0, min(cartas_por_jogador, guess))
 
 # =========================
-# STATE INIT
+# STATE
 # =========================
 def ss_init():
     defaults = {
-        "sid": None,
         "started": False,
         "nomes": ["Ana", "Bruno", "Carlos", "Você"],
         "humano_idx": 3,
@@ -539,20 +453,14 @@ def ss_init():
         "pile_counts": {},
 
         "autoplay_last": 0.0,
+
+        "sid": None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
 ss_init()
-
-# =========================
-# AUTO-RESTORE por sid
-# =========================
-sid_url = get_sid_from_url()
-if sid_url and (not st.session_state.get("started", False)):
-    if load_state(sid_url):
-        set_url_sid(sid_url)
 
 # =========================
 # GAME CORE
@@ -598,8 +506,6 @@ def distribuir(cartas_alvo: int):
     st.session_state.trick_winner = None
     st.session_state.trick_snapshot = []
 
-    save_state()
-
 def preparar_prognosticos_anteriores():
     nomes = st.session_state.nomes
     ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
@@ -610,7 +516,6 @@ def preparar_prognosticos_anteriores():
         n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo)
         for n in prev
     }
-    save_state()
 
 def preparar_prognosticos_posteriores():
     nomes = st.session_state.nomes
@@ -622,7 +527,6 @@ def preparar_prognosticos_posteriores():
         n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo)
         for n in post
     }
-    save_state()
 
 def iniciar_fase_jogo():
     nomes = st.session_state.nomes
@@ -633,7 +537,6 @@ def iniciar_fase_jogo():
     st.session_state.primeira_vaza = True
     st.session_state.copas_quebrada = False
     st.session_state.fase = "jogo"
-    save_state()
 
 def cartas_validas_para_jogar(nome):
     mao = st.session_state.maos[nome]
@@ -644,19 +547,24 @@ def cartas_validas_para_jogar(nome):
     if not mao:
         return []
 
+    # Seguir naipe se tiver
     if naipe_base and tem_naipe(mao, naipe_base):
         return [c for c in mao if c[0] == naipe_base]
 
+    # Não tem naipe base
     if naipe_base and not tem_naipe(mao, naipe_base):
+        # 1ª vaza: não pode jogar trunfo se tiver outras (exceto só trunfo)
         if primeira_vaza and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
         return mao[:]
 
+    # Mão abrindo
     if naipe_base is None:
         if primeira_vaza:
             if somente_trunfo(mao):
                 return mao[:]
             return [c for c in mao if c[0] != TRUNFO]
+        # após 1ª vaza: só pode abrir com trunfo se já quebrou ou só trunfo
         if not copas_quebrada and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
 
@@ -670,7 +578,6 @@ def jogar_carta(nome, carta):
         st.session_state.copas_quebrada = True
     st.session_state.mesa.append((nome, carta))
     st.session_state.table_pop_until = time.time() + 0.22
-    save_state()
 
 def vencedor_da_vaza(mesa_snapshot, naipe_base_snapshot):
     copas = [(n, c) for (n, c) in mesa_snapshot if c[0] == TRUNFO]
@@ -682,6 +589,7 @@ def vencedor_da_vaza(mesa_snapshot, naipe_base_snapshot):
 def schedule_trick_resolution():
     if st.session_state.trick_pending:
         return
+
     now = time.time()
     st.session_state.trick_pending = True
     st.session_state.trick_phase = "show"
@@ -692,7 +600,6 @@ def schedule_trick_resolution():
     fly_seconds = 0.55
     st.session_state.trick_resolve_at = now + show_seconds
     st.session_state.trick_fly_until = now + show_seconds + fly_seconds
-    save_state()
 
 def resolve_trick_if_due():
     if not st.session_state.trick_pending:
@@ -704,7 +611,6 @@ def resolve_trick_if_due():
         if now < st.session_state.trick_resolve_at:
             return False
         st.session_state.trick_phase = "fly"
-        save_state()
         return True
 
     if st.session_state.trick_phase == "fly":
@@ -730,7 +636,6 @@ def resolve_trick_if_due():
         st.session_state.trick_fly_until = 0.0
         st.session_state.trick_winner = None
         st.session_state.trick_snapshot = []
-        save_state()
         return True
 
     return False
@@ -746,7 +651,6 @@ def pontuar_rodada():
         p = v + (5 if st.session_state.prognosticos.get(n) == v else 0)
         st.session_state.pontos[n] = st.session_state.pontos.get(n, 0) + p
     st.session_state.pontuou_rodada = True
-    save_state()
 
 def ai_escolhe_carta(nome):
     validas = cartas_validas_para_jogar(nome)
@@ -770,7 +674,7 @@ def avancar_ate_humano_ou_fim():
         if st.session_state.trick_pending:
             return
 
-        if rodada_terminou() and not st.session_state.trick_pending:
+        if rodada_terminou():
             pontuar_rodada()
             return
 
@@ -802,16 +706,20 @@ def start_next_round():
     prox = st.session_state.cartas_alvo - 1
     distribuir(prox)
     preparar_prognosticos_anteriores()
-    save_state()
 
 # =========================
-# UI helpers
+# UI helpers: chips + pile
 # =========================
 def chip_color_for_index(idx: int) -> str:
     palette = [
-        "rgba(16,185,129,.88)", "rgba(59,130,246,.88)", "rgba(245,158,11,.88)",
-        "rgba(239,68,68,.88)", "rgba(168,85,247,.88)", "rgba(20,184,166,.88)",
-        "rgba(100,116,139,.88)", "rgba(236,72,153,.88)",
+        "rgba(16,185,129,.88)",   # verde
+        "rgba(59,130,246,.88)",   # azul
+        "rgba(245,158,11,.88)",   # âmbar
+        "rgba(239,68,68,.88)",    # vermelho
+        "rgba(168,85,247,.88)",   # roxo
+        "rgba(20,184,166,.88)",   # teal
+        "rgba(100,116,139,.88)",  # slate
+        "rgba(236,72,153,.88)",   # pink
     ]
     return palette[idx % len(palette)]
 
@@ -831,7 +739,9 @@ def render_small_pile_html(won: int) -> str:
         dx = i * 1.1
         dy = -i * 1.2
         rot = (i % 3 - 1) * 2
-        parts.append(f'<div class="cardBackLayer" style="left:{dx}px; top:{dy}px; transform: rotate({rot}deg);"></div>')
+        parts.append(
+            f'<div class="cardBackLayer" style="left:{dx}px; top:{dy}px; transform: rotate({rot}deg);"></div>'
+        )
     label = f"{won}" if won > 10 else ""
     label_html = f'<div class="pileLabel">{label}</div>' if label else ''
     return f'<div class="pileStack">{"".join(parts)}</div>{label_html}'
@@ -857,7 +767,7 @@ with st.sidebar:
             unsafe_allow_html=True
         )
 
-        if st.session_state.fase == "jogo" and rodada_terminou() and not st.session_state.trick_pending:
+        if st.session_state.fase == "jogo" and rodada_terminou() and (not st.session_state.trick_pending):
             st.markdown("---")
             if st.session_state.cartas_alvo > 1:
                 if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
@@ -869,14 +779,9 @@ with st.sidebar:
 
         st.markdown("---")
         if st.button("🔁 Reiniciar", use_container_width=True):
-            sid_keep = st.session_state.get("sid", None)
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             ss_init()
-            if sid_keep:
-                store = get_game_store()
-                store.pop(sid_keep, None)
-            st.query_params.clear()
             st.rerun()
     else:
         st.info("Inicie uma partida.")
@@ -923,9 +828,10 @@ if not st.session_state.started:
             st.session_state.pontos = {n: 0 for n in nomes}
             st.session_state.started = True
 
-            sid = uuid.uuid4().hex[:12]
-            st.session_state.sid = sid
-            set_url_sid(sid)
+            # sid fixo na URL (para podermos adicionar play depois)
+            if not st.session_state.sid:
+                st.session_state.sid = uuid.uuid4().hex[:12]
+            st.query_params["sid"] = st.session_state.sid
 
             n = len(nomes)
             cartas_inicio = 52 // n
@@ -935,7 +841,6 @@ if not st.session_state.started:
 
             distribuir(cartas_inicio)
             preparar_prognosticos_anteriores()
-            save_state()
             st.rerun()
 
     st.stop()
@@ -973,15 +878,16 @@ if st.session_state.fase == "prognostico":
         st.session_state.prognosticos = {}
         st.session_state.prognosticos.update(st.session_state.progn_pre)
         st.session_state.prognosticos[humano_nome] = int(palpite)
+
         preparar_prognosticos_posteriores()
         st.session_state.prognosticos.update(st.session_state.progn_pos)
+
         iniciar_fase_jogo()
         avancar_ate_humano_ou_fim()
-        save_state()
         st.rerun()
 
 # =========================
-# MESA
+# RENDER MESA + animação do "montinho voando"
 # =========================
 def seat_positions(ordem):
     n = len(ordem)
@@ -989,11 +895,11 @@ def seat_positions(ordem):
     rx, ry = 42, 36
     pos = {}
     for i, nome in enumerate(ordem):
-        ang = (2 * math.pi) * (i / n) - (math.pi / 2)
-        x = cx + rx * math.cos(ang)
-        y = cy + ry * math.sin(ang)
-        tx = cx + (rx * 0.70) * math.cos(ang)
-        ty = cy + (ry * 0.70) * math.sin(ang)
+        ang = (2*math.pi) * (i/n) - (math.pi/2)
+        x = cx + rx*math.cos(ang)
+        y = cy + ry*math.sin(ang)
+        tx = cx + (rx*0.70)*math.cos(ang)
+        ty = cy + (ry*0.70)*math.sin(ang)
         pos[nome] = {"seat": (x, y), "target": (tx, ty)}
     return pos
 
@@ -1008,10 +914,18 @@ def render_mesa():
     flash_name = st.session_state.winner_flash_name if now <= st.session_state.winner_flash_until else None
     pop_active = now <= st.session_state.table_pop_until
 
-    mesa_to_render = st.session_state.trick_snapshot if st.session_state.trick_pending else st.session_state.mesa
+    if st.session_state.trick_pending:
+        mesa_to_render = st.session_state.trick_snapshot
+    else:
+        mesa_to_render = st.session_state.mesa
+
     naipe_base_show = st.session_state.naipe_base
 
-    seats_html, chips_html, piles_html, plays_html, anim_css = "", "", "", "", ""
+    seats_html = ""
+    chips_html = ""
+    piles_html = ""
+    plays_html = ""
+    anim_css = ""
 
     for i, nome in enumerate(ordem):
         x, y = pos[nome]["seat"]
@@ -1029,6 +943,7 @@ def render_mesa():
             cls += " winnerFlash"
 
         avatar_src = avatar_svg_data_uri(i)
+
         seats_html += f'''
 <div class="{cls}" style="left:{x}%; top:{y}%; transform:translate(-50%,-50%);">
   <img class="avatarImg" src="{avatar_src}" alt="avatar"/>
@@ -1045,9 +960,12 @@ def render_mesa():
   {render_progn_chips_html(prog, color)}
 </div>
 """
+
         if won > 0:
+            px = tx
+            py = ty + 12
             piles_html += f"""
-<div class="pileWrap" style="left:{tx}%; top:{ty+12}%;">
+<div class="pileWrap" style="left:{px}%; top:{py}%;">
   {render_small_pile_html(won)}
 </div>
 """
@@ -1060,11 +978,11 @@ def render_mesa():
 
     for idx, (nome, carta) in enumerate(mesa_to_render):
         i = ordem.index(nome)
-        ang = (2 * math.pi) * (i / n) - (math.pi / 2)
+        ang = (2*math.pi) * (i/n) - (math.pi/2)
         cx, cy = 50, 50
         rx, ry = 42, 36
-        x = cx + (rx * 0.47) * math.cos(ang)
-        y = cy + (ry * 0.47) * math.sin(ang)
+        x = cx + (rx*0.47)*math.cos(ang)
+        y = cy + (ry*0.47)*math.sin(ang)
 
         is_last = (idx == len(mesa_to_render) - 1)
         cls = "playCard"
@@ -1114,46 +1032,149 @@ def render_mesa():
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-def render_hand_clickable_html():
+# =========================
+# NOVA MÃO CLICÁVEL (SEM BOTÃO) - via components.html + JS
+# =========================
+def render_hand_clickable_components():
     ordem = st.session_state.ordem
     humano = st.session_state.nomes[st.session_state.humano_idx]
     atual = ordem[st.session_state.turn_idx]
     mao = st.session_state.maos[humano]
     validas = set(cartas_validas_para_jogar(humano))
-    sid = st.session_state.get("sid") or get_sid_from_url() or ""
 
-    st.markdown('<div class="handDock">', unsafe_allow_html=True)
+    sid = st.session_state.sid
+    if not sid:
+        sid = st.query_params.get("sid", "")
+        if isinstance(sid, list):
+            sid = sid[0] if sid else ""
+        st.session_state.sid = sid
+
     hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
     if st.session_state.trick_pending:
         hint = "Vaza completa — animação"
+
+    st.markdown('<div class="handDock">', unsafe_allow_html=True)
     st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
 
     mao_ord = sorted(mao, key=peso_carta)
-    cards_html = ['<div class="handLinksRow">']
+    cid = uuid.uuid4().hex[:10]
+
+    # CSS + HTML dentro do iframe (não herda o CSS global)
+    iframe_css = """
+    <style>
+      body{ margin:0; padding:0; background:transparent; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
+      .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start; }
+      .wrap{ display:inline-block; }
+      .wrap.disabled{ opacity:.28; filter: grayscale(.15); pointer-events:none; }
+      .card{
+        width:70px; height:102px; border-radius:14px;
+        border:1px solid rgba(0,0,0,.16);
+        background: linear-gradient(180deg, #ffffff 0%, #f8f8f8 100%);
+        box-shadow: 0 10px 22px rgba(0,0,0,.12);
+        position:relative;
+        user-select:none;
+        cursor:pointer;
+        transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+      }
+      .wrap:hover .card{
+        transform: translateY(-4px);
+        box-shadow: 0 14px 26px rgba(0,0,0,.16);
+      }
+      .tl{ position:absolute; top:7px; left:7px; font-weight:900; font-size:13px; line-height:13px; }
+      .br{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }
+      .mid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }
+    </style>
+    """
+
+    def card_html_iframe(c):
+        naipe, valor = c
+        cor = COR_NAIPE[naipe]
+        vv = valor_str(valor)
+        return (
+            f'<div class="card">'
+            f'<div class="tl" style="color:{cor};">{vv}<br/>{naipe}</div>'
+            f'<div class="mid" style="color:{cor};">{naipe}</div>'
+            f'<div class="br" style="color:{cor};">{vv}<br/>{naipe}</div>'
+            f'</div>'
+        )
+
+    cards = []
     for c in mao_ord:
         disabled = (
-            (c not in validas)
-            or (atual != humano)
-            or (st.session_state.pending_play is not None)
-            or st.session_state.trick_pending
+            (c not in validas) or
+            (atual != humano) or
+            (st.session_state.pending_play is not None) or
+            st.session_state.trick_pending
         )
-        if disabled:
-            cards_html.append(f'<a class="handCardLink disabled" href="#" target="_self">{carta_html(c)}</a>')
-        else:
-            token = encode_carta(c)
-            cards_html.append(f'<a class="handCardLink" href="?sid={sid}&play={token}" target="_self">{carta_html(c)}</a>')
-    cards_html.append('</div>')
+        token = encode_carta(c)
+        cls = "wrap disabled" if disabled else "wrap"
+        cards.append(
+            f'<div class="{cls}" data-sid="{sid}" data-play="{token}" data-disabled="{1 if disabled else 0}">'
+            f'{card_html_iframe(c)}'
+            f'</div>'
+        )
 
-    st.markdown("".join(cards_html), unsafe_allow_html=True)
+    html = f"""
+    <!doctype html>
+    <html>
+      <head>{iframe_css}</head>
+      <body>
+        <div id="hand_{cid}" class="row">
+          {''.join(cards)}
+        </div>
+
+        <script>
+          (function() {{
+            const root = document.getElementById("hand_{cid}");
+            if (!root) return;
+
+            root.addEventListener("click", function(e) {{
+              const el = e.target.closest(".wrap");
+              if (!el) return;
+
+              const disabled = el.getAttribute("data-disabled");
+              if (disabled === "1") return;
+
+              const sid = el.getAttribute("data-sid") || "";
+              const play = el.getAttribute("data-play") || "";
+
+              const params = new URLSearchParams(window.parent.location.search);
+              if (sid) params.set("sid", sid);
+              params.set("play", play);
+
+              // navega na própria página do Streamlit
+              window.parent.location.search = "?" + params.toString();
+            }});
+          }})();
+        </script>
+      </body>
+    </html>
+    """
+
+    # altura suficiente para 1-2 linhas de cartas, sem scroll
+    components.html(html, height=140, scrolling=False)
+
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
-# JOGO (CORRIGIDO: processa click ANTES do autoplay)
+# QUERY PARAMS HELPERS
+# =========================
+def get_qp_one(key: str):
+    qp = st.query_params
+    if key not in qp:
+        return None
+    v = qp.get(key)
+    if isinstance(v, list):
+        return v[0] if v else None
+    return v
+
+# =========================
+# JOGO
 # =========================
 if st.session_state.fase == "jogo":
     st.markdown(f"### 🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador")
 
-    # 1) resolve animação da vaza
+    # resolve fases da animação
     if resolve_trick_if_due():
         st.rerun()
 
@@ -1169,59 +1190,57 @@ if st.session_state.fase == "jogo":
         f"1ª vaza: **{'Sim' if st.session_state.primeira_vaza else 'Não'}**"
     )
 
-    # 2) se vaza animando, só aguardar
-    if st.session_state.trick_pending:
-        time.sleep(0.06)
-        st.rerun()
-
-    # 3) se terminou, pontua
+    # Se rodada terminou
     if rodada_terminou():
         pontuar_rodada()
         st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
         st.stop()
 
-    # 4) CAPTURA O CLIQUE (play) ANTES DO AUTOPLAY  ✅✅✅
-    play_token = _qp_get_one("play")
-    sid_now = st.session_state.get("sid", None) or get_sid_from_url()
+    # Se animação de vaza ativa, só esperar e rerunar
+    if st.session_state.trick_pending:
+        time.sleep(0.06)
+        st.rerun()
 
+    # ✅ CAPTURA CLIQUE DA CARTA (play=...) — agora funciona porque o iframe altera a URL
+    play_token = get_qp_one("play")
     if play_token and st.session_state.pending_play is None:
         try:
             carta = decode_carta(play_token)
 
-            # limpa play e mantém sid
+            # limpa play (mantém sid)
+            sid = get_qp_one("sid") or st.session_state.sid
             st.query_params.clear()
-            if sid_now:
-                st.query_params["sid"] = sid_now
+            if sid:
+                st.query_params["sid"] = sid
 
-            # só aceita se for a vez do humano
-            if atual == humano and (carta in st.session_state.maos[humano]):
+            # valida e agenda jogada
+            if atual == humano and carta in st.session_state.maos[humano]:
                 validas = set(cartas_validas_para_jogar(humano))
                 if carta in validas:
                     st.session_state.pending_play = carta
-                    save_state()
                     st.rerun()
         except Exception:
+            sid = get_qp_one("sid") or st.session_state.sid
             st.query_params.clear()
-            if sid_now:
-                st.query_params["sid"] = sid_now
+            if sid:
+                st.query_params["sid"] = sid
 
-    # 5) AUTOPLAY IA (agora só roda se NÃO houve clique)
+    # AUTOPLAY IA (sem botão)
     if atual != humano and st.session_state.pending_play is None:
         now = time.time()
         if now - st.session_state.autoplay_last > 0.08:
             st.session_state.autoplay_last = now
             avancar_ate_humano_ou_fim()
-            save_state()
             time.sleep(0.03)
             st.rerun()
 
-    # 6) renderiza sua mão (clique)
-    render_hand_clickable_html()
+    # Render da mão clicável (sem retângulo e clique direto na carta)
+    render_hand_clickable_components()
 
-    # 7) executa a carta pendente
+    # Executa carta pendente
     if st.session_state.pending_play is not None and atual == humano:
         st.markdown('<div class="playingOverlay">✨ Jogando carta...</div>', unsafe_allow_html=True)
-        time.sleep(0.16)
+        time.sleep(0.18)
 
         carta = st.session_state.pending_play
         st.session_state.pending_play = None
@@ -1233,5 +1252,5 @@ if st.session_state.fase == "jogo":
             schedule_trick_resolution()
 
         avancar_ate_humano_ou_fim()
-        save_state()
         st.rerun()
+
