@@ -844,14 +844,17 @@ with st.sidebar:
         )
 
         if st.session_state.fase == "jogo" and rodada_terminou():
-            st.markdown("---")
-            if st.session_state.cartas_alvo > 1:
-                if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
-                    start_next_round()
-                    st.rerun()
-            else:
-                vencedor, pts = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)[0]
-                st.success(f"🏆 Fim do jogo! {vencedor} com {pts} pts")
+            # ✅ GARANTE pontuar antes de qualquer próxima rodada/fim
+            pontuar_rodada()
+
+        st.markdown("---")
+        if st.session_state.cartas_alvo > 1:
+            if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
+                start_next_round()
+                st.rerun()
+        else:
+            vencedor, pts = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)[0]
+            st.success(f"🏆 Fim do jogo! {vencedor} com {pts} pts")
 
         st.markdown("---")
         if st.button("🔁 Reiniciar", use_container_width=True):
