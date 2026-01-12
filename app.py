@@ -750,8 +750,8 @@ def avancar_ate_humano_ou_fim():
         # ✅ Se uma vaza está pendente (show/fly), NÃO deixe a rodada finalizar ainda
         if st.session_state.trick_pending:
         # Avança animação show->fly->contabiliza
-        if resolve_trick_if_due():
-            st.rerun()
+            if resolve_trick_if_due():
+                st.rerun()
 
         # ainda pendente? continua animando até contabilizar
         time.sleep(0.06)
