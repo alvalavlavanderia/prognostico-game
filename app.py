@@ -867,7 +867,7 @@ def avancar_ate_humano_ou_fim():
     # decide overlay de rodada ou final
     if st.session_state.cartas_alvo <= 1:
         st.session_state.show_final_overlay = True
-       else:
+    else:
         st.session_state.show_round_overlay = True
         st.rerun()
 
