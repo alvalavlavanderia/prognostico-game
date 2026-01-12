@@ -1236,3 +1236,25 @@ if st.session_state.fase == "jogo":
 
     # 7) render mão clicável (sem retângulo)
     render_hand_clickable_links()
+  
+clicked = render_hand_clickable_links()
+
+if clicked is not None:
+    st.session_state.pending_play = clicked
+    st.rerun()
+
+if st.session_state.pending_play is not None and atual == humano:
+    st.markdown('<div class="playingOverlay">✨ Jogando carta...</div>', unsafe_allow_html=True)
+    time.sleep(0.18)
+
+    carta = st.session_state.pending_play
+    st.session_state.pending_play = None
+
+    jogar_carta(humano, carta)
+    st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
+
+    if len(st.session_state.mesa) == len(ordem):
+        schedule_trick_resolution()
+
+    avancar_ate_humano_ou_fim()
+    st.rerun()
