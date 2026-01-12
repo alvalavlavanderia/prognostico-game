@@ -850,47 +850,54 @@ def avancar_ate_humano_ou_fim():
 
     limit = 2500
     steps = 0
+
     while steps < limit:
         steps += 1
 
-    if resolve_trick_if_due():
-        return
+        # Resolve animação da vaza se for o caso
+        if resolve_trick_if_due():
+            return
 
-    # Se animação de vaza ativa, só esperar e rerunar (não pontuar antes!)
-    if st.session_state.trick_pending:
-        time.sleep(0.06)
-        st.rerun()
+        if st.session_state.trick_pending:
+            return
 
-    if rodada_terminou():
-        pontuar_rodada()
+        # Se acabou a rodada
+        if rodada_terminou():
+            pontuar_rodada()
 
-    # decide overlay de rodada ou final
-    if st.session_state.cartas_alvo <= 1:
-        st.session_state.show_final_overlay = True
-    else:
-        st.session_state.show_round_overlay = True
-        st.rerun()
+            # Última rodada (1 carta)
+            if st.session_state.cartas_alvo <= 1:
+                st.session_state.show_final_overlay = True
+            else:
+                st.session_state.show_round_overlay = True
 
-    atual = ordem[st.session_state.turn_idx]
-    
-    if len(st.session_state.maos[atual]) == 0:
-        st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
-        continue
+            return
 
-    if atual == humano and len(st.session_state.maos[humano]) > 0:
-        return
+        atual = ordem[st.session_state.turn_idx]
 
-    carta = ai_escolhe_carta(atual)
-    if carta is None:
-        st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
-        continue
+        # Pula jogador sem cartas
+        if len(st.session_state.maos[atual]) == 0:
+            st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
+            continue
+
+        # Se for o humano, para aqui
+        if atual == humano and len(st.session_state.maos[humano]) > 0:
+            return
+
+        # IA joga
+        carta = ai_escolhe_carta(atual)
+        if carta is None:
+            st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
+            continue
 
         jogar_carta(atual, carta)
         st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
 
-    if len(st.session_state.mesa) == len(ordem):
-        schedule_trick_resolution()
-        return
+        # Se completou a vaza
+        if len(st.session_state.mesa) == len(ordem):
+            schedule_trick_resolution()
+            return
+
 
 def start_next_round():
     if st.session_state.cartas_alvo <= 1:
