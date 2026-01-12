@@ -303,6 +303,52 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   box-shadow: 0 14px 26px rgba(0,0,0,.16);
   transition: transform .12s ease, box-shadow .12s ease;
 }
+/* ===== FIX CLICK REAL (botão invisível sobre a carta) ===== */
+.handGrid{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:flex-start;
+}
+
+.handCardCell{
+  width:70px;
+  height:102px;
+  position:relative;
+}
+
+/* o HTML da carta */
+.handCardCell .card{
+  width:70px;
+  height:102px;
+}
+
+/* o bloco do botão do Streamlit, puxado pra cima para ficar sobre a carta */
+.handCardCell [data-testid="stButton"]{
+  margin-top: -102px;   /* sobe exatamente a altura da carta */
+}
+
+/* o botão em si: invisível, mas clicável e cobrindo 100% da carta */
+.handCardCell [data-testid="stButton"] > button{
+  width:70px !important;
+  height:102px !important;
+  padding:0 !important;
+  border:none !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  opacity:0 !important;
+  cursor:pointer !important;
+}
+
+/* estado desabilitado: deixa a carta mais apagada */
+.handCardCell.disabled{
+  opacity:.28;
+  filter: grayscale(.15);
+}
+.handCardCell.disabled [data-testid="stButton"] > button{
+  pointer-events:none !important;
+}
+
 </style>
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
@@ -1047,7 +1093,7 @@ def render_mesa():
 # =========================
 # MÃO CLICÁVEL (BOTÃO INVISÍVEL SOBRE A CARTA)
 # =========================
-def render_hand_clickable():
+def render_hand_clickable_streamlit():
     ordem = st.session_state.ordem
     humano = st.session_state.nomes[st.session_state.humano_idx]
     atual = ordem[st.session_state.turn_idx]
@@ -1058,14 +1104,18 @@ def render_hand_clickable():
     hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
     if st.session_state.trick_pending:
         hint = "Vaza completa — animação"
-    st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>',
+        unsafe_allow_html=True
+    )
 
     mao_ord = sorted(mao, key=peso_carta)
     clicked = None
     pending = st.session_state.pending_play
 
-    # linhas de 10 cartas (sem scroll)
-    cols = st.columns(10)
+    # grid flex sem retângulo e sem espaço extra
+    st.markdown('<div class="handGrid">', unsafe_allow_html=True)
+
     for i, c in enumerate(mao_ord):
         disabled = (
             (c not in validas) or
@@ -1074,27 +1124,26 @@ def render_hand_clickable():
             st.session_state.trick_pending
         )
 
-        with cols[i % 10]:
-            # abre um "slot" que vai conter botão invisível + carta
-            st.markdown(f'<div class="handSlot {"disabled" if disabled else ""}">', unsafe_allow_html=True)
+        cls = "handCardCell disabled" if disabled else "handCardCell"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
 
-            # botão invisível em cima da carta
-            # IMPORTANTÍSSIMO: o botão precisa existir e ser clicável.
-            if st.button(
-                " ",
-                key=f"click_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
-                disabled=disabled,
-                use_container_width=True,
-            ):
-                clicked = c
+        # 1) carta visível primeiro
+        st.markdown(carta_html(c), unsafe_allow_html=True)
 
-            # carta visível (embaixo do botão, mas ocupando mesmo lugar)
-            st.markdown(carta_html(c), unsafe_allow_html=True)
+        # 2) botão invisível por cima (puxado pelo CSS)
+        if st.button(
+            " ",
+            key=f"cardpick_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
+            disabled=disabled
+        ):
+            clicked = c
 
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)  # fecha handGrid
+    st.markdown('</div>', unsafe_allow_html=True)  # fecha handDock
     return clicked
+
 
 # =========================
 # JOGO
