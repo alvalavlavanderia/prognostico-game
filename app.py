@@ -385,7 +385,18 @@ def carta_html(c):
         f'<div class="br" style="color:{cor};">{vv}<br/>{naipe}</div>'
         f'</div>'
     )
-
+def card_btn_html(c, extra_class=""):
+    naipe, valor = c
+    cor = COR_NAIPE[naipe]
+    vv = valor_str(valor)
+    cls = f"cardBtnInner {extra_class}".strip()
+    return f"""
+<div class="{cls}">
+  <div class="cardBtnTL" style="color:{cor};">{vv}<br/>{naipe}</div>
+  <div class="cardBtnMid" style="color:{cor};">{naipe}</div>
+  <div class="cardBtnBR" style="color:{cor};">{vv}<br/>{naipe}</div>
+</div>
+"""
 # =========================
 # UTIL
 # =========================
