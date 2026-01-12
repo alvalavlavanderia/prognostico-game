@@ -821,7 +821,7 @@ def pontuar_rodada():
         st.session_state.pontos[n] = st.session_state.pontos.get(n, 0) + p
         # resumo da rodada (pra overlay)
         resumo = []
-        for n in st.session_state.nomes:
+    for n in st.session_state.nomes:
         v = st.session_state.vazas_rodada.get(n, 0)
         pr = st.session_state.prognosticos.get(n, None)
         bonus = 5 if (pr == v) else 0
