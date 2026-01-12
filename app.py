@@ -14,6 +14,7 @@ st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="
 # CSS PREMIUM (felt verde + mini-monte + avatar imagem + animação do montinho)
 # =========================
 APP_CSS = """
+APP_CSS = """
 <style>
 .block-container { padding-top: .8rem !important; padding-bottom: .8rem !important; max-width: 1200px; }
 header[data-testid="stHeader"] { height: .4rem; }
@@ -68,7 +69,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   color: rgba(255,255,255,.90);
 }
 
-/* Assentos (nome + avatar sempre visíveis) */
+/* Assentos */
 .seat{
   position:absolute;
   padding:6px 10px;
@@ -85,7 +86,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .seat.you{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }
 .seat.dealer{ border-color: rgba(34,197,94,.35); background: rgba(255,255,255,.95); }
 
-/* Avatar imagem cartoon */
+/* Avatar */
 .avatarImg{
   width:26px; height:26px;
   border-radius:50%;
@@ -95,32 +96,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   flex: 0 0 auto;
 }
 
-/* Winner glow */
-@keyframes winnerGlow {
-  0% { box-shadow: 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }
-  35% { box-shadow: 0 0 0 6px rgba(34,197,94,.22), 0 14px 28px rgba(0,0,0,.14); transform: translate(-50%,-50%) scale(1.03); }
-  100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }
-}
-.seat.winnerFlash{
-  animation: winnerGlow 1.2s ease-out;
-  outline: 2px solid rgba(34,197,94,.55);
-  background: rgba(255,255,255,.97);
-}
-
-/* Cartas na mesa */
-.playCard{
-  position:absolute;
-  transform: translate(-50%,-50%);
-  pointer-events:none;
-  z-index: 18;
-}
-@keyframes popIn {
-  0% { transform: translate(-50%,-50%) scale(.92); opacity: .0; }
-  100% { transform: translate(-50%,-50%) scale(1.0); opacity: 1; }
-}
-.playCard.pop{ animation: popIn .16s ease-out; }
-
-/* Carta (frente) */
+/* Cartas */
 .card{
   width:70px;
   height:102px;
@@ -135,91 +111,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .card .br{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }
 .card .mid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }
 
-/* Chips pequenos */
-.chipWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 16; }
-.chipRow{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width: 140px; }
-.chipMini{
-  width:22px; height:22px;
-  border-radius:50%;
-  position:relative;
-  box-shadow: 0 8px 14px rgba(0,0,0,.14);
-  border: 2px solid rgba(0,0,0,.14);
-  background:
-    radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), rgba(255,255,255,0) 45%),
-    conic-gradient(from 0deg,
-      rgba(255,255,255,0) 0 18deg,
-      rgba(255,255,255,.70) 18deg 28deg,
-      rgba(255,255,255,0) 28deg 54deg,
-      rgba(255,255,255,.70) 54deg 64deg,
-      rgba(255,255,255,0) 64deg 90deg,
-      rgba(255,255,255,.70) 90deg 100deg,
-      rgba(255,255,255,0) 100deg 126deg,
-      rgba(255,255,255,.70) 126deg 136deg,
-      rgba(255,255,255,0) 136deg 162deg,
-      rgba(255,255,255,.70) 162deg 172deg,
-      rgba(255,255,255,0) 172deg 198deg,
-      rgba(255,255,255,.70) 198deg 208deg,
-      rgba(255,255,255,0) 208deg 234deg,
-      rgba(255,255,255,.70) 234deg 244deg,
-      rgba(255,255,255,0) 244deg 270deg,
-      rgba(255,255,255,.70) 270deg 280deg,
-      rgba(255,255,255,0) 280deg 306deg,
-      rgba(255,255,255,.70) 306deg 316deg,
-      rgba(255,255,255,0) 316deg 342deg,
-      rgba(255,255,255,.70) 342deg 352deg,
-      rgba(255,255,255,0) 352deg 360deg
-    );
-  background-color: var(--chip-base, rgba(16,185,129,.88));
-}
-.chipMini:after{
-  content:"";
-  position:absolute;
-  inset:5px;
-  border-radius:50%;
-  background: rgba(255,255,255,.78);
-  border: 1px solid rgba(0,0,0,.10);
-}
-.chipNote{
-  margin-top: 6px;
-  font-size: 10px;
-  font-weight: 900;
-  opacity: .72;
-  background: rgba(255,255,255,.76);
-  border: 1px solid rgba(0,0,0,.08);
-  padding: 3px 8px;
-  border-radius: 999px;
-  display:inline-block;
-}
-
-/* Montinho mini-cartas (bem pequeno) */
-.pileWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 15; }
-.pileStack{ position:relative; width:26px; height:40px; }
-.cardBackLayer{
-  position:absolute;
-  width:26px; height:40px;
-  border-radius:8px;
-  border:1px solid rgba(0,0,0,.18);
-  background: linear-gradient(180deg, rgba(12,110,80,.95) 0%, rgba(7,86,64,.95) 100%);
-  box-shadow: 0 6px 10px rgba(0,0,0,.12);
-  overflow:hidden;
-}
-.cardBackLayer:before{
-  content:"";
-  position:absolute; inset:-28%;
-  background: repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 8px, rgba(255,255,255,0) 8px 16px);
-  transform: rotate(14deg);
-}
-.pileLabel{
-  margin-top:4px;
-  text-align:center;
-  font-weight:900;
-  font-size:10px;
-  opacity:.74;
-  color: rgba(255,255,255,.92);
-  text-shadow: 0 2px 6px rgba(0,0,0,.25);
-}
-
-/* Dock da mão */
+/* Dock */
 .handDock{
   margin-top: 12px;
   border-radius: 18px;
@@ -233,68 +125,6 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .handTitle h3{ margin:0; font-size:16px; }
 .hint{ font-size:12px; opacity:.70; font-weight:800; }
 
-/* Botão-carta */
-div[data-testid="column"] .stButton > button{
-  border-radius: 14px !important;
-  border: 1px solid rgba(0,0,0,.18) !important;
-  background: linear-gradient(180deg, #ffffff 0%, #f9f9f9 100%) !important;
-  box-shadow: 0 10px 22px rgba(0,0,0,.12) !important;
-  min-height: 118px !important;
-  width: 100% !important;
-  padding: 0 !important;
-  transition: transform .10s ease, box-shadow .10s ease, opacity .10s ease;
-}
-div[data-testid="column"] .stButton > button:hover{
-  transform: translateY(-4px);
-  box-shadow: 0 14px 26px rgba(0,0,0,.16) !important;
-}
-div[data-testid="column"] .stButton > button:disabled{
-  opacity: .28 !important;
-  transform:none !important;
-  box-shadow: 0 6px 14px rgba(0,0,0,.08) !important;
-}
-
-/* Face da carta dentro do botão */
-.cardBtnInner{
-  width:100%;
-  height:118px;
-  position:relative;
-  border-radius:14px;
-  overflow:hidden;
-}
-.cardBtnTL{
-  position:absolute; top:10px; left:10px;
-  font-weight:900; font-size:14px; line-height:14px;
-}
-.cardBtnBR{
-  position:absolute; bottom:10px; right:10px;
-  font-weight:900; font-size:14px; line-height:14px;
-  transform: rotate(180deg);
-}
-.cardBtnMid{
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  font-size:34px; font-weight:900; opacity:.92;
-}
-
-/* Animação: carta sumindo */
-@keyframes flyAway {
-  0%   { transform: translateY(0px) scale(1); opacity: 1; }
-  55%  { transform: translateY(-26px) scale(1.03); opacity: .85; }
-  100% { transform: translateY(-70px) scale(.96); opacity: 0; }
-}
-.flyAway{ animation: flyAway .25s ease-in forwards; }
-
-/* Overlay */
-.playingOverlay{
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px; border-radius:14px;
-  border:1px solid rgba(0,0,0,.08);
-  background: rgba(255,255,255,.85);
-  font-weight:900;
-  margin-top: 10px;
-}
-
 /* Sidebar */
 .scoreItem{
   display:flex; justify-content:space-between;
@@ -307,69 +137,8 @@ div[data-testid="column"] .stButton > button:disabled{
 .scoreName{ font-weight:900; }
 .scorePts{ font-weight:900; }
 .smallMuted{ opacity:.70; font-size:12px; }
-APP_CSS += """
-<style>
-/* ===== Mobile App Mode ===== */
-@media (max-width: 900px){
 
-  /* some com sidebar (vira app) */
-  section[data-testid="stSidebar"]{
-    display:none !important;
-  }
-
-  /* container mais “app” */
-  .block-container{
-    padding-left: .6rem !important;
-    padding-right: .6rem !important;
-    padding-bottom: 6.2rem !important; /* espaço para dock */
-    max-width: 100% !important;
-  }
-
-  /* header mais compacto */
-  .titleRow h1{ font-size: 22px !important; }
-  .badges{ display:none !important; } /* badges ocupam muito */
-
-  /* mesa menor e responsiva */
-  .mesa{
-    height: 380px !important;
-    border-radius: 18px !important;
-  }
-
-  /* assentos mais compactos */
-  .seat{
-    padding:5px 8px !important;
-    font-size:11px !important;
-  }
-  .avatarImg{ width:22px !important; height:22px !important; }
-
-  /* cartas menores no mobile */
-  .card{ width:58px !important; height:86px !important; border-radius:12px !important; }
-  .card .mid{ font-size:26px !important; }
-  .card .tl,.card .br{ font-size:12px !important; line-height:12px !important; }
-
-  /* dock da mão vira FIXO embaixo (sensação de app) */
-  .handDock{
-    position: fixed !important;
-    left: .6rem !important;
-    right: .6rem !important;
-    bottom: .6rem !important;
-    z-index: 999 !important;
-    margin-top: 0 !important;
-    box-shadow: 0 18px 48px rgba(0,0,0,.16) !important;
-  }
-
-  /* título do dock mais compacto */
-  .handTitle h3{ font-size:14px !important; }
-
-  /* botão-carta menor */
-  div[data-testid="column"] .stButton > button{
-    min-height: 98px !important;
-  }
-  .cardBtnInner{ height:98px !important; }
-  .cardBtnMid{ font-size:30px !important; }
-}
-
-/* ===== Top HUD (placar compacto “app”) ===== */
+/* ===== HUD topo (app) ===== */
 .appHUD{
   position: sticky;
   top: .35rem;
@@ -397,8 +166,41 @@ APP_CSS += """
   font-weight:900;
   font-size:12px;
 }
-</style>
-"""
+
+/* ===== Mobile app mode ===== */
+@media (max-width: 900px){
+  section[data-testid="stSidebar"]{ display:none !important; }
+
+  .block-container{
+    padding-left: .6rem !important;
+    padding-right: .6rem !important;
+    padding-bottom: 6.2rem !important;
+    max-width: 100% !important;
+  }
+
+  .titleRow h1{ font-size: 22px !important; }
+  .badges{ display:none !important; }
+
+  .mesa{ height: 380px !important; border-radius: 18px !important; }
+
+  .seat{ padding:5px 8px !important; font-size:11px !important; }
+  .avatarImg{ width:22px !important; height:22px !important; }
+
+  .card{ width:58px !important; height:86px !important; border-radius:12px !important; }
+  .card .mid{ font-size:26px !important; }
+  .card .tl,.card .br{ font-size:12px !important; line-height:12px !important; }
+
+  .handDock{
+    position: fixed !important;
+    left: .6rem !important;
+    right: .6rem !important;
+    bottom: .6rem !important;
+    z-index: 999 !important;
+    margin-top: 0 !important;
+    box-shadow: 0 18px 48px rgba(0,0,0,.16) !important;
+  }
+  .handTitle h3{ font-size:14px !important; }
+}
 </style>
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
