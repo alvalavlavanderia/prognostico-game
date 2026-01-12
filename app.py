@@ -12,7 +12,6 @@ st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="
 
 # =========================
 # CSS PREMIUM (felt verde + mini-monte + avatar imagem + animação do montinho)
-# + MÃO CLICÁVEL POR LINK (SEM BOTÃO/RETÂNGULO)
 # =========================
 APP_CSS = """
 <style>
@@ -222,7 +221,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 
 /* Dock da mão */
 .handDock{
-  margin-top: 10px;
+  margin-top: 12px;
   border-radius: 18px;
   border:1px solid rgba(0,0,0,.10);
   background: rgba(255,255,255,.75);
@@ -230,36 +229,61 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   box-shadow: 0 14px 34px rgba(0,0,0,.08);
   padding: 12px;
 }
-.handTitle{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 6px; }
+.handTitle{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 6px; }
 .handTitle h3{ margin:0; font-size:16px; }
 .hint{ font-size:12px; opacity:.70; font-weight:800; }
 
-/* MÃO: cards em linha, clicáveis sem botão */
-.handLinksRow{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:flex-start;
+/* Botão-carta */
+div[data-testid="column"] .stButton > button{
+  border-radius: 14px !important;
+  border: 1px solid rgba(0,0,0,.18) !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f9f9f9 100%) !important;
+  box-shadow: 0 10px 22px rgba(0,0,0,.12) !important;
+  min-height: 118px !important;
+  width: 100% !important;
+  padding: 0 !important;
+  transition: transform .10s ease, box-shadow .10s ease, opacity .10s ease;
 }
-.handCardLink{
-  display:inline-block;
-  text-decoration:none !important;
-  color:inherit !important;
-  border-radius:14px;
-}
-.handCardLink .card{
-  cursor:pointer;
-  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
-}
-.handCardLink:hover .card{
+div[data-testid="column"] .stButton > button:hover{
   transform: translateY(-4px);
-  box-shadow: 0 14px 26px rgba(0,0,0,.16);
+  box-shadow: 0 14px 26px rgba(0,0,0,.16) !important;
 }
-.handCardLink.disabled{
-  pointer-events:none;
-  opacity:.28;
-  filter: grayscale(.15);
+div[data-testid="column"] .stButton > button:disabled{
+  opacity: .28 !important;
+  transform:none !important;
+  box-shadow: 0 6px 14px rgba(0,0,0,.08) !important;
 }
+
+/* Face da carta dentro do botão */
+.cardBtnInner{
+  width:100%;
+  height:118px;
+  position:relative;
+  border-radius:14px;
+  overflow:hidden;
+}
+.cardBtnTL{
+  position:absolute; top:10px; left:10px;
+  font-weight:900; font-size:14px; line-height:14px;
+}
+.cardBtnBR{
+  position:absolute; bottom:10px; right:10px;
+  font-weight:900; font-size:14px; line-height:14px;
+  transform: rotate(180deg);
+}
+.cardBtnMid{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:34px; font-weight:900; opacity:.92;
+}
+
+/* Animação: carta sumindo */
+@keyframes flyAway {
+  0%   { transform: translateY(0px) scale(1); opacity: 1; }
+  55%  { transform: translateY(-26px) scale(1.03); opacity: .85; }
+  100% { transform: translateY(-70px) scale(.96); opacity: 0; }
+}
+.flyAway{ animation: flyAway .25s ease-in forwards; }
 
 /* Overlay */
 .playingOverlay{
@@ -283,62 +307,6 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .scoreName{ font-weight:900; }
 .scorePts{ font-weight:900; }
 .smallMuted{ opacity:.70; font-size:12px; }
-/* ====== CARTA CLICÁVEL SEM RETÂNGULO (botão invisível + carta por cima) ====== */
-.cardClickWrap{
-  position:relative;
-  width:70px;
-  height:102px;
-}
-
-.cardClickWrap .stButton{
-  position:absolute;
-  inset:0;
-  z-index:1;
-}
-
-/* botão invisível, mas clicável */
-.cardClickWrap .stButton > button{
-  width:100% !important;
-  height:100% !important;
-  min-height:100% !important;
-
-  padding:0 !important;
-  margin:0 !important;
-
-  background:transparent !important;
-  border:none !important;
-  box-shadow:none !important;
-
-  outline:none !important;
-}
-
-/* tira qualquer “efeito” visual do foco */
-.cardClickWrap .stButton > button:focus,
-.cardClickWrap .stButton > button:focus-visible{
-  outline:none !important;
-  box-shadow:none !important;
-}
-
-/* a carta fica por cima, mas NÃO captura clique */
-.cardClickVisual{
-  position:absolute;
-  inset:0;
-  z-index:2;
-  pointer-events:none;
-}
-
-/* hover "premium" (aplicado no wrapper) */
-.cardClickWrap:hover .card{
-  transform: translateY(-4px);
-  box-shadow: 0 14px 26px rgba(0,0,0,.16);
-  transition: transform .12s ease, box-shadow .12s ease;
-}
-
-/* desabilitada: fica opaca */
-.cardClickWrap.disabled{
-  opacity:.28;
-  filter: grayscale(.15);
-}
 </style>
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
@@ -376,6 +344,19 @@ def carta_html(c):
         f'<div class="br" style="color:{cor};">{vv}<br/>{naipe}</div>'
         f'</div>'
     )
+
+def card_btn_html(c, extra_class=""):
+    naipe, valor = c
+    cor = COR_NAIPE[naipe]
+    vv = valor_str(valor)
+    cls = f"cardBtnInner {extra_class}".strip()
+    return f"""
+<div class="{cls}">
+  <div class="cardBtnTL" style="color:{cor};">{vv}<br/>{naipe}</div>
+  <div class="cardBtnMid" style="color:{cor};">{naipe}</div>
+  <div class="cardBtnBR" style="color:{cor};">{vv}<br/>{naipe}</div>
+</div>
+"""
 
 # =========================
 # UTIL
@@ -455,7 +436,10 @@ def ai_prognostico(mao, cartas_por_jogador: int) -> int:
 
     for n, v in mao:
         base = HIGH_POINTS.get(v, 0.0)
-        strength += base * (1.35 if n == "♥" else 1.00)
+        if n == "♥":
+            strength += base * 1.35
+        else:
+            strength += base * 1.00
 
     for s in ["♠", "♦", "♣"]:
         c = suit_counts[s]
@@ -475,6 +459,8 @@ def ai_prognostico(mao, cartas_por_jogador: int) -> int:
 
     guess = int(round(expected))
     guess = max(0, min(cartas_por_jogador, guess))
+    if cartas_por_jogador >= 9:
+        guess = max(0, min(cartas_por_jogador, guess))
     return guess
 
 # =========================
@@ -513,12 +499,14 @@ def ss_init():
 
         "pontuou_rodada": False,
 
+        "pending_play": None,
+
         "table_pop_until": 0.0,
         "winner_flash_name": None,
         "winner_flash_until": 0.0,
 
         "trick_pending": False,
-        "trick_phase": None,          # "show" -> "fly"
+        "trick_phase": None,
         "trick_resolve_at": 0.0,
         "trick_fly_until": 0.0,
         "trick_winner": None,
@@ -569,6 +557,7 @@ def distribuir(cartas_alvo: int):
 
     st.session_state.fase = "prognostico"
     st.session_state.pontuou_rodada = False
+    st.session_state.pending_play = None
 
     st.session_state.trick_pending = False
     st.session_state.trick_phase = None
@@ -594,7 +583,7 @@ def preparar_prognosticos_posteriores():
     ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
     humano = nomes[st.session_state.humano_idx]
     pos_h = ordem.index(humano)
-    post = ordem[pos_h + 1:]
+    post = ordem[pos_h+1:]
 
     st.session_state.progn_pos = {
         n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo)
@@ -742,7 +731,8 @@ def avancar_ate_humano_ou_fim():
         if st.session_state.trick_pending:
             return
 
-        if rodada_terminou():
+        # IMPORTANTE: só pontuar quando NÃO estiver com vaza pendente (última vaza!)
+        if rodada_terminou() and not st.session_state.trick_pending:
             pontuar_rodada()
             return
 
@@ -835,7 +825,8 @@ with st.sidebar:
             unsafe_allow_html=True
         )
 
-        if st.session_state.fase == "jogo" and rodada_terminou():
+        # só permitir "Próxima rodada" quando a rodada terminou E NÃO há vaza pendente
+        if st.session_state.fase == "jogo" and rodada_terminou() and not st.session_state.trick_pending:
             st.markdown("---")
             if st.session_state.cartas_alvo > 1:
                 if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
@@ -921,7 +912,7 @@ if st.session_state.fase == "prognostico":
     mao_humano = st.session_state.maos.get(humano_nome, [])
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
     st.markdown('<div class="handTitle"><h3>🃏 Suas cartas (prognóstico)</h3><div class="hint">Ordenadas por naipe e valor</div></div>', unsafe_allow_html=True)
-    st.markdown('<div class="handLinksRow">' + "".join(carta_html(c) for c in sorted(mao_humano, key=peso_carta)) + "</div>", unsafe_allow_html=True)
+    st.markdown('<div style="display:flex; flex-wrap:wrap; gap:10px;">' + "".join(carta_html(c) for c in sorted(mao_humano, key=peso_carta)) + "</div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("#### ✅ Prognósticos visíveis (anteriores na mesa)")
@@ -950,7 +941,7 @@ if st.session_state.fase == "prognostico":
         st.rerun()
 
 # =========================
-# MESA
+# RENDER MESA + animação do "montinho voando"
 # =========================
 def seat_positions(ordem):
     n = len(ordem)
@@ -1019,14 +1010,18 @@ def render_mesa():
         color = chip_color_for_index(i)
 
         chips_html += f"""
-<div class="chipWrap" style="left:{tx}%; top:{ty}%;">{render_progn_chips_html(prog, color)}</div>
+<div class="chipWrap" style="left:{tx}%; top:{ty}%;">
+  {render_progn_chips_html(prog, color)}
+</div>
 """
 
         if won > 0:
             px = tx
             py = ty + 12
             piles_html += f"""
-<div class="pileWrap" style="left:{px}%; top:{py}%;">{render_small_pile_html(won)}</div>
+<div class="pileWrap" style="left:{px}%; top:{py}%;">
+  {render_small_pile_html(won)}
+</div>
 """
 
     winner = st.session_state.trick_winner
@@ -1066,7 +1061,10 @@ def render_mesa():
         plays_html += f'<div class="{cls}" style="{extra_style}">{carta_html(carta)}</div>'
 
     if st.session_state.trick_pending:
-        centro_txt = "Vaza completa — mostrando..." if st.session_state.trick_phase == "show" else "Vaza completa — indo ao vencedor..."
+        if st.session_state.trick_phase == "show":
+            centro_txt = "Vaza completa — mostrando..."
+        else:
+            centro_txt = "Vaza completa — indo ao vencedor..."
     else:
         centro_txt = "Aguardando jogada" if not st.session_state.mesa else "Vaza em andamento"
 
@@ -1091,22 +1089,7 @@ def render_mesa():
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-# =========================
-# MÃO CLICÁVEL (LINK SEM RETÂNGULO)
-# =========================
-def encode_card(c):
-    # ex: "♦|10" ou "♠|A"
-    return f"{c[0]}|{c[1]}"
-
-def decode_card(s):
-    naipe, valor = s.split("|", 1)
-    try:
-        valor = int(valor)
-    except:
-        pass
-    return (naipe, valor)
-
-def render_hand_clickable_links():
+def render_hand_clickable_streamlit():
     ordem = st.session_state.ordem
     humano = st.session_state.nomes[st.session_state.humano_idx]
     atual = ordem[st.session_state.turn_idx]
@@ -1117,51 +1100,28 @@ def render_hand_clickable_links():
     hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
     if st.session_state.trick_pending:
         hint = "Vaza completa — animação"
-    st.markdown(
-        f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>',
-        unsafe_allow_html=True
-    )
+    st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
 
     mao_ord = sorted(mao, key=peso_carta)
-
-    # linha horizontal e responsiva (sem vertical)
-    st.markdown('<div style="display:flex; gap:10px; flex-wrap:wrap;">', unsafe_allow_html=True)
-
+    cols = st.columns(10)
     clicked = None
+    pending = st.session_state.pending_play
 
     for i, c in enumerate(mao_ord):
         disabled = (
             (c not in validas) or
             (atual != humano) or
+            (pending is not None) or
             st.session_state.trick_pending
         )
+        with cols[i % 10]:
+            if st.button(" ", key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}", disabled=disabled, use_container_width=True):
+                clicked = c
+            extra = "flyAway" if (pending is not None and c == pending) else ""
+            st.markdown(card_btn_html(c, extra_class=extra), unsafe_allow_html=True)
 
-        wrap_cls = "cardClickWrap"
-        if disabled:
-            wrap_cls += " disabled"
-
-        # abre wrapper
-        st.markdown(f'<div class="{wrap_cls}">', unsafe_allow_html=True)
-
-        # botão invisível (clicável)
-        if st.button(
-            " ",
-            key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
-            disabled=disabled
-        ):
-            clicked = c
-
-        # carta por cima (visual)
-        st.markdown(f'<div class="cardClickVisual">{carta_html(c)}</div>', unsafe_allow_html=True)
-
-        # fecha wrapper
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('</div>', unsafe_allow_html=True)  # fecha linha flex
-    st.markdown('</div>', unsafe_allow_html=True)  # fecha handDock
-
+    st.markdown('</div>', unsafe_allow_html=True)
     return clicked
-
 
 # =========================
 # JOGO
@@ -1169,11 +1129,10 @@ def render_hand_clickable_links():
 if st.session_state.fase == "jogo":
     st.markdown(f"### 🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador")
 
-    # 1) resolve animação de vaza
+    # 1) controla animação show->fly->contabiliza
     if resolve_trick_if_due():
         st.rerun()
 
-    # 2) render mesa
     render_mesa()
 
     ordem = st.session_state.ordem
@@ -1186,19 +1145,20 @@ if st.session_state.fase == "jogo":
         f"1ª vaza: **{'Sim' if st.session_state.primeira_vaza else 'Não'}**"
     )
 
-    # 3) se rodada acabou
+    # 2) Se a vaza está pendente (show ou fly), não finalize rodada.
+    #    Isso corrige a ÚLTIMA RODADA (1 carta) onde as mãos ficam vazias antes da vaza ser contabilizada.
+    if st.session_state.trick_pending:
+        time.sleep(0.06)
+        st.rerun()
+
+    # 3) Agora sim: se acabou a rodada (e NÃO tem vaza pendente), pontua e finaliza
     if rodada_terminou():
         pontuar_rodada()
         st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
         st.stop()
 
-    # 4) se animação ativa, só esperar e rerun
-    if st.session_state.trick_pending:
-        time.sleep(0.06)
-        st.rerun()
-
-    # 5) autoplay IA
-    if atual != humano:
+    # AUTOPLAY IA (sem botão)
+    if atual != humano and st.session_state.pending_play is None:
         now = time.time()
         if now - st.session_state.autoplay_last > 0.08:
             st.session_state.autoplay_last = now
@@ -1206,34 +1166,25 @@ if st.session_state.fase == "jogo":
             time.sleep(0.03)
             st.rerun()
 
-    # 6) se é vez do humano, processa clique via query param
-    play_param = st.query_params.get("play")
-    if play_param:
-        try:
-            st.query_params.clear()  # evita repetir
-        except:
-            # fallback em versões antigas
-            st.experimental_set_query_params()
+    clicked = render_hand_clickable_streamlit()
 
-        carta = decode_card(play_param)
-        validas = set(cartas_validas_para_jogar(humano))
-        if atual == humano and (carta in validas) and (carta in st.session_state.maos[humano]):
-            # joga
-            st.markdown('<div class="playingOverlay">✨ Jogando carta...</div>', unsafe_allow_html=True)
-            time.sleep(0.10)
+    if clicked is not None:
+        st.session_state.pending_play = clicked
+        st.rerun()
 
-            jogar_carta(humano, carta)
-            st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
+    if st.session_state.pending_play is not None and atual == humano:
+        st.markdown('<div class="playingOverlay">✨ Jogando carta...</div>', unsafe_allow_html=True)
+        time.sleep(0.18)
 
-            if len(st.session_state.mesa) == len(ordem):
-                schedule_trick_resolution()
+        carta = st.session_state.pending_play
+        st.session_state.pending_play = None
 
-            avancar_ate_humano_ou_fim()
-            st.rerun()
-        else:
-            # clique inválido (não é sua vez / carta não válida)
-            st.rerun()
+        jogar_carta(humano, carta)
+        st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
 
-    # 7) render mão clicável (sem retângulo)
-    render_hand_clickable_links()
-  
+        if len(st.session_state.mesa) == len(ordem):
+            schedule_trick_resolution()
+
+        avancar_ate_humano_ou_fim()
+        st.rerun()
+
