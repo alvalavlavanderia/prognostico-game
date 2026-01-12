@@ -12,6 +12,7 @@ st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="
 
 # =========================
 # CSS PREMIUM (felt verde + mini-monte + avatar imagem + animação do montinho)
+# + HUD compacto (modo app)
 # =========================
 APP_CSS = """
 <style>
@@ -25,6 +26,48 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .titleRow h1{ margin:0; font-size: 28px; }
 .badges{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 .badge{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(0,0,0,.06); font-size:12px; font-weight:800; }
+
+/* HUD compacto (modo app) */
+.hudBar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  margin: 10px 0 10px 0;
+}
+.hudLeft, .hudRight{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.hudChip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(0,0,0,.10);
+  background: rgba(255,255,255,.78);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 24px rgba(0,0,0,.08);
+  font-weight:900;
+  font-size:12px;
+}
+.hudChip .k{ opacity:.65; font-weight:900; }
+.hudChip .v{ font-weight:900; }
+.hudDot{
+  width:10px; height:10px; border-radius:50%;
+  background: rgba(16,185,129,.88);
+  box-shadow: 0 6px 14px rgba(0,0,0,.12);
+}
+.hudDot.red{ background: rgba(239,68,68,.88); }
+.hudDot.gray{ background: rgba(100,116,139,.88); }
+.hudDot.blue{ background: rgba(59,130,246,.88); }
+.hudDot.gold{ background: rgba(245,158,11,.92); }
+
+.hudSpacer{ height: 2px; }
 
 /* Mesa (felt verde profissional) */
 .mesaWrap{ margin-top: 6px; }
@@ -229,7 +272,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   box-shadow: 0 14px 34px rgba(0,0,0,.08);
   padding: 12px;
 }
-.handTitle{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 6px; }
+.handTitle{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 6px; }
 .handTitle h3{ margin:0; font-size:16px; }
 .hint{ font-size:12px; opacity:.70; font-weight:800; }
 
@@ -436,10 +479,7 @@ def ai_prognostico(mao, cartas_por_jogador: int) -> int:
 
     for n, v in mao:
         base = HIGH_POINTS.get(v, 0.0)
-        if n == "♥":
-            strength += base * 1.35
-        else:
-            strength += base * 1.00
+        strength += (base * 1.35) if n == "♥" else (base * 1.00)
 
     for s in ["♠", "♦", "♣"]:
         c = suit_counts[s]
@@ -459,8 +499,6 @@ def ai_prognostico(mao, cartas_por_jogador: int) -> int:
 
     guess = int(round(expected))
     guess = max(0, min(cartas_por_jogador, guess))
-    if cartas_por_jogador >= 9:
-        guess = max(0, min(cartas_por_jogador, guess))
     return guess
 
 # =========================
@@ -505,15 +543,17 @@ def ss_init():
         "winner_flash_name": None,
         "winner_flash_until": 0.0,
 
+        # Animação da vaza indo pro vencedor
         "trick_pending": False,
-        "trick_phase": None,
-        "trick_resolve_at": 0.0,
-        "trick_fly_until": 0.0,
+        "trick_phase": None,          # "show" -> "fly"
+        "trick_resolve_at": 0.0,      # quando sai do show e entra no fly
+        "trick_fly_until": 0.0,       # quando termina o fly e contabiliza
         "trick_winner": None,
         "trick_snapshot": [],
 
         "pile_counts": {},
 
+        # autoplay
         "autoplay_last": 0.0,
     }
     for k, v in defaults.items():
@@ -572,7 +612,6 @@ def preparar_prognosticos_anteriores():
     humano = nomes[st.session_state.humano_idx]
     pos_h = ordem.index(humano)
     prev = ordem[:pos_h]
-
     st.session_state.progn_pre = {
         n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo)
         for n in prev
@@ -584,7 +623,6 @@ def preparar_prognosticos_posteriores():
     humano = nomes[st.session_state.humano_idx]
     pos_h = ordem.index(humano)
     post = ordem[pos_h+1:]
-
     st.session_state.progn_pos = {
         n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo)
         for n in post
@@ -609,19 +647,24 @@ def cartas_validas_para_jogar(nome):
     if not mao:
         return []
 
+    # Seguir naipe se tiver
     if naipe_base and tem_naipe(mao, naipe_base):
         return [c for c in mao if c[0] == naipe_base]
 
+    # Não tem naipe base
     if naipe_base and not tem_naipe(mao, naipe_base):
+        # 1ª vaza: não pode jogar trunfo se tiver outras (exceto só trunfo)
         if primeira_vaza and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
         return mao[:]
 
+    # Mão abrindo
     if naipe_base is None:
         if primeira_vaza:
             if somente_trunfo(mao):
                 return mao[:]
             return [c for c in mao if c[0] != TRUNFO]
+        # após 1ª vaza: só pode abrir com trunfo se já quebrou ou só trunfo
         if not copas_quebrada and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
 
@@ -731,8 +774,7 @@ def avancar_ate_humano_ou_fim():
         if st.session_state.trick_pending:
             return
 
-        # IMPORTANTE: só pontuar quando NÃO estiver com vaza pendente (última vaza!)
-        if rodada_terminou() and not st.session_state.trick_pending:
+        if rodada_terminou():
             pontuar_rodada()
             return
 
@@ -770,14 +812,14 @@ def start_next_round():
 # =========================
 def chip_color_for_index(idx: int) -> str:
     palette = [
-        "rgba(16,185,129,.88)",
-        "rgba(59,130,246,.88)",
-        "rgba(245,158,11,.88)",
-        "rgba(239,68,68,.88)",
-        "rgba(168,85,247,.88)",
-        "rgba(20,184,166,.88)",
-        "rgba(100,116,139,.88)",
-        "rgba(236,72,153,.88)",
+        "rgba(16,185,129,.88)",   # verde
+        "rgba(59,130,246,.88)",   # azul
+        "rgba(245,158,11,.88)",   # âmbar
+        "rgba(239,68,68,.88)",    # vermelho
+        "rgba(168,85,247,.88)",   # roxo
+        "rgba(20,184,166,.88)",   # teal
+        "rgba(100,116,139,.88)",  # slate
+        "rgba(236,72,153,.88)",   # pink
     ]
     return palette[idx % len(palette)]
 
@@ -805,6 +847,46 @@ def render_small_pile_html(won: int) -> str:
     return f'<div class="pileStack">{"".join(parts)}</div>{label_html}'
 
 # =========================
+# HUD (modo app)
+# =========================
+def render_hud():
+    ordem = st.session_state.ordem
+    humano = st.session_state.nomes[st.session_state.humano_idx]
+    atual = ordem[st.session_state.turn_idx]
+    naipe = st.session_state.naipe_base or "—"
+
+    dot_turn = "gold" if atual == humano else "blue"
+    dot_heart = "red" if st.session_state.copas_quebrada else "gray"
+    dot_first = "gold" if st.session_state.primeira_vaza else "gray"
+
+    mao_len = len(st.session_state.maos.get(humano, []))
+    mesa_len = len(st.session_state.mesa)
+    sobras = st.session_state.sobras_monte
+    cartas_rodada = st.session_state.cartas_alvo
+
+    st.markdown(
+        f"""
+<div class="hudBar">
+  <div class="hudLeft">
+    <div class="hudChip"><span class="hudDot {dot_turn}"></span><span class="k">Vez</span><span class="v">{atual}</span></div>
+    <div class="hudChip"><span class="hudDot gray"></span><span class="k">Naipe</span><span class="v">{naipe}</span></div>
+    <div class="hudChip"><span class="hudDot {dot_heart}"></span><span class="k">♥ quebrada</span><span class="v">{"Sim" if st.session_state.copas_quebrada else "Não"}</span></div>
+    <div class="hudChip"><span class="hudDot {dot_first}"></span><span class="k">1ª vaza</span><span class="v">{"Sim" if st.session_state.primeira_vaza else "Não"}</span></div>
+  </div>
+
+  <div class="hudRight">
+    <div class="hudChip"><span class="hudDot gray"></span><span class="k">Sua mão</span><span class="v">{mao_len}</span></div>
+    <div class="hudChip"><span class="hudDot gray"></span><span class="k">Na vaza</span><span class="v">{mesa_len}/{len(ordem)}</span></div>
+    <div class="hudChip"><span class="hudDot gray"></span><span class="k">Cartas/rodada</span><span class="v">{cartas_rodada}</span></div>
+    <div class="hudChip"><span class="hudDot gray"></span><span class="k">Sobras</span><span class="v">{sobras}</span></div>
+  </div>
+</div>
+<div class="hudSpacer"></div>
+""",
+        unsafe_allow_html=True
+    )
+
+# =========================
 # SIDEBAR
 # =========================
 with st.sidebar:
@@ -825,8 +907,7 @@ with st.sidebar:
             unsafe_allow_html=True
         )
 
-        # só permitir "Próxima rodada" quando a rodada terminou E NÃO há vaza pendente
-        if st.session_state.fase == "jogo" and rodada_terminou() and not st.session_state.trick_pending:
+        if st.session_state.fase == "jogo" and rodada_terminou():
             st.markdown("---")
             if st.session_state.cartas_alvo > 1:
                 if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
@@ -1129,9 +1210,12 @@ def render_hand_clickable_streamlit():
 if st.session_state.fase == "jogo":
     st.markdown(f"### 🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador")
 
-    # 1) controla animação show->fly->contabiliza
+    # controla fases da animação (show->fly->contabiliza)
     if resolve_trick_if_due():
         st.rerun()
+
+    # HUD compacto (SUBSTITUI o st.info grandão)
+    render_hud()
 
     render_mesa()
 
@@ -1139,23 +1223,14 @@ if st.session_state.fase == "jogo":
     atual = ordem[st.session_state.turn_idx]
     humano = st.session_state.nomes[st.session_state.humano_idx]
 
-    st.info(
-        f"🎯 Vez de: **{atual}** | Naipe: **{st.session_state.naipe_base or '-'}** | "
-        f"♥ quebrada: **{'Sim' if st.session_state.copas_quebrada else 'Não'}** | "
-        f"1ª vaza: **{'Sim' if st.session_state.primeira_vaza else 'Não'}**"
-    )
-
-    # 2) Se a vaza está pendente (show ou fly), não finalize rodada.
-    #    Isso corrige a ÚLTIMA RODADA (1 carta) onde as mãos ficam vazias antes da vaza ser contabilizada.
-    if st.session_state.trick_pending:
-        time.sleep(0.06)
-        st.rerun()
-
-    # 3) Agora sim: se acabou a rodada (e NÃO tem vaza pendente), pontua e finaliza
     if rodada_terminou():
         pontuar_rodada()
         st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
         st.stop()
+
+    if st.session_state.trick_pending:
+        time.sleep(0.06)
+        st.rerun()
 
     # AUTOPLAY IA (sem botão)
     if atual != humano and st.session_state.pending_play is None:
@@ -1187,4 +1262,3 @@ if st.session_state.fase == "jogo":
 
         avancar_ate_humano_ou_fim()
         st.rerun()
-
