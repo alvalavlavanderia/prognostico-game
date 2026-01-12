@@ -1184,7 +1184,7 @@ if st.session_state.fase == "jogo":
             time.sleep(0.03)
             st.rerun()
 
-    clicked = render_hand_clickable()
+    clicked = render_hand_clickable_streamlit()
 
     if clicked is not None:
         st.session_state.pending_play = clicked
