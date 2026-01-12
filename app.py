@@ -741,7 +741,14 @@ def resolve_trick_if_due():
     return False
 
 def rodada_terminou():
-    return all(len(st.session_state.maos[n]) == 0 for n in st.session_state.nomes)
+    # Só termina de verdade quando:
+    # - ninguém tem cartas na mão
+    # - não existe animação de vaza pendente (última vaza já foi contabilizada)
+    # - e a mesa está vazia
+    hands_empty = all(len(st.session_state.maos[n]) == 0 for n in st.session_state.nomes)
+    mesa_vazia = (len(st.session_state.mesa) == 0)
+    sem_trick_pendente = (not st.session_state.trick_pending)
+    return hands_empty and mesa_vazia and sem_trick_pendente
 
 def pontuar_rodada():
     if st.session_state.pontuou_rodada:
@@ -771,12 +778,16 @@ def avancar_ate_humano_ou_fim():
         if resolve_trick_if_due():
             return
 
+        # Se animação de vaza ativa, só esperar e rerunar (não pontuar antes!)
         if st.session_state.trick_pending:
-            return
+            time.sleep(0.06)
+            st.rerun()
 
         if rodada_terminou():
             pontuar_rodada()
-            return
+            st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
+            st.stop()
+
 
         atual = ordem[st.session_state.turn_idx]
 
