@@ -870,9 +870,9 @@ def avancar_ate_humano_ou_fim():
         else:
             st.session_state.show_round_overlay = True
 
-    st.rerun()
+        st.rerun()
 
-        atual = ordem[st.session_state.turn_idx]
+    atual = ordem[st.session_state.turn_idx]
 
         if len(st.session_state.maos[atual]) == 0:
             st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
