@@ -902,11 +902,17 @@ def render_hud():
 # =========================
 with st.sidebar:
     st.markdown("## 📊 Placar")
+
     if st.session_state.started:
         for n in st.session_state.nomes:
             st.session_state.pontos.setdefault(n, 0)
 
-        ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
+        ranking = sorted(
+            st.session_state.pontos.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
         for nome, pts in ranking:
             st.markdown(
                 f'<div class="scoreItem"><div class="scoreName">{nome}</div><div class="scorePts">{pts}</div></div>',
@@ -914,22 +920,28 @@ with st.sidebar:
             )
 
         st.markdown(
-            f'<div class="smallMuted">Rodada: {st.session_state.rodada} • Cartas/jogador: {st.session_state.cartas_alvo} • Sobras: {st.session_state.sobras_monte}</div>',
+            f'<div class="smallMuted">Rodada: {st.session_state.rodada} • '
+            f'Cartas/jogador: {st.session_state.cartas_alvo} • '
+            f'Sobras: {st.session_state.sobras_monte}</div>',
             unsafe_allow_html=True
         )
 
-       if st.session_state.fase == "jogo" and rodada_terminou():
-          # GARANTE que a última rodada (incluindo 1 carta) pontue antes de finalizar
-          pontuar_rodada()
+        # 🔧 CORREÇÃO DEFINITIVA DA ÚLTIMA RODADA
+        if st.session_state.fase == "jogo" and rodada_terminou():
+            pontuar_rodada()
 
-         st.markdown("---")
-         if st.session_state.cartas_alvo > 1:
-            if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
-              start_next_round()
-              st.rerun()
-         else:
-            vencedor, pts = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)[0]
-            st.success(f"🏆 Fim do jogo! {vencedor} com {pts} pts")
+            st.markdown("---")
+            if st.session_state.cartas_alvo > 1:
+                if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
+                    start_next_round()
+                    st.rerun()
+            else:
+                vencedor, pts = sorted(
+                    st.session_state.pontos.items(),
+                    key=lambda x: x[1],
+                    reverse=True
+                )[0]
+                st.success(f"🏆 Fim do jogo! {vencedor} com {pts} pts")
 
         st.markdown("---")
         if st.button("🔁 Reiniciar", use_container_width=True):
@@ -937,6 +949,7 @@ with st.sidebar:
                 del st.session_state[key]
             ss_init()
             st.rerun()
+
     else:
         st.info("Inicie uma partida.")
 
