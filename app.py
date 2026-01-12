@@ -1110,11 +1110,11 @@ def render_hand_clickable_streamlit():
     )
 
     mao_ord = sorted(mao, key=peso_carta)
+
+    # ✅ COLUNAS DINÂMICAS (uma por carta)
+    cols = st.columns(len(mao_ord))
     clicked = None
     pending = st.session_state.pending_play
-
-    # grid flex sem retângulo e sem espaço extra
-    st.markdown('<div class="handGrid">', unsafe_allow_html=True)
 
     for i, c in enumerate(mao_ord):
         disabled = (
@@ -1124,25 +1124,21 @@ def render_hand_clickable_streamlit():
             st.session_state.trick_pending
         )
 
-        cls = "handCardCell disabled" if disabled else "handCardCell"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        with cols[i]:
+            if st.button(
+                " ",
+                key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
+                disabled=disabled,
+                use_container_width=True
+            ):
+                clicked = c
 
-        # 1) carta visível primeiro
-        st.markdown(carta_html(c), unsafe_allow_html=True)
+            extra = "flyAway" if (pending is not None and c == pending) else ""
+            st.markdown(card_btn_html(c, extra_class=extra), unsafe_allow_html=True)
 
-        # 2) botão invisível por cima (puxado pelo CSS)
-        if st.button(
-            " ",
-            key=f"cardpick_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
-            disabled=disabled
-        ):
-            clicked = c
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('</div>', unsafe_allow_html=True)  # fecha handGrid
-    st.markdown('</div>', unsafe_allow_html=True)  # fecha handDock
+    st.markdown('</div>', unsafe_allow_html=True)
     return clicked
+
 
 
 # =========================
