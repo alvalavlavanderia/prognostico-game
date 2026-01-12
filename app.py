@@ -3,11 +3,7 @@ import random
 import math
 import time
 import base64
-import urllib.parse
-import uuid
-
 import streamlit as st
-import streamlit.components.v1 as components
 
 # =========================
 # CONFIG
@@ -15,7 +11,7 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="wide")
 
 # =========================
-# CSS PREMIUM (felt verde + mini-monte + avatar imagem + animação do montinho)
+# CSS PREMIUM + FIX CLICK (BOTÃO INVISÍVEL SOBRE A CARTA)
 # =========================
 APP_CSS = """
 <style>
@@ -259,6 +255,54 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .scoreName{ font-weight:900; }
 .scorePts{ font-weight:900; }
 .smallMuted{ opacity:.70; font-size:12px; }
+
+/* ======== FIX: "CARTÃO CLICÁVEL" ========
+   Criamos um slot fixo (70x102). O st.button fica absoluto, invisível, em cima da carta.
+   Assim o clique é na carta e não aparece o retângulo. */
+.handSlot{
+  position:relative;
+  width:70px;
+  height:102px;
+  display:inline-block;
+  margin-right:10px;
+  margin-bottom:10px;
+}
+.handSlot .card{
+  position:absolute;
+  inset:0;
+}
+.handSlot .stButton{
+  position:absolute;
+  inset:0;
+  z-index:5;
+  margin:0 !important;
+}
+.handSlot .stButton > button{
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  padding:0 !important;
+  border:none !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  opacity:0 !important;
+  cursor:pointer !important;
+}
+.handSlot.disabled{
+  opacity:.28;
+  filter: grayscale(.15);
+}
+.handSlot.disabled .stButton > button{
+  pointer-events:none !important;
+}
+
+/* Hover na carta (fica real) */
+.handSlot:hover .card{
+  transform: translateY(-4px);
+  box-shadow: 0 14px 26px rgba(0,0,0,.16);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
 </style>
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
@@ -296,20 +340,6 @@ def carta_html(c):
         f'</div>'
     )
 
-def encode_carta(c):
-    naipe, valor = c
-    payload = f"{naipe}|{valor}"
-    return urllib.parse.quote(payload, safe="")
-
-def decode_carta(s):
-    raw = urllib.parse.unquote(s)
-    naipe, valor_s = raw.split("|", 1)
-    if valor_s in ["J", "Q", "K", "A"]:
-        valor = valor_s
-    else:
-        valor = int(valor_s)
-    return (naipe, valor)
-
 # =========================
 # UTIL
 # =========================
@@ -345,19 +375,13 @@ def avatar_svg_data_uri(idx: int) -> str:
   </defs>
 
   <circle cx="32" cy="32" r="30" fill="{b}" filter="url(#s)"/>
-
   <path d="M14 58c3-13 14-16 18-16s15 3 18 16" fill="{shirt}"/>
-
   <rect x="28" y="36" width="8" height="10" rx="4" fill="{skin}"/>
   <circle cx="32" cy="28" r="16" fill="{skin}"/>
-
   <path d="M16 28c2-12 10-18 16-18s14 6 16 18c-4-7-10-9-16-9s-12 2-16 9z" fill="{hair}"/>
-
   <circle cx="26" cy="28" r="2.2" fill="#111827"/>
   <circle cx="38" cy="28" r="2.2" fill="#111827"/>
-
   <path d="M26 34c2.2 2 4.4 3 6 3s3.8-1 6-3" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
-
   <circle cx="22" cy="33" r="2.1" fill="rgba(244,114,182,.35)"/>
   <circle cx="42" cy="33" r="2.1" fill="rgba(244,114,182,.35)"/>
 </svg>
@@ -372,6 +396,7 @@ def avatar_svg_data_uri(idx: int) -> str:
 def ai_prognostico(mao, cartas_por_jogador: int) -> int:
     if not mao:
         return 0
+
     suit_counts = {"♠": 0, "♦": 0, "♣": 0, "♥": 0}
     for n, v in mao:
         suit_counts[n] += 1
@@ -453,8 +478,6 @@ def ss_init():
         "pile_counts": {},
 
         "autoplay_last": 0.0,
-
-        "sid": None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -553,7 +576,6 @@ def cartas_validas_para_jogar(nome):
 
     # Não tem naipe base
     if naipe_base and not tem_naipe(mao, naipe_base):
-        # 1ª vaza: não pode jogar trunfo se tiver outras (exceto só trunfo)
         if primeira_vaza and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
         return mao[:]
@@ -564,7 +586,6 @@ def cartas_validas_para_jogar(nome):
             if somente_trunfo(mao):
                 return mao[:]
             return [c for c in mao if c[0] != TRUNFO]
-        # após 1ª vaza: só pode abrir com trunfo se já quebrou ou só trunfo
         if not copas_quebrada and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
 
@@ -712,14 +733,14 @@ def start_next_round():
 # =========================
 def chip_color_for_index(idx: int) -> str:
     palette = [
-        "rgba(16,185,129,.88)",   # verde
-        "rgba(59,130,246,.88)",   # azul
-        "rgba(245,158,11,.88)",   # âmbar
-        "rgba(239,68,68,.88)",    # vermelho
-        "rgba(168,85,247,.88)",   # roxo
-        "rgba(20,184,166,.88)",   # teal
-        "rgba(100,116,139,.88)",  # slate
-        "rgba(236,72,153,.88)",   # pink
+        "rgba(16,185,129,.88)",
+        "rgba(59,130,246,.88)",
+        "rgba(245,158,11,.88)",
+        "rgba(239,68,68,.88)",
+        "rgba(168,85,247,.88)",
+        "rgba(20,184,166,.88)",
+        "rgba(100,116,139,.88)",
+        "rgba(236,72,153,.88)",
     ]
     return palette[idx % len(palette)]
 
@@ -767,7 +788,7 @@ with st.sidebar:
             unsafe_allow_html=True
         )
 
-        if st.session_state.fase == "jogo" and rodada_terminou() and (not st.session_state.trick_pending):
+        if st.session_state.fase == "jogo" and rodada_terminou():
             st.markdown("---")
             if st.session_state.cartas_alvo > 1:
                 if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
@@ -827,11 +848,6 @@ if not st.session_state.started:
             st.session_state.humano_idx = len(nomes) - 1
             st.session_state.pontos = {n: 0 for n in nomes}
             st.session_state.started = True
-
-            # sid fixo na URL (para podermos adicionar play depois)
-            if not st.session_state.sid:
-                st.session_state.sid = uuid.uuid4().hex[:12]
-            st.query_params["sid"] = st.session_state.sid
 
             n = len(nomes)
             cartas_inicio = 52 // n
@@ -914,11 +930,7 @@ def render_mesa():
     flash_name = st.session_state.winner_flash_name if now <= st.session_state.winner_flash_until else None
     pop_active = now <= st.session_state.table_pop_until
 
-    if st.session_state.trick_pending:
-        mesa_to_render = st.session_state.trick_snapshot
-    else:
-        mesa_to_render = st.session_state.mesa
-
+    mesa_to_render = st.session_state.trick_snapshot if st.session_state.trick_pending else st.session_state.mesa
     naipe_base_show = st.session_state.naipe_base
 
     seats_html = ""
@@ -1033,140 +1045,56 @@ def render_mesa():
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
-# NOVA MÃO CLICÁVEL (SEM BOTÃO) - via components.html + JS
+# MÃO CLICÁVEL (BOTÃO INVISÍVEL SOBRE A CARTA)
 # =========================
-def render_hand_clickable_components():
+def render_hand_clickable():
     ordem = st.session_state.ordem
     humano = st.session_state.nomes[st.session_state.humano_idx]
     atual = ordem[st.session_state.turn_idx]
     mao = st.session_state.maos[humano]
     validas = set(cartas_validas_para_jogar(humano))
 
-    sid = st.session_state.sid
-    if not sid:
-        sid = st.query_params.get("sid", "")
-        if isinstance(sid, list):
-            sid = sid[0] if sid else ""
-        st.session_state.sid = sid
-
+    st.markdown('<div class="handDock">', unsafe_allow_html=True)
     hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
     if st.session_state.trick_pending:
         hint = "Vaza completa — animação"
-
-    st.markdown('<div class="handDock">', unsafe_allow_html=True)
     st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
 
     mao_ord = sorted(mao, key=peso_carta)
-    cid = uuid.uuid4().hex[:10]
+    clicked = None
+    pending = st.session_state.pending_play
 
-    # CSS + HTML dentro do iframe (não herda o CSS global)
-    iframe_css = """
-    <style>
-      body{ margin:0; padding:0; background:transparent; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
-      .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start; }
-      .wrap{ display:inline-block; }
-      .wrap.disabled{ opacity:.28; filter: grayscale(.15); pointer-events:none; }
-      .card{
-        width:70px; height:102px; border-radius:14px;
-        border:1px solid rgba(0,0,0,.16);
-        background: linear-gradient(180deg, #ffffff 0%, #f8f8f8 100%);
-        box-shadow: 0 10px 22px rgba(0,0,0,.12);
-        position:relative;
-        user-select:none;
-        cursor:pointer;
-        transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
-      }
-      .wrap:hover .card{
-        transform: translateY(-4px);
-        box-shadow: 0 14px 26px rgba(0,0,0,.16);
-      }
-      .tl{ position:absolute; top:7px; left:7px; font-weight:900; font-size:13px; line-height:13px; }
-      .br{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }
-      .mid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }
-    </style>
-    """
-
-    def card_html_iframe(c):
-        naipe, valor = c
-        cor = COR_NAIPE[naipe]
-        vv = valor_str(valor)
-        return (
-            f'<div class="card">'
-            f'<div class="tl" style="color:{cor};">{vv}<br/>{naipe}</div>'
-            f'<div class="mid" style="color:{cor};">{naipe}</div>'
-            f'<div class="br" style="color:{cor};">{vv}<br/>{naipe}</div>'
-            f'</div>'
-        )
-
-    cards = []
-    for c in mao_ord:
+    # linhas de 10 cartas (sem scroll)
+    cols = st.columns(10)
+    for i, c in enumerate(mao_ord):
         disabled = (
             (c not in validas) or
             (atual != humano) or
-            (st.session_state.pending_play is not None) or
+            (pending is not None) or
             st.session_state.trick_pending
         )
-        token = encode_carta(c)
-        cls = "wrap disabled" if disabled else "wrap"
-        cards.append(
-            f'<div class="{cls}" data-sid="{sid}" data-play="{token}" data-disabled="{1 if disabled else 0}">'
-            f'{card_html_iframe(c)}'
-            f'</div>'
-        )
 
-    html = f"""
-    <!doctype html>
-    <html>
-      <head>{iframe_css}</head>
-      <body>
-        <div id="hand_{cid}" class="row">
-          {''.join(cards)}
-        </div>
+        with cols[i % 10]:
+            # abre um "slot" que vai conter botão invisível + carta
+            st.markdown(f'<div class="handSlot {"disabled" if disabled else ""}">', unsafe_allow_html=True)
 
-        <script>
-          (function() {{
-            const root = document.getElementById("hand_{cid}");
-            if (!root) return;
+            # botão invisível em cima da carta
+            # IMPORTANTÍSSIMO: o botão precisa existir e ser clicável.
+            if st.button(
+                " ",
+                key=f"click_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
+                disabled=disabled,
+                use_container_width=True,
+            ):
+                clicked = c
 
-            root.addEventListener("click", function(e) {{
-              const el = e.target.closest(".wrap");
-              if (!el) return;
+            # carta visível (embaixo do botão, mas ocupando mesmo lugar)
+            st.markdown(carta_html(c), unsafe_allow_html=True)
 
-              const disabled = el.getAttribute("data-disabled");
-              if (disabled === "1") return;
-
-              const sid = el.getAttribute("data-sid") || "";
-              const play = el.getAttribute("data-play") || "";
-
-              const params = new URLSearchParams(window.parent.location.search);
-              if (sid) params.set("sid", sid);
-              params.set("play", play);
-
-              // navega na própria página do Streamlit
-              window.parent.location.search = "?" + params.toString();
-            }});
-          }})();
-        </script>
-      </body>
-    </html>
-    """
-
-    # altura suficiente para 1-2 linhas de cartas, sem scroll
-    components.html(html, height=140, scrolling=False)
+            st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
-
-# =========================
-# QUERY PARAMS HELPERS
-# =========================
-def get_qp_one(key: str):
-    qp = st.query_params
-    if key not in qp:
-        return None
-    v = qp.get(key)
-    if isinstance(v, list):
-        return v[0] if v else None
-    return v
+    return clicked
 
 # =========================
 # JOGO
@@ -1174,7 +1102,6 @@ def get_qp_one(key: str):
 if st.session_state.fase == "jogo":
     st.markdown(f"### 🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador")
 
-    # resolve fases da animação
     if resolve_trick_if_due():
         st.rerun()
 
@@ -1190,42 +1117,16 @@ if st.session_state.fase == "jogo":
         f"1ª vaza: **{'Sim' if st.session_state.primeira_vaza else 'Não'}**"
     )
 
-    # Se rodada terminou
     if rodada_terminou():
         pontuar_rodada()
         st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
         st.stop()
 
-    # Se animação de vaza ativa, só esperar e rerunar
     if st.session_state.trick_pending:
         time.sleep(0.06)
         st.rerun()
 
-    # ✅ CAPTURA CLIQUE DA CARTA (play=...) — agora funciona porque o iframe altera a URL
-    play_token = get_qp_one("play")
-    if play_token and st.session_state.pending_play is None:
-        try:
-            carta = decode_carta(play_token)
-
-            # limpa play (mantém sid)
-            sid = get_qp_one("sid") or st.session_state.sid
-            st.query_params.clear()
-            if sid:
-                st.query_params["sid"] = sid
-
-            # valida e agenda jogada
-            if atual == humano and carta in st.session_state.maos[humano]:
-                validas = set(cartas_validas_para_jogar(humano))
-                if carta in validas:
-                    st.session_state.pending_play = carta
-                    st.rerun()
-        except Exception:
-            sid = get_qp_one("sid") or st.session_state.sid
-            st.query_params.clear()
-            if sid:
-                st.query_params["sid"] = sid
-
-    # AUTOPLAY IA (sem botão)
+    # AUTOPLAY IA
     if atual != humano and st.session_state.pending_play is None:
         now = time.time()
         if now - st.session_state.autoplay_last > 0.08:
@@ -1234,10 +1135,12 @@ if st.session_state.fase == "jogo":
             time.sleep(0.03)
             st.rerun()
 
-    # Render da mão clicável (sem retângulo e clique direto na carta)
-    render_hand_clickable_components()
+    clicked = render_hand_clickable()
 
-    # Executa carta pendente
+    if clicked is not None:
+        st.session_state.pending_play = clicked
+        st.rerun()
+
     if st.session_state.pending_play is not None and atual == humano:
         st.markdown('<div class="playingOverlay">✨ Jogando carta...</div>', unsafe_allow_html=True)
         time.sleep(0.18)
@@ -1253,4 +1156,3 @@ if st.session_state.fase == "jogo":
 
         avancar_ate_humano_ou_fim()
         st.rerun()
-
