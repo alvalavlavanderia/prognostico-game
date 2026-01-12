@@ -14,7 +14,6 @@ st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="
 # CSS PREMIUM (felt verde + mini-monte + avatar imagem + animação do montinho)
 # =========================
 APP_CSS = """
-APP_CSS = """
 <style>
 .block-container { padding-top: .8rem !important; padding-bottom: .8rem !important; max-width: 1200px; }
 header[data-testid="stHeader"] { height: .4rem; }
