@@ -283,6 +283,62 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .scoreName{ font-weight:900; }
 .scorePts{ font-weight:900; }
 .smallMuted{ opacity:.70; font-size:12px; }
+/* ====== CARTA CLICÁVEL SEM RETÂNGULO (botão invisível + carta por cima) ====== */
+.cardClickWrap{
+  position:relative;
+  width:70px;
+  height:102px;
+}
+
+.cardClickWrap .stButton{
+  position:absolute;
+  inset:0;
+  z-index:1;
+}
+
+/* botão invisível, mas clicável */
+.cardClickWrap .stButton > button{
+  width:100% !important;
+  height:100% !important;
+  min-height:100% !important;
+
+  padding:0 !important;
+  margin:0 !important;
+
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+
+  outline:none !important;
+}
+
+/* tira qualquer “efeito” visual do foco */
+.cardClickWrap .stButton > button:focus,
+.cardClickWrap .stButton > button:focus-visible{
+  outline:none !important;
+  box-shadow:none !important;
+}
+
+/* a carta fica por cima, mas NÃO captura clique */
+.cardClickVisual{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+}
+
+/* hover "premium" (aplicado no wrapper) */
+.cardClickWrap:hover .card{
+  transform: translateY(-4px);
+  box-shadow: 0 14px 26px rgba(0,0,0,.16);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+/* desabilitada: fica opaca */
+.cardClickWrap.disabled{
+  opacity:.28;
+  filter: grayscale(.15);
+}
 </style>
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
@@ -1061,27 +1117,51 @@ def render_hand_clickable_links():
     hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
     if st.session_state.trick_pending:
         hint = "Vaza completa — animação"
-    st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>',
+        unsafe_allow_html=True
+    )
 
     mao_ord = sorted(mao, key=peso_carta)
 
-    cards_html = []
-    for c in mao_ord:
+    # linha horizontal e responsiva (sem vertical)
+    st.markdown('<div style="display:flex; gap:10px; flex-wrap:wrap;">', unsafe_allow_html=True)
+
+    clicked = None
+
+    for i, c in enumerate(mao_ord):
         disabled = (
             (c not in validas) or
             (atual != humano) or
             st.session_state.trick_pending
         )
 
-        token = encode_card(c)
+        wrap_cls = "cardClickWrap"
         if disabled:
-            cards_html.append(f'<span class="handCardLink disabled">{carta_html(c)}</span>')
-        else:
-            # IMPORTANT: sem target="_blank" para não abrir nova aba
-            cards_html.append(f'<a class="handCardLink" href="?play={token}">{carta_html(c)}</a>')
+            wrap_cls += " disabled"
 
-    st.markdown('<div class="handLinksRow">' + "".join(cards_html) + '</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+        # abre wrapper
+        st.markdown(f'<div class="{wrap_cls}">', unsafe_allow_html=True)
+
+        # botão invisível (clicável)
+        if st.button(
+            " ",
+            key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
+            disabled=disabled
+        ):
+            clicked = c
+
+        # carta por cima (visual)
+        st.markdown(f'<div class="cardClickVisual">{carta_html(c)}</div>', unsafe_allow_html=True)
+
+        # fecha wrapper
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)  # fecha linha flex
+    st.markdown('</div>', unsafe_allow_html=True)  # fecha handDock
+
+    return clicked
+
 
 # =========================
 # JOGO
