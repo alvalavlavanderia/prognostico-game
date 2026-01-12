@@ -307,6 +307,98 @@ div[data-testid="column"] .stButton > button:disabled{
 .scoreName{ font-weight:900; }
 .scorePts{ font-weight:900; }
 .smallMuted{ opacity:.70; font-size:12px; }
+APP_CSS += """
+<style>
+/* ===== Mobile App Mode ===== */
+@media (max-width: 900px){
+
+  /* some com sidebar (vira app) */
+  section[data-testid="stSidebar"]{
+    display:none !important;
+  }
+
+  /* container mais “app” */
+  .block-container{
+    padding-left: .6rem !important;
+    padding-right: .6rem !important;
+    padding-bottom: 6.2rem !important; /* espaço para dock */
+    max-width: 100% !important;
+  }
+
+  /* header mais compacto */
+  .titleRow h1{ font-size: 22px !important; }
+  .badges{ display:none !important; } /* badges ocupam muito */
+
+  /* mesa menor e responsiva */
+  .mesa{
+    height: 380px !important;
+    border-radius: 18px !important;
+  }
+
+  /* assentos mais compactos */
+  .seat{
+    padding:5px 8px !important;
+    font-size:11px !important;
+  }
+  .avatarImg{ width:22px !important; height:22px !important; }
+
+  /* cartas menores no mobile */
+  .card{ width:58px !important; height:86px !important; border-radius:12px !important; }
+  .card .mid{ font-size:26px !important; }
+  .card .tl,.card .br{ font-size:12px !important; line-height:12px !important; }
+
+  /* dock da mão vira FIXO embaixo (sensação de app) */
+  .handDock{
+    position: fixed !important;
+    left: .6rem !important;
+    right: .6rem !important;
+    bottom: .6rem !important;
+    z-index: 999 !important;
+    margin-top: 0 !important;
+    box-shadow: 0 18px 48px rgba(0,0,0,.16) !important;
+  }
+
+  /* título do dock mais compacto */
+  .handTitle h3{ font-size:14px !important; }
+
+  /* botão-carta menor */
+  div[data-testid="column"] .stButton > button{
+    min-height: 98px !important;
+  }
+  .cardBtnInner{ height:98px !important; }
+  .cardBtnMid{ font-size:30px !important; }
+}
+
+/* ===== Top HUD (placar compacto “app”) ===== */
+.appHUD{
+  position: sticky;
+  top: .35rem;
+  z-index: 998;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius: 16px;
+  border:1px solid rgba(0,0,0,.10);
+  background: rgba(255,255,255,.82);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 18px 42px rgba(0,0,0,.10);
+  margin-bottom: 10px;
+}
+.hudLeft{ display:flex; flex-direction:column; gap:2px; }
+.hudTitle{ font-weight:900; font-size:12px; opacity:.75; }
+.hudMain{ font-weight:900; font-size:14px; }
+.hudRight{ display:flex; gap:8px; align-items:center; }
+.hudChip{
+  padding:7px 10px;
+  border-radius:999px;
+  background: rgba(0,0,0,.06);
+  font-weight:900;
+  font-size:12px;
+}
+</style>
+"""
 </style>
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
@@ -1123,9 +1215,39 @@ def render_hand_clickable_streamlit():
 # JOGO  ✅ (fix definitivo da ÚLTIMA MÃO / ÚLTIMA RODADA)
 # =========================
 if st.session_state.fase == "jogo":
-    st.markdown(f"### 🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador")
+    ordem = st.session_state.ordem
+    atual = ordem[st.session_state.turn_idx]
+    humano = st.session_state.nomes[st.session_state.humano_idx]
 
+    # TOP HUD (cara de app)
+    top3 = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)[:3]
+    top_txt = " • ".join([f"{n}:{p}" for n,p in top3]) if top3 else "-"
+    st.markdown(
+        f"""
+<div class="appHUD">
+  <div class="hudLeft">
+    <div class="hudTitle">Rodada {st.session_state.rodada} • {st.session_state.cartas_alvo} cartas</div>
+    <div class="hudMain">Vez: {atual}</div>
+    <div class="hudTitle">Top: {top_txt}</div>
+  </div>
+  <div class="hudRight">
+    <div class="hudChip">♥ {'quebrada' if st.session_state.copas_quebrada else 'intacta'}</div>
+    <div class="hudChip">Sobras {st.session_state.sobras_monte}</div>
+  </div>
+</div>
+""",
+        unsafe_allow_html=True
+    )
+  
     render_mesa()
+  
+    with st.expander("📊 Placar (toque para abrir)", expanded=False):
+        ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
+        for nome, pts in ranking:
+            st.markdown(
+              f'<div class="scoreItem"><div class="scoreName">{nome}</div><div class="scorePts">{pts}</div></div>',
+              unsafe_allow_html=True
+            )
 
     ordem = st.session_state.ordem
     atual = ordem[st.session_state.turn_idx]
