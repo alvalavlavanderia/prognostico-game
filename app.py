@@ -853,9 +853,9 @@ with st.sidebar:
         )
 
         if st.session_state.fase == "jogo" and rodada_terminou():
-        # ✅ Se ainda tem vaza pendente, não deixa seguir (evita perder a última vaza)
-        if st.session_state.trick_pending:
-            st.info("Finalizando a última vaza...")
+            # ✅ Se ainda tem vaza pendente, não deixa seguir (evita perder a última vaza)
+            if st.session_state.trick_pending:
+                st.info("Finalizando a última vaza...")
         else:
             pontuar_rodada()
             st.markdown("---")
