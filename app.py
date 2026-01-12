@@ -747,12 +747,21 @@ def avancar_ate_humano_ou_fim():
         if resolve_trick_if_due():
             return
 
+        # ✅ Se uma vaza está pendente (show/fly), NÃO deixe a rodada finalizar ainda
         if st.session_state.trick_pending:
-            return
+        # Avança animação show->fly->contabiliza
+        if resolve_trick_if_due():
+            st.rerun()
 
+        # ainda pendente? continua animando até contabilizar
+        time.sleep(0.06)
+        st.rerun()
+
+        # ✅ Só depois que NÃO houver vaza pendente, pode finalizar a rodada
         if rodada_terminou():
             pontuar_rodada()
-            return
+            st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
+            st.stop()
 
         atual = ordem[st.session_state.turn_idx]
 
@@ -844,10 +853,12 @@ with st.sidebar:
         )
 
         if st.session_state.fase == "jogo" and rodada_terminou():
-            # ✅ GARANTE pontuar antes de qualquer próxima rodada/fim
+        # ✅ Se ainda tem vaza pendente, não deixa seguir (evita perder a última vaza)
+        if st.session_state.trick_pending:
+            st.info("Finalizando a última vaza...")
+        else:
             pontuar_rodada()
-
-        st.markdown("---")
+            st.markdown("---")
         if st.session_state.cartas_alvo > 1:
             if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
                 start_next_round()
