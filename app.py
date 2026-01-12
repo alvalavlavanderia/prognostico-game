@@ -350,6 +350,65 @@ div[data-testid="column"] .stButton > button:disabled{
 .scoreName{ font-weight:900; }
 .scorePts{ font-weight:900; }
 .smallMuted{ opacity:.70; font-size:12px; }
+/* Overlay modal (fim de rodada / fim de jogo) */
+.overlayDim{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(4px);
+  z-index: 9998;
+}
+.overlayCard{
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  width: min(760px, 92vw);
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 30px 80px rgba(0,0,0,.35);
+  z-index: 9999;
+  padding: 18px 18px 14px;
+}
+.overlayTitle{
+  font-size: 18px;
+  font-weight: 900;
+  margin: 0 0 10px 0;
+}
+.overlayGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.overlayBox{
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,.08);
+  background: rgba(255,255,255,.85);
+  padding: 12px;
+}
+.overlayBox h4{
+  margin: 0 0 6px 0;
+  font-size: 13px;
+  opacity: .75;
+  font-weight: 900;
+}
+.overlayRow{
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(0,0,0,.10);
+}
+.overlayRow:last-child{ border-bottom: none; }
+.overlayName{ font-weight: 900; }
+.overlayVal{ font-weight: 900; }
+.overlayBtns{
+  display:flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
 </style>
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
@@ -509,7 +568,7 @@ def ss_init():
         "started": False,
         "nomes": ["Ana", "Bruno", "Carlos", "Você"],
         "humano_idx": 3,
-
+       
         "pontos": {},
         "vazas_rodada": {},
         "maos": {},
@@ -555,6 +614,9 @@ def ss_init():
 
         # autoplay
         "autoplay_last": 0.0,
+        "show_round_overlay": False,
+        "show_final_overlay": False,
+        "last_round_summary": None,  # dict com detalhes
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -757,6 +819,22 @@ def pontuar_rodada():
         v = st.session_state.vazas_rodada.get(n, 0)
         p = v + (5 if st.session_state.prognosticos.get(n) == v else 0)
         st.session_state.pontos[n] = st.session_state.pontos.get(n, 0) + p
+        # resumo da rodada (pra overlay)
+        resumo = []
+        for n in st.session_state.nomes:
+        v = st.session_state.vazas_rodada.get(n, 0)
+        pr = st.session_state.prognosticos.get(n, None)
+        bonus = 5 if (pr == v) else 0
+        pts = v + bonus
+        resumo.append({"nome": n, "progn": pr, "vazas": v, "bonus": bonus, "pts": pts})
+
+    st.session_state.last_round_summary = {
+        "rodada": st.session_state.rodada,
+        "cartas": st.session_state.cartas_alvo,
+        "sobras": st.session_state.sobras_monte,
+        "linhas": resumo
+    }
+
     st.session_state.pontuou_rodada = True
 
 def ai_escolhe_carta(nome):
@@ -785,9 +863,14 @@ def avancar_ate_humano_ou_fim():
 
         if rodada_terminou():
             pontuar_rodada()
-            st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
-            st.stop()
 
+        # decide overlay de rodada ou final
+        if st.session_state.cartas_alvo <= 1:
+            st.session_state.show_final_overlay = True
+        else:
+            st.session_state.show_round_overlay = True
+
+    st.rerun()
 
         atual = ordem[st.session_state.turn_idx]
 
@@ -1197,6 +1280,107 @@ def render_mesa():
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
+def render_overlay_resumo():
+    # overlay de rodada
+    if st.session_state.show_round_overlay and st.session_state.last_round_summary:
+        data = st.session_state.last_round_summary
+        linhas = data["linhas"]
+
+        # ranking parcial
+        ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
+
+        st.markdown('<div class="overlayDim"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="overlayCard">', unsafe_allow_html=True)
+        st.markdown(f'<div class="overlayTitle">✅ Rodada {data["rodada"]} finalizada — {data["cartas"]} carta(s) por jogador</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="overlayGrid">', unsafe_allow_html=True)
+
+        # box 1: resumo da rodada
+        html1 = ['<div class="overlayBox"><h4>Resumo da rodada</h4>']
+        for r in linhas:
+            html1.append(
+                f'<div class="overlayRow"><div class="overlayName">{r["nome"]}</div>'
+                f'<div class="overlayVal">Prog {r["progn"]} • Vazas {r["vazas"]} • +{r["bonus"]} = {r["pts"]}</div></div>'
+            )
+        html1.append('</div>')
+        st.markdown("".join(html1), unsafe_allow_html=True)
+
+        # box 2: ranking
+        html2 = ['<div class="overlayBox"><h4>Ranking (placar total)</h4>']
+        for nome, pts in ranking:
+            html2.append(
+                f'<div class="overlayRow"><div class="overlayName">{nome}</div><div class="overlayVal">{pts} pts</div></div>'
+            )
+        html2.append('</div>')
+        st.markdown("".join(html2), unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)  # grid
+
+        # botões
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
+                st.session_state.show_round_overlay = False
+                start_next_round()
+                st.rerun()
+        with c2:
+            if st.button("🔁 Reiniciar partida", use_container_width=True):
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                ss_init()
+                st.rerun()
+
+        st.markdown('</div>', unsafe_allow_html=True)  # card
+
+    # overlay final do jogo
+    if st.session_state.show_final_overlay and st.session_state.last_round_summary:
+        ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
+        vencedor, pts = ranking[0]
+
+        st.markdown('<div class="overlayDim"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="overlayCard">', unsafe_allow_html=True)
+        st.markdown(f'<div class="overlayTitle">🏆 Fim do jogo — Campeão: {vencedor} ({pts} pts)</div>', unsafe_allow_html=True)
+
+        html = ['<div class="overlayBox"><h4>Ranking final</h4>']
+        for i, (nome, p) in enumerate(ranking, start=1):
+            medal = "🥇" if i == 1 else ("🥈" if i == 2 else ("🥉" if i == 3 else ""))
+            html.append(
+                f'<div class="overlayRow"><div class="overlayName">{medal} {i}º — {nome}</div><div class="overlayVal">{p} pts</div></div>'
+            )
+        html.append('</div>')
+        st.markdown("".join(html), unsafe_allow_html=True)
+
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("🔁 Jogar de novo (mesmos jogadores)", use_container_width=True):
+                nomes = st.session_state.nomes[:]
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                ss_init()
+                st.session_state.nomes = nomes
+                st.session_state.humano_idx = len(nomes) - 1
+                st.session_state.pontos = {n: 0 for n in nomes}
+                st.session_state.started = True
+
+                cartas_inicio = 52 // len(nomes)
+                st.session_state.cartas_inicio = cartas_inicio
+                st.session_state.cartas_alvo = cartas_inicio
+                st.session_state.rodada = 1
+
+                distribuir(cartas_inicio)
+                preparar_prognosticos_anteriores()
+                st.rerun()
+
+        with c2:
+            if st.button("🧹 Voltar ao início (setup)", use_container_width=True):
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                ss_init()
+                st.rerun()
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
 def render_hand_clickable_streamlit():
     ordem = st.session_state.ordem
     humano = st.session_state.nomes[st.session_state.humano_idx]
@@ -1230,6 +1414,8 @@ def render_hand_clickable_streamlit():
 
     st.markdown('</div>', unsafe_allow_html=True)
     return clicked
+
+render_overlay_resumo()
 
 # =========================
 # JOGO
