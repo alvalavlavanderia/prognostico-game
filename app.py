@@ -18,59 +18,76 @@ st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="
 # =========================
 APP_CSS = """
 <style>
-.block-container { padding-top: .8rem !important; padding-bottom: .8rem !important; max-width: 1200px; }
+/* ====== BASE ====== */
+:root{
+  --app-max: 1200px;
+  --pad: .8rem;
+  --topbar-h: 58px;
+  --dock-h: 190px;   /* altura “prevista” do dock no mobile */
+}
+
+.block-container {
+  padding-top: var(--pad) !important;
+  padding-bottom: var(--pad) !important;
+  max-width: var(--app-max);
+}
+
 header[data-testid="stHeader"] { height: .4rem; }
 div[data-testid="stSidebarContent"] { padding-top: 1rem; }
-[data-testid="stAppViewContainer"] { background: radial-gradient(circle at 20% 10%, rgba(0,150,110,.10), transparent 40%); }
+[data-testid="stAppViewContainer"] {
+  background: radial-gradient(circle at 20% 10%, rgba(0,150,110,.10), transparent 40%);
+}
 
-/* Header */
+/* Remove “respiros” excessivos do streamlit */
+[data-testid="stVerticalBlock"] { gap: .55rem; }
+
+/* ====== HEADER ====== */
 .titleRow{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 6px; }
 .titleRow h1{ margin:0; font-size: 28px; }
 .badges{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 .badge{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(0,0,0,.06); font-size:12px; font-weight:800; }
 
-/* ===== TOP BAR (1 LINHA) ===== */
+/* ====== TOPBAR (APP-LIKE) ====== */
 .topbar{
+  position: sticky;
+  top: .35rem;
+  z-index: 60;
+  border-radius: 18px;
+  border:1px solid rgba(0,0,0,.10);
+  background: rgba(255,255,255,.78);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 14px 32px rgba(0,0,0,.10);
+  padding: 10px 12px;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid rgba(0,0,0,.10);
-  background: rgba(255,255,255,.78);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 14px 34px rgba(0,0,0,.06);
-  margin: 10px 0 12px 0;
+  gap: 10px;
 }
-.topbarLeft{
-  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-  font-weight:900;
-}
-.topbarLeft .muted{ opacity:.72; font-weight:800; }
-.topbarRight{
-  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-}
+.topLeft{ display:flex; flex-direction:column; gap:2px; }
+.topTitle{ font-weight: 950; font-size: 14px; }
+.topSub{ font-weight: 850; opacity:.70; font-size: 12px; }
+.topRight{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 .pill{
   display:inline-flex; align-items:center; gap:6px;
-  padding:6px 10px;
-  border-radius:999px;
-  background:rgba(0,0,0,.06);
-  font-size:12px;
-  font-weight:900;
+  padding:6px 10px; border-radius:999px;
+  border:1px solid rgba(0,0,0,.10);
+  background: rgba(255,255,255,.70);
+  font-weight: 900;
+  font-size: 12px;
 }
+.pillGood{ background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.25); }
+.pillWarn{ background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.25); }
+.pillInfo{ background: rgba(59,130,246,.12); border-color: rgba(59,130,246,.25); }
 
-/* Mesa (felt verde profissional) */
+/* ====== MESA (felt verde) ====== */
 .mesaWrap{ margin-top: 6px; }
 .mesa{
   border-radius:22px;
   border:1px solid rgba(0,0,0,.14);
-
   background:
     radial-gradient(circle at 30% 20%, rgba(255,255,255,.12) 0%, rgba(255,255,255,0) 42%),
     radial-gradient(circle at 70% 80%, rgba(0,0,0,.10) 0%, rgba(0,0,0,0) 48%),
     linear-gradient(180deg, rgba(18,90,55,1) 0%, rgba(13,72,45,1) 55%, rgba(10,58,36,1) 100%);
-
   height: 470px;
   position:relative;
   overflow:hidden;
@@ -102,7 +119,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   color: rgba(255,255,255,.90);
 }
 
-/* Assentos (nome + avatar sempre visíveis) */
+/* ====== SEATS / AVATAR ====== */
 .seat{
   position:absolute;
   padding:6px 10px;
@@ -118,8 +135,6 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 }
 .seat.you{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }
 .seat.dealer{ border-color: rgba(34,197,94,.35); background: rgba(255,255,255,.95); }
-
-/* Avatar imagem cartoon */
 .avatarImg{
   width:26px; height:26px;
   border-radius:50%;
@@ -129,7 +144,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   flex: 0 0 auto;
 }
 
-/* Winner glow */
+/* ====== WINNER GLOW ====== */
 @keyframes winnerGlow {
   0% { box-shadow: 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }
   35% { box-shadow: 0 0 0 6px rgba(34,197,94,.22), 0 14px 28px rgba(0,0,0,.14); transform: translate(-50%,-50%) scale(1.03); }
@@ -141,20 +156,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   background: rgba(255,255,255,.97);
 }
 
-/* Cartas na mesa */
-.playCard{
-  position:absolute;
-  transform: translate(-50%,-50%);
-  pointer-events:none;
-  z-index: 18;
-}
-@keyframes popIn {
-  0% { transform: translate(-50%,-50%) scale(.92); opacity: .0; }
-  100% { transform: translate(-50%,-50%) scale(1.0); opacity: 1; }
-}
-.playCard.pop{ animation: popIn .16s ease-out; }
-
-/* Carta (frente) */
+/* ====== CARTA (frente) ====== */
 .card{
   width:70px;
   height:102px;
@@ -169,12 +171,16 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .card .br{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }
 .card .mid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }
 
-/* Chips pequenos */
+/* ====== PLAY CARD ON TABLE ====== */
+.playCard{ position:absolute; transform: translate(-50%,-50%); pointer-events:none; z-index: 18; }
+@keyframes popIn { 0% { transform: translate(-50%,-50%) scale(.92); opacity: 0; } 100% { transform: translate(-50%,-50%) scale(1); opacity: 1; } }
+.playCard.pop{ animation: popIn .16s ease-out; }
+
+/* ====== CHIPS ====== */
 .chipWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 16; }
 .chipRow{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width: 140px; }
 .chipMini{
-  width:22px; height:22px;
-  border-radius:50%;
+  width:22px; height:22px; border-radius:50%;
   position:relative;
   box-shadow: 0 8px 14px rgba(0,0,0,.14);
   border: 2px solid rgba(0,0,0,.14);
@@ -225,7 +231,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   display:inline-block;
 }
 
-/* Montinho mini-cartas (bem pequeno) */
+/* ====== PILE ====== */
 .pileWrap{ position:absolute; transform: translate(-50%,-50%); z-index: 15; }
 .pileStack{ position:relative; width:26px; height:40px; }
 .cardBackLayer{
@@ -253,9 +259,9 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   text-shadow: 0 2px 6px rgba(0,0,0,.25);
 }
 
-/* Dock da mão */
+/* ====== DOCK DA MÃO ====== */
 .handDock{
-  margin-top: 12px;
+  margin-top: 10px;
   border-radius: 18px;
   border:1px solid rgba(0,0,0,.10);
   background: rgba(255,255,255,.75);
@@ -267,100 +273,72 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .handTitle h3{ margin:0; font-size:16px; }
 .hint{ font-size:12px; opacity:.70; font-weight:800; }
 
-/* ===== CARTA-BOTÃO (clicável) + OVERLAY =====
-   - o botão vira uma "área clicável" invisível
-   - a carta bonita (HTML) fica por cima com pointer-events:none
-*/
-.handDock div[data-testid="column"] .stButton > button{
+/* ====== BOTÃO CARTA (mantém o “retângulo” funcional) ====== */
+div[data-testid="column"] .stButton > button{
   border-radius: 14px !important;
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
+  border: 1px solid rgba(0,0,0,.18) !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f9f9f9 100%) !important;
+  box-shadow: 0 10px 22px rgba(0,0,0,.12) !important;
   min-height: 118px !important;
   width: 100% !important;
   padding: 0 !important;
-  margin: 0 !important;
-}
-.handDock div[data-testid="column"] .stButton > button:hover{
-  transform:none !important;
-  box-shadow:none !important;
-}
-.handDock div[data-testid="column"] .stButton > button:disabled{
-  opacity: .28 !important;
-}
-
-/* overlay visual da carta */
-.cardOverlay{
-  margin-top: -118px;  /* puxa pra cima e cobre o botão */
-  height:118px;
-  display:flex;
-  align-items:flex-start;
-  justify-content:center;
-  pointer-events:none; /* deixa o clique passar pro botão */
-}
-.cardBtnInner{
-  width:100%;
-  height:118px;
-  position:relative;
-  border-radius:14px;
-  overflow:hidden;
-  border: 1px solid rgba(0,0,0,.18);
-  background: linear-gradient(180deg, #ffffff 0%, #f9f9f9 100%);
-  box-shadow: 0 10px 22px rgba(0,0,0,.12);
   transition: transform .10s ease, box-shadow .10s ease, opacity .10s ease;
 }
-.handDock div[data-testid="column"]:hover .cardBtnInner{
+div[data-testid="column"] .stButton > button:hover{
   transform: translateY(-4px);
-  box-shadow: 0 14px 26px rgba(0,0,0,.16);
+  box-shadow: 0 14px 26px rgba(0,0,0,.16) !important;
 }
+div[data-testid="column"] .stButton > button:disabled{
+  opacity: .28 !important;
+  transform:none !important;
+  box-shadow: 0 6px 14px rgba(0,0,0,.08) !important;
+}
+.cardBtnInner{ width:100%; height:118px; position:relative; border-radius:14px; overflow:hidden; }
+.cardBtnTL{ position:absolute; top:10px; left:10px; font-weight:900; font-size:14px; line-height:14px; }
+.cardBtnBR{ position:absolute; bottom:10px; right:10px; font-weight:900; font-size:14px; line-height:14px; transform: rotate(180deg); }
+.cardBtnMid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:900; opacity:.92; }
 
-.cardBtnTL{
-  position:absolute; top:10px; left:10px;
-  font-weight:900; font-size:14px; line-height:14px;
-}
-.cardBtnBR{
-  position:absolute; bottom:10px; right:10px;
-  font-weight:900; font-size:14px; line-height:14px;
-  transform: rotate(180deg);
-}
-.cardBtnMid{
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  font-size:34px; font-weight:900; opacity:.92;
-}
+/* ====== MOBILE-FIRST ====== */
+@media (max-width: 900px){
+  :root{ --pad: .55rem; --dock-h: 210px; }
 
-/* Animação: carta sumindo */
-@keyframes flyAway {
-  0%   { transform: translateY(0px) scale(1); opacity: 1; }
-  55%  { transform: translateY(-26px) scale(1.03); opacity: .85; }
-  100% { transform: translateY(-70px) scale(.96); opacity: 0; }
-}
-.flyAway{ animation: flyAway .25s ease-in forwards; }
+  .block-container{
+    padding-left: .55rem !important;
+    padding-right: .55rem !important;
+    max-width: 980px;
+  }
 
-/* Overlay */
-.playingOverlay{
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px; border-radius:14px;
-  border:1px solid rgba(0,0,0,.08);
-  background: rgba(255,255,255,.85);
-  font-weight:900;
-  margin-top: 10px;
-}
+  .titleRow{ margin-bottom: 2px; }
+  .titleRow h1{ font-size: 22px; }
 
-/* Sidebar */
-.scoreItem{
-  display:flex; justify-content:space-between;
-  padding:8px 10px;
-  border-radius:12px;
-  border:1px solid rgba(0,0,0,.06);
-  background:rgba(255,255,255,.70);
-  margin-bottom:8px;
+  /* A mesa vira “corpo do app” e o dock vira fixo embaixo */
+  .mesa{
+    height: calc(100vh - var(--topbar-h) - var(--dock-h) - 24px);
+    min-height: 340px;
+  }
+  .mesaWrap{
+    margin-bottom: calc(var(--dock-h) + 10px);
+  }
+  .handDock{
+    position: fixed;
+    left: .55rem;
+    right: .55rem;
+    bottom: .55rem;
+    margin-top: 0 !important;
+    z-index: 80;
+  }
+
+  /* Deixa as cartas um pouco menores no mobile */
+  .card{ width:62px; height:92px; border-radius: 13px; }
+  .card .mid{ font-size: 26px; }
+
+  /* Topbar compacto */
+  .topbar{ padding: 8px 10px; }
+  .pill{ padding: 5px 9px; font-size: 11px; }
 }
-.scoreName{ font-weight:900; }
-.scorePts{ font-weight:900; }
-.smallMuted{ opacity:.70; font-size:12px; }
 </style>
 """
+
 st.markdown(APP_CSS, unsafe_allow_html=True)
 
 # =========================
