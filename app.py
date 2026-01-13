@@ -742,6 +742,14 @@ def resolve_trick_if_due():
 def rodada_terminou():
     return all(len(st.session_state.maos[n]) == 0 for n in st.session_state.nomes)
 
+def fim_de_rodada_pronto():
+    # Só finaliza a rodada quando a última vaza já foi resolvida/animação concluída
+    return (
+        rodada_terminou()
+        and (not st.session_state.trick_pending)
+        and (len(st.session_state.mesa) == 0)
+    )
+
 def pontuar_rodada():
     if st.session_state.pontuou_rodada:
         return
@@ -773,9 +781,17 @@ def avancar_ate_humano_ou_fim():
         if st.session_state.trick_pending:
             return
 
-        if rodada_terminou():
+        # Se acabou a mão de todo mundo mas a mesa ainda tem uma vaza completa,
+        # agenda a resolução (última vaza) e espera a animação contabilizar.
+        if rodada_terminou() and (not st.session_state.trick_pending):
+            if len(st.session_state.mesa) == len(ordem):
+                schedule_trick_resolution()
+                return
+
+        if fim_de_rodada_pronto():
             pontuar_rodada()
             return
+
 
         atual = ordem[st.session_state.turn_idx]
 
@@ -866,7 +882,7 @@ with st.sidebar:
             unsafe_allow_html=True
         )
 
-        if st.session_state.fase == "jogo" and rodada_terminou():
+        if st.session_state.fase == "jogo" and fim_de_rodada_pronto():
             st.markdown("---")
             if st.session_state.cartas_alvo > 1:
                 if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
@@ -1202,7 +1218,13 @@ if st.session_state.fase == "jogo":
 
     render_mesa()
 
-    if rodada_terminou():
+        # Se a última vaza completou, deixa resolver (show -> fly -> contabiliza)
+    if st.session_state.trick_pending:
+        time.sleep(0.06)
+        st.rerun()
+
+    # Só aqui é "fim de rodada de verdade"
+    if fim_de_rodada_pronto():
         pontuar_rodada()
         if st.session_state.cartas_alvo <= 1:
             vencedor, pts = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)[0]
