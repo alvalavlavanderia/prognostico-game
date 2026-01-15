@@ -882,22 +882,30 @@ with st.sidebar:
 # =========================
 # HEADER
 # =========================
+# ===== TOPBAR estilo APP =====
+naipe_txt = st.session_state.naipe_base or "—"
+quebrada = "Sim" if st.session_state.copas_quebrada else "Não"
+primeira = "Sim" if st.session_state.primeira_vaza else "Não"
+vez = atual
+
 st.markdown(
-    """
-<div class="titleRow">
-  <div>
-    <h1>🃏 Jogo de Prognóstico</h1>
-    <div style="opacity:.70;font-weight:800;font-size:12px;">Premium UI • Avatares cartoon • Montinho animado</div>
+    f"""
+<div class="topbar">
+  <div class="topLeft">
+    <div class="topTitle">🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>
+    <div class="topSub">Vez: <b>{vez}</b></div>
   </div>
-  <div class="badges">
-    <span class="badge">Trunfo: ♥</span>
-    <span class="badge">1ª vaza: ♥ proibida</span>
-    <span class="badge">Abrir com ♥ só após quebrar</span>
+  <div class="topRight">
+    <span class="pill pillInfo">Naipe {naipe_txt}</span>
+    <span class="pill {'pillWarn' if quebrada=='Não' else 'pillGood'}">♥ quebrada: {quebrada}</span>
+    <span class="pill pillInfo">1ª vaza: {primeira}</span>
+    <span class="pill">Sobras {st.session_state.sobras_monte}</span>
   </div>
 </div>
 """,
     unsafe_allow_html=True
 )
+
 
 # =========================
 # SETUP
