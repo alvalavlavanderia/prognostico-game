@@ -336,6 +336,48 @@ div[data-testid="column"] .stButton > button:disabled{
   .topbar{ padding: 8px 10px; }
   .pill{ padding: 5px 9px; font-size: 11px; }
 }
+/* ===== TOPBAR (estilo app) ===== */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(0,0,0,.10);
+  background: rgba(255,255,255,.78);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 14px 34px rgba(0,0,0,.10);
+  margin: 10px 0 12px 0;
+}
+
+.topLeft{ display:flex; flex-direction:column; gap:2px; }
+.topTitle{ font-weight: 900; font-size: 14px; }
+.topSub{ font-weight: 800; font-size: 12px; opacity: .85; }
+
+.topRight{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+  border:1px solid rgba(0,0,0,.10);
+  background: rgba(0,0,0,.04);
+}
+.pillInfo{ background: rgba(59,130,246,.10); border-color: rgba(59,130,246,.20); }
+.pillGood{ background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.22); }
+.pillWarn{ background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.25); }
+
+/* Mobile: quebra bonitinho */
+@media (max-width: 900px){
+  .topbar{ flex-direction:column; align-items:flex-start; }
+  .topRight{ justify-content:flex-start; }
+}
+
 </style>
 """
 
@@ -1204,6 +1246,29 @@ if st.session_state.fase == "jogo":
 
     render_mesa()
 
+  # ===== TOPBAR estilo APP =====
+naipe_txt = st.session_state.naipe_base or "—"
+quebrada = "Sim" if st.session_state.copas_quebrada else "Não"
+primeira = "Sim" if st.session_state.primeira_vaza else "Não"
+vez = atual
+
+st.markdown(
+    f"""
+<div class="topbar">
+  <div class="topLeft">
+    <div class="topTitle">🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>
+    <div class="topSub">Vez: <b>{vez}</b></div>
+  </div>
+  <div class="topRight">
+    <span class="pill pillInfo">Naipe {naipe_txt}</span>
+    <span class="pill {"pillWarn" if quebrada=="Não" else "pillGood"}">♥ quebrada: {quebrada}</span>
+    <span class="pill pillInfo">1ª vaza: {primeira}</span>
+    <span class="pill">Sobras {st.session_state.sobras_monte}</span>
+  </div>
+</div>
+""",
+    unsafe_allow_html=True
+)
         # Se a última vaza completou, deixa resolver (show -> fly -> contabiliza)
     if st.session_state.trick_pending:
         time.sleep(0.06)
