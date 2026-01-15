@@ -1213,108 +1213,63 @@ def render_hand_clickable_streamlit():
 # JOGO
 # =========================
 if st.session_state.fase == "jogo":
-    # TOP BAR (1 linha)
+    st.markdown(
+        f"### 🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas por jogador"
+    )
+
+    # resolve animações pendentes da vaza
+    if resolve_trick_if_due():
+        st.rerun()
+
+    render_mesa()
+
     ordem = st.session_state.ordem
     atual = ordem[st.session_state.turn_idx]
     humano = st.session_state.nomes[st.session_state.humano_idx]
 
-    top_txt = f"Rodada {st.session_state.rodada} • {st.session_state.cartas_alvo} cartas/jogador"
-    top_info = f"Vez: {atual}"
-    top_order = "Top: " + " • ".join(ordem)
-    pill_heart = "♥ intacta" if (not st.session_state.copas_quebrada) else "♥ quebrada"
-    pill_sobras = f"Sobras {st.session_state.sobras_monte}"
+    # ===== TOPBAR estilo app =====
+    naipe_txt = st.session_state.naipe_base or "—"
+    quebrada = "Sim" if st.session_state.copas_quebrada else "Não"
+    primeira = "Sim" if st.session_state.primeira_vaza else "Não"
 
     st.markdown(
         f"""
 <div class="topbar">
-  <div class="topbarLeft">
-    <span>{top_txt}</span>
-    <span class="muted">{top_info}</span>
-    <span class="muted">{top_order}</span>
+  <div class="topLeft">
+    <div class="topTitle">🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>
+    <div class="topSub">Vez: <b>{atual}</b></div>
   </div>
-  <div class="topbarRight">
-    <span class="pill">{pill_heart}</span>
-    <span class="pill">{pill_sobras}</span>
+  <div class="topRight">
+    <span class="pill pillInfo">Naipe {naipe_txt}</span>
+    <span class="pill {'pillWarn' if quebrada=='Não' else 'pillGood'}">♥ quebrada: {quebrada}</span>
+    <span class="pill pillInfo">1ª vaza: {primeira}</span>
+    <span class="pill">Sobras {st.session_state.sobras_monte}</span>
   </div>
 </div>
 """,
         unsafe_allow_html=True
     )
 
-    if resolve_trick_if_due():
-        st.rerun()
-
-    render_mesa()
-
-  # ===== TOPBAR estilo APP =====
-naipe_txt = st.session_state.naipe_base or "—"
-quebrada = "Sim" if st.session_state.copas_quebrada else "Não"
-primeira = "Sim" if st.session_state.primeira_vaza else "Não"
-vez = atual
-
-st.markdown(
-    f"""
-<div class="topbar">
-  <div class="topLeft">
-    <div class="topTitle">🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>
-    <div class="topSub">Vez: <b>{vez}</b></div>
-  </div>
-  <div class="topRight">
-    <span class="pill pillInfo">Naipe {naipe_txt}</span>
-    <span class="pill {"pillWarn" if quebrada=="Não" else "pillGood"}">♥ quebrada: {quebrada}</span>
-    <span class="pill pillInfo">1ª vaza: {primeira}</span>
-    <span class="pill">Sobras {st.session_state.sobras_monte}</span>
-  </div>
-</div>
-""",
-    unsafe_allow_html=True
-)
-        # Se a última vaza completou, deixa resolver (show -> fly -> contabiliza)
-    if st.session_state.trick_pending:
-        time.sleep(0.06)
-        st.rerun()
-
-    # Só aqui é "fim de rodada de verdade"
-    if fim_de_rodada_pronto():
+    # rodada terminou
+    if rodada_terminou():
         pontuar_rodada()
-        if st.session_state.cartas_alvo <= 1:
-            vencedor, pts = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)[0]
-            st.success(f"🏆 Fim do jogo! {vencedor} com {pts} pts")
-        else:
-            st.success("✅ Rodada finalizada. Vá ao sidebar para iniciar a próxima.")
+        st.success("✅ Rodada finalizada. Vá ao sidebar para continuar.")
         st.stop()
 
+    # se animação da vaza estiver rodando, apenas aguarda
     if st.session_state.trick_pending:
         time.sleep(0.06)
         st.rerun()
 
-    # AUTOPLAY IA
+    # autoplay IA
     if atual != humano and st.session_state.pending_play is None:
-        now = time.time()
-        if now - st.session_state.autoplay_last > 0.08:
-            st.session_state.autoplay_last = now
-            avancar_ate_humano_ou_fim()
-            time.sleep(0.03)
-            st.rerun()
+        avancar_ate_humano_ou_fim()
+        st.rerun()
 
+    # mão do jogador
     clicked = render_hand_clickable_streamlit()
 
     if clicked is not None:
         st.session_state.pending_play = clicked
         st.rerun()
 
-    if st.session_state.pending_play is not None and atual == humano:
-        st.markdown('<div class="playingOverlay">✨ Jogando carta...</div>', unsafe_allow_html=True)
-        time.sleep(0.18)
-
-        carta = st.session_state.pending_play
-        st.session_state.pending_play = None
-
-        jogar_carta(humano, carta)
-        st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
-
-        if len(st.session_state.mesa) == len(ordem):
-            schedule_trick_resolution()
-
-        avancar_ate_humano_ou_fim()
-        st.rerun()
