@@ -815,7 +815,7 @@ def avancar_ate_humano_ou_fim():
 
         # 3) Se rodada pronta de verdade: pontua
         if fim_de_rodada_pronto():
-             pontuar_rodada()
+            pontuar_rodada()
 
             # Se é a última rodada (1 carta), entra na tela final
             if st.session_state.cartas_alvo <= 1:
