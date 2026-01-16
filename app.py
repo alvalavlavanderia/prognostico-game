@@ -1386,29 +1386,34 @@ if st.session_state.fase == "fim" and st.session_state.show_final:
 
     ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
 
-    # tabela bonitinha (sem depender de st.info)
+    # Medalhas só pros 3 primeiros (se existirem)
+    medals = ["🥇", "🥈", "🥉"]
+    pos = []
+    nomes_tbl = []
+    pontos_tbl = []
+
+    for i, (nome, pts) in enumerate(ranking):
+        medal = medals[i] if i < 3 else ""
+        pos.append(f"{medal} {i+1}º".strip())
+        nomes_tbl.append(nome)
+        pontos_tbl.append(pts)
+
+    # ✅ Tabela final com medalhas
     st.table({
-        "Jogador": [n for n, _ in ranking],
-        "Pontos":  [p for _, p in ranking],
+        "Posição": pos,
+        "Jogador": nomes_tbl,
+        "Pontos": pontos_tbl
     })
 
     vencedor, pts = ranking[0]
     st.success(f"🏆 Vencedor: **{vencedor}** com **{pts}** pontos!")
 
-    st.markdown("---")
     if st.button("🔁 Jogar novamente", use_container_width=True):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         ss_init()
         st.rerun()
-def render_podio(ranking):
-    # ranking = [(nome, pontos), ...] já ordenado desc
-    top3 = ranking[:3]
-    # garante 3 entradas (pra não quebrar se tiver só 2 jogadores)
-    while len(top3) < 3:
-        top3.append(("—", 0))
 
-    ouro, prata, bronze = top3[0], top3[1], top3[2]
 
     st.markdown(
         f"""
@@ -1455,9 +1460,6 @@ if st.session_state.fase == "fim" and st.session_state.show_final:
     st.markdown("## 🏁 Placar final")
 
     ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
-
-    # ✅ pódio top 3
-    render_podio(ranking)
 
     # ✅ placar completo (abaixo)
     st.markdown("### 📊 Pontuação completa")
