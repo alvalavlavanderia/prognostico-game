@@ -929,6 +929,21 @@ naipe_txt = st.session_state.naipe_base or "—"
 quebrada = "Sim" if st.session_state.copas_quebrada else "Não"
 primeira = "Sim" if st.session_state.primeira_vaza else "Não"
 
+# --- GARANTIAS (evita ordem vazia / turn_idx fora) ---
+if "ordem" not in st.session_state or not st.session_state.ordem:
+    # reconstrói a ordem (mão da rodada abre a rodada)
+    st.session_state.ordem = ordem_da_mesa(st.session_state.nomes, st.session_state.mao_da_rodada)
+
+if "turn_idx" not in st.session_state:
+    st.session_state.turn_idx = 0
+
+# normaliza índice
+st.session_state.turn_idx = st.session_state.turn_idx % len(st.session_state.ordem)
+
+ordem = st.session_state.ordem
+atual = ordem[st.session_state.turn_idx]
+# -----------------------------------------------------
+
 ordem = st.session_state.ordem
 atual = ordem[st.session_state.turn_idx]
 vez = atual
