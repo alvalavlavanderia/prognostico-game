@@ -626,6 +626,8 @@ def ss_init():
 
         # autoplay
         "autoplay_last": 0.0,
+        "final_rendered": False,
+
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -1308,6 +1310,38 @@ def render_hand_clickable_streamlit():
     st.markdown('</div>', unsafe_allow_html=True)
     return clicked
 
+import pandas as pd
+
+def render_tela_final():
+    st.markdown("## 🏁 Placar final")
+
+    ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
+
+    linhas = []
+    for i, (nome, pts) in enumerate(ranking, start=1):
+        medalha = ""
+        if i == 1: medalha = "🥇"
+        elif i == 2: medalha = "🥈"
+        elif i == 3: medalha = "🥉"
+
+        linhas.append({
+            "Posição": f"{medalha} {i}º".strip(),
+            "Jogador": nome,
+            "Pontos": pts
+        })
+
+    df = pd.DataFrame(linhas)
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    vencedor, pts = ranking[0]
+    st.success(f"🏆 Vencedor: {vencedor} com {pts} pontos!")
+
+    # ✅ key fixa para nunca duplicar
+    if st.button("🔁 Jogar novamente", use_container_width=True, key="btn_play_again"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        ss_init()
+        st.rerun()
 
 # =========================
 # JOGO
@@ -1331,17 +1365,17 @@ if st.session_state.fase == "jogo":
         st.rerun()
 
     # 4) Se rodada terminou de verdade (mesa limpa + sem animação), pontua e para
+    # ✅ Fim de rodada só quando a última vaza já foi resolvida
     if fim_de_rodada_pronto():
         pontuar_rodada()
 
+        # se era a última rodada (1 carta), vai pra tela final
         if st.session_state.cartas_alvo <= 1:
             st.session_state.fase = "fim"
-            st.session_state.show_final = True
             st.rerun()
 
         st.success("✅ Rodada finalizada. Vá ao sidebar para continuar.")
         st.stop()
-
 
     # 5) se animação rolando, aguarda
     if st.session_state.trick_pending:
@@ -1431,3 +1465,7 @@ if st.session_state.fase == "fim" and st.session_state.show_final:
             del st.session_state[key]
         ss_init()
         st.rerun()
+
+if st.session_state.fase == "fim":
+    render_tela_final()
+    st.stop()
