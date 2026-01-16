@@ -377,6 +377,27 @@ div[data-testid="column"] .stButton > button:disabled{
   .topbar{ flex-direction:column; align-items:flex-start; }
   .topRight{ justify-content:flex-start; }
 }
+/* ===== FIX clique na carta (botão invisível + carta por cima) ===== */
+div[data-testid="column"] .stButton > button{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  min-height: 118px !important;
+  padding: 0 !important;
+}
+
+div[data-testid="column"] .stButton{
+  margin-bottom: 0 !important;
+}
+
+/* A carta desenhada por HTML vai ficar em cima do botão */
+.cardOverlay{
+  margin-top: -118px;      /* sobe a carta por cima do botão */
+  pointer-events: none;    /* deixa o clique passar pro botão */
+}
+
+/* Tira aquele “retângulo”/espaço extra entre mesa e mão */
+.handDock{ margin-top: 10px !important; }
 
 </style>
 """
@@ -1202,9 +1223,11 @@ def render_hand_clickable_streamlit():
     st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
 
     mao_ord = sorted(mao, key=peso_carta)
+    if len(mao_ord) == 0:
+        st.markdown("</div>", unsafe_allow_html=True)
+        return None
 
-    # 10 colunas por linha (pra não quebrar layout em mãos grandes)
-    cols = st.columns(10)
+    cols = st.columns(len(mao_ord))
     clicked = None
     pending = st.session_state.pending_play
 
@@ -1215,12 +1238,18 @@ def render_hand_clickable_streamlit():
             (pending is not None) or
             st.session_state.trick_pending
         )
-        with cols[i % 10]:
-            # botão invisível (clicável)
-            if st.button(" ", key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}", disabled=disabled, use_container_width=True):
+
+        with cols[i]:
+            # 1) Botão invisível (captura clique)
+            if st.button(
+                " ",
+                key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
+                disabled=disabled,
+                use_container_width=True
+            ):
                 clicked = c
 
-            # overlay bonito por cima do botão
+            # 2) Carta desenhada por cima (sem capturar clique)
             extra = "flyAway" if (pending is not None and c == pending) else ""
             st.markdown(f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>', unsafe_allow_html=True)
 
