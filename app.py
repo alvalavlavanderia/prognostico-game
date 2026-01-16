@@ -929,6 +929,10 @@ naipe_txt = st.session_state.naipe_base or "—"
 quebrada = "Sim" if st.session_state.copas_quebrada else "Não"
 primeira = "Sim" if st.session_state.primeira_vaza else "Não"
 
+ordem = st.session_state.ordem
+atual = ordem[st.session_state.turn_idx]
+vez = atual
+
 st.markdown(
     f"""
 <div class="topbar">
