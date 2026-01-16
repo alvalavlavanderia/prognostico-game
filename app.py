@@ -1417,20 +1417,6 @@ if st.session_state.fase == "fim" and st.session_state.show_final:
 
     st.markdown(
         f"""
-<style>
-.podioWrap{ display:flex; gap:12px; align-items:flex-end; justify-content:center; flex-wrap:wrap; margin-top:10px; }
-.podioCard{ width: 220px; border-radius:18px; border:1px solid rgba(0,0,0,.10);
-  background: rgba(255,255,255,.78); backdrop-filter: blur(10px);
-  box-shadow: 0 14px 34px rgba(0,0,0,.10); padding:14px 14px 12px 14px; }
-.podioPos{ font-weight:950; font-size:12px; opacity:.75; margin-bottom:6px; }
-.podioName{ font-weight:950; font-size:18px; margin:0; }
-.podioPts{ font-weight:950; font-size:14px; opacity:.8; margin-top:6px; }
-.podioBar{ margin-top:10px; border-radius:14px; height: 10px; background: rgba(0,0,0,.06); overflow:hidden; }
-.podioFill{ height:100%; border-radius:14px; }
-.p1{ transform: translateY(-12px); }
-.badgeMedal{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px;
-  border:1px solid rgba(0,0,0,.10); background: rgba(0,0,0,.04); font-weight:900; font-size:12px; }
-</style>
 
 <div class="podioWrap">
   <div class="podioCard">
