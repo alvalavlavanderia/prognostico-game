@@ -347,6 +347,41 @@ div[data-testid="column"] .stButton > button:disabled{
   .topbar{ flex-direction:column; align-items:flex-start; }
   .topRight{ justify-content:flex-start; }
 }
+/* ===== CARTAS DA MÃO: tamanho fixo (não esticar) ===== */
+:root{
+  --hand-card-w: 86px;
+  --hand-card-h: 118px;
+}
+
+/* botão invisível do streamlit */
+.handDock div[data-testid="column"] .stButton > button{
+  width: var(--hand-card-w) !important;
+  min-width: var(--hand-card-w) !important;
+  max-width: var(--hand-card-w) !important;
+
+  min-height: var(--hand-card-h) !important;
+  height: var(--hand-card-h) !important;
+
+  margin: 0 auto !important;     /* centraliza dentro da coluna */
+  display: block !important;
+}
+
+/* overlay (carta desenhada por cima do botão) */
+.handDock .cardOverlay{
+  width: var(--hand-card-w) !important;
+  height: var(--hand-card-h) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  margin-top: calc(-1 * var(--hand-card-h)) !important;
+}
+
+/* a “carta” desenhada dentro do overlay */
+.handDock .cardBtnInner{
+  width: var(--hand-card-w) !important;
+  height: var(--hand-card-h) !important;
+  border-radius: 14px;
+}
+
 </style>
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
@@ -517,6 +552,8 @@ def ss_init():
         "mao_primeira_sorteada": False,
 
         "fase": "setup",
+        # ...
+        "show_final": False,
 
         "prognosticos": {},
         "progn_pre": {},
@@ -778,8 +815,18 @@ def avancar_ate_humano_ou_fim():
 
         # 3) Se rodada pronta de verdade: pontua
         if fim_de_rodada_pronto():
-            pontuar_rodada()
-            return
+             pontuar_rodada()
+
+            # Se é a última rodada (1 carta), entra na tela final
+            if st.session_state.cartas_alvo <= 1:
+                st.session_state.fase = "fim"
+                st.session_state.show_final = True
+                st.rerun()
+
+            # Se não é a última, só encerra a rodada normalmente
+            st.success("✅ Rodada finalizada. Vá ao sidebar para continuar.")
+            st.stop()
+
 
         # 4) Próximo jogador
         atual = ordem[st.session_state.turn_idx]
@@ -879,8 +926,10 @@ with st.sidebar:
                     start_next_round()
                     st.rerun()
             else:
+                pontuar_rodada()
                 vencedor, pts = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)[0]
                 st.success(f"🏆 Fim do jogo! {vencedor} com {pts} pts")
+
 
         st.markdown("---")
         if st.button("🔁 Reiniciar", use_container_width=True):
@@ -1279,4 +1328,25 @@ if st.session_state.fase == "jogo":
             schedule_trick_resolution()
 
         avancar_ate_humano_ou_fim()
+        st.rerun()
+
+if st.session_state.fase == "fim" and st.session_state.show_final:
+    st.markdown("## 🏁 Placar final")
+
+    ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
+
+    # tabela bonitinha (sem depender de st.info)
+    st.table({
+        "Jogador": [n for n, _ in ranking],
+        "Pontos":  [p for _, p in ranking],
+    })
+
+    vencedor, pts = ranking[0]
+    st.success(f"🏆 Vencedor: **{vencedor}** com **{pts}** pontos!")
+
+    st.markdown("---")
+    if st.button("🔁 Jogar novamente", use_container_width=True):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        ss_init()
         st.rerun()
