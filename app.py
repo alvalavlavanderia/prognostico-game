@@ -928,7 +928,6 @@ with st.sidebar:
 naipe_txt = st.session_state.naipe_base or "—"
 quebrada = "Sim" if st.session_state.copas_quebrada else "Não"
 primeira = "Sim" if st.session_state.primeira_vaza else "Não"
-vez = atual
 
 st.markdown(
     f"""
