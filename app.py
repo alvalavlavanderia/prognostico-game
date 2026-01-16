@@ -381,6 +381,46 @@ div[data-testid="column"] .stButton > button:disabled{
   height: var(--hand-card-h) !important;
   border-radius: 14px;
 }
+/* ===== FIX FINAL: mão não estica carta ===== */
+:root{
+  --hand-card-w: 86px;
+  --hand-card-h: 118px;
+}
+
+/* botão do streamlit (fica atrás) */
+.handDock div[data-testid="column"] .stButton > button{
+  width: var(--hand-card-w) !important;
+  min-width: var(--hand-card-w) !important;
+  max-width: var(--hand-card-w) !important;
+
+  height: var(--hand-card-h) !important;
+  min-height: var(--hand-card-h) !important;
+
+  margin: 0 auto !important;
+  display: block !important;
+
+  background: rgba(255,255,255,0.0) !important; /* continua “invisível” */
+  border: 1px solid rgba(0,0,0,.12) !important; /* opcional: se quiser o retângulo funcional, deixe */
+  border-radius: 14px !important;
+  box-shadow: 0 10px 22px rgba(0,0,0,.10) !important;
+  padding: 0 !important;
+}
+
+/* overlay (a carta desenhada) */
+.handDock .cardOverlay{
+  width: var(--hand-card-w) !important;
+  height: var(--hand-card-h) !important;
+  margin: 0 auto !important;
+  margin-top: calc(-1 * var(--hand-card-h)) !important;
+  pointer-events: none !important;
+}
+
+/* a carta desenhada precisa ser fixa também */
+.handDock .cardBtnInner{
+  width: var(--hand-card-w) !important;
+  height: var(--hand-card-h) !important;
+  border-radius: 14px;
+}
 
 </style>
 """
@@ -552,8 +592,8 @@ def ss_init():
         "mao_primeira_sorteada": False,
 
         "fase": "setup",
-        # ...
         "show_final": False,
+
 
         "prognosticos": {},
         "progn_pre": {},
@@ -1235,35 +1275,39 @@ def render_hand_clickable_streamlit():
         st.markdown("</div>", unsafe_allow_html=True)
         return None
 
-    # Até 10 por linha, para não “empilhar” vertical feio
-    per_row = 10
     clicked = None
     pending = st.session_state.pending_play
 
-    for start in range(0, len(mao_ord), per_row):
-        row = mao_ord[start:start+per_row]
-        cols = st.columns(len(row))
-        for i, c in enumerate(row):
-            disabled = (
-                (c not in validas) or
-                (atual != humano) or
-                (pending is not None) or
-                st.session_state.trick_pending
-            )
-            with cols[i]:
-                if st.button(
-                    " ",
-                    key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{start+i}",
-                    disabled=disabled,
-                    use_container_width=True
-                ):
-                    clicked = c
+    # ✅ grade fixa: evita “cartas esticadas”
+    cols = st.columns(10)
 
-                extra = "flyAway" if (pending is not None and c == pending) else ""
-                st.markdown(f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>', unsafe_allow_html=True)
+    for i, c in enumerate(mao_ord):
+        disabled = (
+            (c not in validas) or
+            (atual != humano) or
+            (pending is not None) or
+            st.session_state.trick_pending
+        )
+
+        with cols[i % 10]:
+            # botão (fica “atrás” da carta e captura clique)
+            if st.button(
+                " ",
+                key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
+                disabled=disabled,
+                use_container_width=True
+            ):
+                clicked = c
+
+            extra = "flyAway" if (pending is not None and c == pending) else ""
+            st.markdown(
+                f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
+                unsafe_allow_html=True
+            )
 
     st.markdown('</div>', unsafe_allow_html=True)
     return clicked
+
 
 # =========================
 # JOGO
@@ -1289,8 +1333,15 @@ if st.session_state.fase == "jogo":
     # 4) Se rodada terminou de verdade (mesa limpa + sem animação), pontua e para
     if fim_de_rodada_pronto():
         pontuar_rodada()
+
+        if st.session_state.cartas_alvo <= 1:
+            st.session_state.fase = "fim"
+            st.session_state.show_final = True
+            st.rerun()
+
         st.success("✅ Rodada finalizada. Vá ao sidebar para continuar.")
         st.stop()
+
 
     # 5) se animação rolando, aguarda
     if st.session_state.trick_pending:
@@ -1345,6 +1396,76 @@ if st.session_state.fase == "fim" and st.session_state.show_final:
     st.success(f"🏆 Vencedor: **{vencedor}** com **{pts}** pontos!")
 
     st.markdown("---")
+    if st.button("🔁 Jogar novamente", use_container_width=True):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        ss_init()
+        st.rerun()
+def render_podio(ranking):
+    # ranking = [(nome, pontos), ...] já ordenado desc
+    top3 = ranking[:3]
+    # garante 3 entradas (pra não quebrar se tiver só 2 jogadores)
+    while len(top3) < 3:
+        top3.append(("—", 0))
+
+    ouro, prata, bronze = top3[0], top3[1], top3[2]
+
+    st.markdown(
+        f"""
+<style>
+.podioWrap{ display:flex; gap:12px; align-items:flex-end; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+.podioCard{ width: 220px; border-radius:18px; border:1px solid rgba(0,0,0,.10);
+  background: rgba(255,255,255,.78); backdrop-filter: blur(10px);
+  box-shadow: 0 14px 34px rgba(0,0,0,.10); padding:14px 14px 12px 14px; }
+.podioPos{ font-weight:950; font-size:12px; opacity:.75; margin-bottom:6px; }
+.podioName{ font-weight:950; font-size:18px; margin:0; }
+.podioPts{ font-weight:950; font-size:14px; opacity:.8; margin-top:6px; }
+.podioBar{ margin-top:10px; border-radius:14px; height: 10px; background: rgba(0,0,0,.06); overflow:hidden; }
+.podioFill{ height:100%; border-radius:14px; }
+.p1{ transform: translateY(-12px); }
+.badgeMedal{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px;
+  border:1px solid rgba(0,0,0,.10); background: rgba(0,0,0,.04); font-weight:900; font-size:12px; }
+</style>
+
+<div class="podioWrap">
+  <div class="podioCard">
+    <div class="podioPos"><span class="badgeMedal">🥈 2º lugar</span></div>
+    <div class="podioName">{prata[0]}</div>
+    <div class="podioPts">{prata[1]} pts</div>
+  </div>
+
+  <div class="podioCard p1">
+    <div class="podioPos"><span class="badgeMedal">🥇 1º lugar</span></div>
+    <div class="podioName">{ouro[0]}</div>
+    <div class="podioPts">{ouro[1]} pts</div>
+  </div>
+
+  <div class="podioCard">
+    <div class="podioPos"><span class="badgeMedal">🥉 3º lugar</span></div>
+    <div class="podioName">{bronze[0]}</div>
+    <div class="podioPts">{bronze[1]} pts</div>
+  </div>
+</div>
+""",
+        unsafe_allow_html=True
+    )
+
+
+if st.session_state.fase == "fim" and st.session_state.show_final:
+    st.markdown("## 🏁 Placar final")
+
+    ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
+
+    # ✅ pódio top 3
+    render_podio(ranking)
+
+    # ✅ placar completo (abaixo)
+    st.markdown("### 📊 Pontuação completa")
+    st.table({"Jogador": [n for n, _ in ranking], "Pontos": [p for _, p in ranking]})
+
+    vencedor, pts = ranking[0]
+    st.success(f"🏆 Vencedor: **{vencedor}** com **{pts}** pontos!")
+
     if st.button("🔁 Jogar novamente", use_container_width=True):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
