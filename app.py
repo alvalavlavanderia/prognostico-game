@@ -1413,35 +1413,7 @@ if st.session_state.fase == "fim" and st.session_state.show_final:
             del st.session_state[key]
         ss_init()
         st.rerun()
-
-
-    st.markdown(
-        f"""
-
-<div class="podioWrap">
-  <div class="podioCard">
-    <div class="podioPos"><span class="badgeMedal">🥈 2º lugar</span></div>
-    <div class="podioName">{prata[0]}</div>
-    <div class="podioPts">{prata[1]} pts</div>
-  </div>
-
-  <div class="podioCard p1">
-    <div class="podioPos"><span class="badgeMedal">🥇 1º lugar</span></div>
-    <div class="podioName">{ouro[0]}</div>
-    <div class="podioPts">{ouro[1]} pts</div>
-  </div>
-
-  <div class="podioCard">
-    <div class="podioPos"><span class="badgeMedal">🥉 3º lugar</span></div>
-    <div class="podioName">{bronze[0]}</div>
-    <div class="podioPts">{bronze[1]} pts</div>
-  </div>
-</div>
-""",
-        unsafe_allow_html=True
-    )
-
-
+   
 if st.session_state.fase == "fim" and st.session_state.show_final:
     st.markdown("## 🏁 Placar final")
 
