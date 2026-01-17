@@ -330,12 +330,12 @@ div[data-testid="stHorizontalBlock"] .stButton > button.iconBtn:hover {{
   color: rgba(255,255,255,.90);
 }}
 
-@keyframes shimmer {
-  0%   { transform: translateX(-40%) rotate(10deg); opacity: 0; }
-  15%  { opacity: .10; }
-  55%  { opacity: .06; }
-  100% { transform: translateX(140%) rotate(10deg); opacity: 0; }
-}
+@keyframes shimmer {{
+  0%   {{ transform: translateX(-40%) rotate(10deg); opacity: 0; }}
+  15%  {{ opacity: .10; }}
+  55%  {{ opacity: .06; }}
+  100% {{ transform: translateX(140%) rotate(10deg); opacity: 0; }}
+}}
 
 .mesa .shimmer{
   position:absolute;
