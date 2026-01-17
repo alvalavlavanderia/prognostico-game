@@ -68,7 +68,6 @@ def ss_init():
         "ui_theme": "Neon Casino",     # ou "Classic Premium"
         "ui_sound": True,
         "sound_event": None,           # "click" | "throw" | "win"
-        "ui_toast": None,              # mensagens pequenas
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -87,7 +86,6 @@ def inject_app_css(theme_name: str):
         glass = "rgba(255,255,255,.10)"
         stroke = "rgba(255,255,255,.14)"
         text = "rgba(255,255,255,.92)"
-        muted = "rgba(255,255,255,.75)"
     else:  # Classic Premium
         bg1, bg2 = "#0b1220", "#0a1a14"
         neon1, neon2 = "rgba(56,189,248,.10)", "rgba(34,197,94,.10)"
@@ -95,7 +93,6 @@ def inject_app_css(theme_name: str):
         glass = "rgba(255,255,255,.10)"
         stroke = "rgba(255,255,255,.14)"
         text = "rgba(255,255,255,.92)"
-        muted = "rgba(255,255,255,.78)"
 
     APP_CSS = f"""
     <style>
@@ -112,19 +109,14 @@ def inject_app_css(theme_name: str):
       --glass: {glass};
       --stroke: {stroke};
       --text: {text};
-      --muted: {muted};
 
       --shadow: 0 18px 44px rgba(0,0,0,.28);
       --shadow2: 0 14px 34px rgba(0,0,0,.22);
-
-      --radius: 18px;
-      --radius2: 22px;
 
       --hand-card-w: 86px;
       --hand-card-h: 118px;
     }}
 
-    /* fullscreen + esconder coisas do Streamlit */
     header[data-testid="stHeader"]{{ height: .2rem; }}
     #MainMenu {{ visibility: hidden; }}
     footer {{ visibility: hidden; }}
@@ -146,14 +138,12 @@ def inject_app_css(theme_name: str):
     [data-testid="stVerticalBlock"]{{ gap: .55rem; }}
     html, body, [class*="css"]{{ letter-spacing:.1px; }}
 
-    /* Animations / transitions */
     @keyframes fadeUp {{
       0% {{ opacity:0; transform: translateY(10px); }}
       100% {{ opacity:1; transform: translateY(0px); }}
     }}
     .animFadeUp{{ animation: fadeUp .22s ease-out; }}
 
-    /* Header */
     .titleRow{{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 6px; }}
     .titleRow h1{{ margin:0; font-size: 28px; color: var(--text); }}
     .badges{{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }}
@@ -166,7 +156,7 @@ def inject_app_css(theme_name: str):
       font-size:12px; font-weight:900;
     }}
 
-    /* Sidebar placar */
+    /* Sidebar placar (desktop) */
     .scoreItem{{
       display:flex; justify-content:space-between;
       padding:8px 10px; border-radius:12px;
@@ -260,6 +250,87 @@ def inject_app_css(theme_name: str):
       text-transform: uppercase;
       letter-spacing: .08em;
       color: rgba(255,255,255,.90);
+    }}
+
+    /* ===== HUD MINI PLACAR (overlay na mesa) ===== */
+    .hudScore{{
+      position:absolute;
+      right: 16px;
+      top: 16px;
+      z-index: 50;
+      width: 210px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(10, 14, 26, .38);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 18px 44px rgba(0,0,0,.30);
+      overflow: hidden;
+    }}
+    .hudHead{{
+      padding: 10px 10px 8px 10px;
+      font-weight: 950;
+      font-size: 12px;
+      color: rgba(255,255,255,.92);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 8px;
+      background: rgba(255,255,255,.06);
+      border-bottom: 1px solid rgba(255,255,255,.10);
+    }}
+    .hudSub{{
+      font-weight: 900;
+      font-size: 11px;
+      opacity: .80;
+    }}
+    .hudList{{
+      padding: 8px 10px 10px 10px;
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+    }}
+    .hudRow{{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 6px 8px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      color: rgba(255,255,255,.92);
+      font-weight: 900;
+      font-size: 12px;
+    }}
+    .hudRow.you{{
+      background: rgba(34,197,94,.10);
+      border-color: rgba(34,197,94,.22);
+    }}
+    .hudLeft{{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      min-width: 0;
+    }}
+    .hudPos{{
+      width: 20px;
+      text-align:center;
+      opacity:.92;
+    }}
+    .hudName{{
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 120px;
+    }}
+    .hudPts{{
+      opacity:.95;
+    }}
+    .hudDivider{{
+      height: 1px;
+      background: rgba(255,255,255,.10);
+      margin: 6px 2px;
+      border-radius: 999px;
     }}
 
     /* Seats */
@@ -415,7 +486,6 @@ def inject_app_css(theme_name: str):
     .handTitle h3{{ margin:0; font-size:16px; }}
     .hint{{ font-size:12px; opacity:.78; font-weight:900; }}
 
-    /* Click-through: button behind */
     .handDock div[data-testid="column"] .stButton > button{{
       width: var(--hand-card-w) !important;
       min-width: var(--hand-card-w) !important;
@@ -465,33 +535,22 @@ def inject_app_css(theme_name: str):
     }}
     .flyAway{{ animation: flyAway .25s ease-in forwards; }}
 
-    /* MOBILE: hide sidebar + fixed dock */
+    /* MOBILE */
     @media (max-width: 900px){{
-      :root{{ --pad: .55rem; --dock-h: 210px; }}
+      :root{{ --pad: .55rem; --dock-h: 210px; --hand-card-w: 80px; --hand-card-h: 112px; }}
       [data-testid="stSidebar"]{{ display:none !important; }}
-      .block-container{{
-        padding-left: .55rem !important;
-        padding-right: .55rem !important;
-        max-width: 980px;
-      }}
+      .block-container{{ padding-left: .55rem !important; padding-right: .55rem !important; max-width: 980px; }}
       .titleRow h1{{ font-size: 22px; }}
-      .mesa{{
-        height: calc(100vh - 62px - var(--dock-h) - 24px);
-        min-height: 340px;
-      }}
+      .mesa{{ height: calc(100vh - 62px - var(--dock-h) - 24px); min-height: 340px; }}
       .mesaWrap{{ margin-bottom: calc(var(--dock-h) + 10px); }}
-      .handDock{{
-        position: fixed;
-        left: .55rem;
-        right: .55rem;
-        bottom: .55rem;
-        margin-top: 0 !important;
-        z-index: 80;
-      }}
+      .handDock{{ position: fixed; left: .55rem; right: .55rem; bottom: .55rem; margin-top: 0 !important; z-index: 80; }}
       .card{{ width:62px; height:92px; border-radius: 13px; }}
       .card .mid{{ font-size: 26px; }}
       .topbar{{ flex-direction:column; align-items:flex-start; }}
       .topRight{{ justify-content:flex-start; }}
+
+      .hudScore{{ width: 185px; right: 12px; top: 12px; }}
+      .hudName{{ max-width: 105px; }}
     }}
     </style>
     """
@@ -510,15 +569,13 @@ def play_sound_if_needed():
     if not ev:
         return
 
-    # parametros por evento
     if ev == "click":
         freq, dur = 520, 0.06
     elif ev == "throw":
         freq, dur = 260, 0.09
-    else:  # "win"
+    else:
         freq, dur = 740, 0.12
 
-    nonce = f"{time.time():.6f}".replace(".", "")
     st.markdown(
         f"""
         <script>
@@ -606,7 +663,7 @@ def tem_naipe(mao, naipe):
     return any(n == naipe for (n, _) in mao)
 
 # =========================
-# AVATAR CARTOON (SVG inline)
+# AVATAR CARTOON
 # =========================
 def avatar_svg_data_uri(idx: int) -> str:
     skins = ["#F6D3B3", "#E9BE9D", "#D9A074", "#C6865F"]
@@ -641,7 +698,6 @@ def avatar_svg_data_uri(idx: int) -> str:
   <circle cx="42" cy="33" r="2.1" fill="rgba(244,114,182,.35)"/>
 </svg>
 """.strip()
-
     svg_b64 = base64.b64encode(svg.encode("utf-8")).decode("ascii")
     return f"data:image/svg+xml;base64,{svg_b64}"
 
@@ -651,7 +707,6 @@ def avatar_svg_data_uri(idx: int) -> str:
 def ai_prognostico(mao, cartas_por_jogador: int) -> int:
     if not mao:
         return 0
-
     suit_counts = {"♠": 0, "♦": 0, "♣": 0, "♥": 0}
     for n, v in mao:
         suit_counts[n] += 1
@@ -813,9 +868,7 @@ def schedule_trick_resolution():
 def resolve_trick_if_due():
     if not st.session_state.trick_pending:
         return False
-
     now = time.time()
-
     if st.session_state.trick_phase == "show":
         if now < st.session_state.trick_resolve_at:
             return False
@@ -968,43 +1021,43 @@ def render_small_pile_html(won: int) -> str:
     return f'<div class="pileStack">{"".join(parts)}</div>{label_html}'
 
 # =========================
-# PLACAR OVERLAY (Drawer / Popover)
+# SCORE OVERLAY (Popover)
 # =========================
 def render_score_overlay():
     ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True) if st.session_state.started else []
     medals = ["🥇", "🥈", "🥉"]
-
     st.markdown("### 📊 Placar")
     if not ranking:
         st.info("Sem placar ainda.")
         return
-
     rows = []
     for i, (nome, pts) in enumerate(ranking, start=1):
         medal = medals[i-1] if i <= 3 else ""
         rows.append({"Posição": f"{medal} {i}º".strip(), "Jogador": nome, "Pontos": pts})
-
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
     st.caption(f"Rodada: {st.session_state.rodada} • Cartas/jogador: {st.session_state.cartas_alvo} • Sobras: {st.session_state.sobras_monte}")
 
 # =========================
-# SIDEBAR (Desktop only; no mobile via CSS)
+# SIDEBAR
 # =========================
 with st.sidebar:
     st.markdown("## 📊 Placar")
     if st.session_state.started:
         for n in st.session_state.nomes:
             st.session_state.pontos.setdefault(n, 0)
+
         ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
         for nome, pts in ranking:
             st.markdown(
                 f'<div class="scoreItem"><div class="scoreName">{nome}</div><div class="scorePts">{pts}</div></div>',
                 unsafe_allow_html=True
             )
+
         st.markdown(
             f'<div class="smallMuted">Rodada: {st.session_state.rodada} • Cartas/jogador: {st.session_state.cartas_alvo} • Sobras: {st.session_state.sobras_monte}</div>',
             unsafe_allow_html=True
         )
+
         st.markdown("---")
         if st.button("🔁 Reiniciar", use_container_width=True, key="sb_reset"):
             for key in list(st.session_state.keys()):
@@ -1023,7 +1076,7 @@ st.markdown(
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
     <div style="opacity:.78;font-weight:900;font-size:12px;color:rgba(255,255,255,.85);">
-      App UI • Drawer de placar • Temas • Sons • Transições • Mobile Fullscreen
+      HUD mini placar na mesa • Premium UI • Mobile fullscreen
     </div>
   </div>
   <div class="badges">
@@ -1037,7 +1090,7 @@ st.markdown(
 )
 
 # =========================
-# QUICK CONTROLS (App actions)
+# QUICK CONTROLS
 # =========================
 ctrl = st.columns([1.25, 1.05, 0.9, 0.9, 1.0])
 with ctrl[0]:
@@ -1075,7 +1128,7 @@ play_sound_if_needed()
 # SETUP
 # =========================
 if not st.session_state.started:
-    st.markdown("### Configuração", help="Defina os jogadores. O último será você.")
+    st.markdown("### Configuração")
     nomes_txt = st.text_input("Jogadores (separados por vírgula). O último será Você", value=", ".join(st.session_state.nomes), key="inp_names")
     colA, colB = st.columns([1, 2])
     with colA:
@@ -1106,7 +1159,7 @@ if not st.session_state.started:
     st.stop()
 
 # =========================
-# TOPBAR (game status)
+# TOPBAR
 # =========================
 def render_topbar():
     if not st.session_state.ordem:
@@ -1148,7 +1201,7 @@ humano_nome = nomes[st.session_state.humano_idx]
 
 if st.session_state.fase == "prognostico":
     ordem_preview = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
-    st.markdown(f"### 📌 Prognóstico — Rodada {st.session_state.rodada} ({st.session_state.cartas_alvo} cartas/jogador)", help="Faça seu palpite e siga pro jogo.")
+    st.markdown(f"### 📌 Prognóstico — Rodada {st.session_state.rodada} ({st.session_state.cartas_alvo} cartas/jogador)")
 
     mao_humano = st.session_state.maos.get(humano_nome, [])
     st.markdown('<div class="handDock animFadeUp">', unsafe_allow_html=True)
@@ -1171,6 +1224,8 @@ if st.session_state.fase == "prognostico":
 
     if st.button("Confirmar meu prognóstico", use_container_width=True, key="btn_confirm_progn"):
         st.session_state.sound_event = "click"
+        play_sound_if_needed()
+
         st.session_state.prognosticos = {}
         st.session_state.prognosticos.update(st.session_state.progn_pre)
         st.session_state.prognosticos[humano_nome] = int(palpite)
@@ -1185,7 +1240,7 @@ if st.session_state.fase == "prognostico":
     st.stop()
 
 # =========================
-# MESA + animação do montinho
+# MESA + HUD + animação
 # =========================
 def seat_positions(ordem):
     n = len(ordem)
@@ -1200,6 +1255,69 @@ def seat_positions(ordem):
         ty = cy + (ry*0.70)*math.sin(ang)
         pos[nome] = {"seat": (x, y), "target": (tx, ty)}
     return pos
+
+def build_hud_html():
+    # Top 3 + "Você" (se não estiver no top3)
+    if not st.session_state.started:
+        return ""
+
+    pontos = st.session_state.pontos or {}
+    for n in st.session_state.nomes:
+        pontos.setdefault(n, 0)
+
+    ranking = sorted(pontos.items(), key=lambda x: x[1], reverse=True)
+    medals = ["🥇", "🥈", "🥉"]
+
+    top3 = ranking[:3]
+    humano = st.session_state.nomes[st.session_state.humano_idx]
+    humano_in_top3 = any(n == humano for n, _ in top3)
+    humano_row = None
+
+    if not humano_in_top3:
+        # encontra posição do humano
+        for idx, (n, pts) in enumerate(ranking, start=1):
+            if n == humano:
+                humano_row = (idx, n, pts)
+                break
+
+    rows_html = ""
+    for i, (nome, pts) in enumerate(top3, start=1):
+        medal = medals[i-1] if i <= 3 else ""
+        you_cls = " you" if nome == humano else ""
+        rows_html += f"""
+<div class="hudRow{you_cls}">
+  <div class="hudLeft">
+    <div class="hudPos">{medal}</div>
+    <div class="hudName">{nome}</div>
+  </div>
+  <div class="hudPts">{pts}</div>
+</div>
+"""
+
+    if humano_row is not None:
+        pos, nome, pts = humano_row
+        rows_html += '<div class="hudDivider"></div>'
+        rows_html += f"""
+<div class="hudRow you">
+  <div class="hudLeft">
+    <div class="hudPos">{pos}º</div>
+    <div class="hudName">{nome} (Você)</div>
+  </div>
+  <div class="hudPts">{pts}</div>
+</div>
+"""
+
+    return f"""
+<div class="hudScore">
+  <div class="hudHead">
+    <div>📌 Placar</div>
+    <div class="hudSub">Rod {st.session_state.rodada}</div>
+  </div>
+  <div class="hudList">
+    {rows_html}
+  </div>
+</div>
+"""
 
 def render_mesa():
     ordem = st.session_state.ordem
@@ -1309,10 +1427,13 @@ def render_mesa():
     if anim_css.strip():
         st.markdown(f"<style>{anim_css}</style>", unsafe_allow_html=True)
 
+    hud_html = build_hud_html()  # ✅ HUD mini placar
+
     st.markdown('<div class="mesaWrap animFadeUp">', unsafe_allow_html=True)
     st.markdown(
         f"""
 <div class="mesa">
+  {hud_html}
   {seats_html}
   {chips_html}
   {piles_html}
@@ -1360,6 +1481,7 @@ def render_hand_clickable_streamlit():
         with cols[i % 10]:
             if st.button(" ", key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}", disabled=disabled, use_container_width=False):
                 st.session_state.sound_event = "click"
+                play_sound_if_needed()
                 clicked = c
 
             extra = "flyAway" if (pending is not None and c == pending) else ""
@@ -1405,19 +1527,19 @@ if st.session_state.fase == "jogo":
     atual = ordem[st.session_state.turn_idx]
     humano = st.session_state.nomes[st.session_state.humano_idx]
 
-    # última vaza: agenda animação final se necessário
     if rodada_terminou() and (not st.session_state.trick_pending) and (len(st.session_state.mesa) == len(ordem)):
         schedule_trick_resolution()
         st.session_state.sound_event = "throw"
+        play_sound_if_needed()
         st.rerun()
 
-    # fim de rodada real
     if fim_de_rodada_pronto():
         pontuar_rodada()
         if st.session_state.cartas_alvo <= 1:
             st.session_state.fase = "fim"
             st.session_state.show_final = True
             st.session_state.sound_event = "win"
+            play_sound_if_needed()
             st.rerun()
 
         st.success("✅ Rodada finalizada. Use o botão Próxima rodada no topo.")
@@ -1427,7 +1549,6 @@ if st.session_state.fase == "jogo":
         time.sleep(0.06)
         st.rerun()
 
-    # IA
     if atual != humano and st.session_state.pending_play is None:
         now = time.time()
         if now - st.session_state.autoplay_last > 0.08:
@@ -1436,7 +1557,6 @@ if st.session_state.fase == "jogo":
             time.sleep(0.03)
             st.rerun()
 
-    # Humano
     clicked = render_hand_clickable_streamlit()
     if clicked is not None:
         st.session_state.pending_play = clicked
