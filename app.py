@@ -64,10 +64,10 @@ def ss_init():
 
         "show_final": False,
 
-        # APP-like extras
-        "ui_theme": "Neon Casino",     # ou "Classic Premium"
+        # UI
+        "ui_theme": "Neon Casino",   # Neon Casino | Classic Premium
         "ui_sound": True,
-        "sound_event": None,           # "click" | "throw" | "win"
+        "sound_event": None,         # click | throw | win
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -81,12 +81,12 @@ ss_init()
 def inject_app_css(theme_name: str):
     if theme_name == "Neon Casino":
         bg1, bg2 = "#070A1A", "#081a10"
-        neon1, neon2 = "rgba(56,189,248,.16)", "rgba(34,197,94,.15)"
+        neon1, neon2 = "rgba(56,189,248,.18)", "rgba(34,197,94,.16)"
         mesa1, mesa2, mesa3 = "rgba(18,140,90,1)", "rgba(10,96,64,1)", "rgba(8,70,50,1)"
         glass = "rgba(255,255,255,.10)"
         stroke = "rgba(255,255,255,.14)"
         text = "rgba(255,255,255,.92)"
-    else:  # Classic Premium
+    else:
         bg1, bg2 = "#0b1220", "#0a1a14"
         neon1, neon2 = "rgba(56,189,248,.10)", "rgba(34,197,94,.10)"
         mesa1, mesa2, mesa3 = "rgba(16,110,70,1)", "rgba(10,78,50,1)", "rgba(8,60,40,1)"
@@ -117,13 +117,17 @@ def inject_app_css(theme_name: str):
       --hand-card-h: 118px;
     }}
 
-    header[data-testid="stHeader"]{{ height: .2rem; }}
+    /* ===== remove faixa branca / header ===== */
+    header[data-testid="stHeader"] {{
+      background: transparent !important;
+      height: 0.35rem !important;
+    }}
+    [data-testid="stToolbar"]{{ display:none !important; }}
     #MainMenu {{ visibility: hidden; }}
     footer {{ visibility: hidden; }}
-    [data-testid="stToolbar"]{{ display:none !important; }}
 
     .block-container{{
-      padding-top: var(--pad) !important;
+      padding-top: calc(var(--pad) + 0.55rem) !important;  /* ✅ empurra conteúdo pra baixo */
       padding-bottom: var(--pad) !important;
       max-width: var(--app-max);
     }}
@@ -144,8 +148,14 @@ def inject_app_css(theme_name: str):
     }}
     .animFadeUp{{ animation: fadeUp .22s ease-out; }}
 
-    .titleRow{{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 6px; }}
+    .titleRow{{
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:12px;
+      margin-top: 8px;      /* ✅ evita ficar “sob a faixa” */
+      margin-bottom: 6px;
+    }}
     .titleRow h1{{ margin:0; font-size: 28px; color: var(--text); }}
+
     .badges{{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }}
     .badge{{
       display:inline-flex; align-items:center; gap:6px;
@@ -156,7 +166,7 @@ def inject_app_css(theme_name: str):
       font-size:12px; font-weight:900;
     }}
 
-    /* Sidebar placar (desktop) */
+    /* Sidebar placar */
     .scoreItem{{
       display:flex; justify-content:space-between;
       padding:8px 10px; border-radius:12px;
@@ -250,87 +260,6 @@ def inject_app_css(theme_name: str):
       text-transform: uppercase;
       letter-spacing: .08em;
       color: rgba(255,255,255,.90);
-    }}
-
-    /* ===== HUD MINI PLACAR (overlay na mesa) ===== */
-    .hudScore{{
-      position:absolute;
-      right: 16px;
-      top: 16px;
-      z-index: 50;
-      width: 210px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.16);
-      background: rgba(10, 14, 26, .38);
-      backdrop-filter: blur(12px);
-      box-shadow: 0 18px 44px rgba(0,0,0,.30);
-      overflow: hidden;
-    }}
-    .hudHead{{
-      padding: 10px 10px 8px 10px;
-      font-weight: 950;
-      font-size: 12px;
-      color: rgba(255,255,255,.92);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 8px;
-      background: rgba(255,255,255,.06);
-      border-bottom: 1px solid rgba(255,255,255,.10);
-    }}
-    .hudSub{{
-      font-weight: 900;
-      font-size: 11px;
-      opacity: .80;
-    }}
-    .hudList{{
-      padding: 8px 10px 10px 10px;
-      display:flex;
-      flex-direction:column;
-      gap: 6px;
-    }}
-    .hudRow{{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 10px;
-      padding: 6px 8px;
-      border-radius: 12px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.08);
-      color: rgba(255,255,255,.92);
-      font-weight: 900;
-      font-size: 12px;
-    }}
-    .hudRow.you{{
-      background: rgba(34,197,94,.10);
-      border-color: rgba(34,197,94,.22);
-    }}
-    .hudLeft{{
-      display:flex;
-      align-items:center;
-      gap: 8px;
-      min-width: 0;
-    }}
-    .hudPos{{
-      width: 20px;
-      text-align:center;
-      opacity:.92;
-    }}
-    .hudName{{
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      max-width: 120px;
-    }}
-    .hudPts{{
-      opacity:.95;
-    }}
-    .hudDivider{{
-      height: 1px;
-      background: rgba(255,255,255,.10);
-      margin: 6px 2px;
-      border-radius: 999px;
     }}
 
     /* Seats */
@@ -486,7 +415,18 @@ def inject_app_css(theme_name: str):
     .handTitle h3{{ margin:0; font-size:16px; }}
     .hint{{ font-size:12px; opacity:.78; font-weight:900; }}
 
-    .handDock div[data-testid="column"] .stButton > button{{
+    /* ===== FIX: overlay absoluto por cima do botão (botão invisível) ===== */
+    .handDock div[data-testid="column"] {{
+      position: relative !important;
+      min-height: var(--hand-card-h) !important;
+    }}
+
+    .handDock div[data-testid="column"] .stButton {{
+      position: relative !important;
+      z-index: 1 !important;
+    }}
+
+    .handDock div[data-testid="column"] .stButton > button {{
       width: var(--hand-card-w) !important;
       min-width: var(--hand-card-w) !important;
       max-width: var(--hand-card-w) !important;
@@ -494,40 +434,46 @@ def inject_app_css(theme_name: str):
       min-height: var(--hand-card-h) !important;
       margin: 0 auto !important;
       display: block !important;
+
+      opacity: 0 !important;          /* ✅ invisível, mas clicável */
       background: transparent !important;
       border: none !important;
       box-shadow: none !important;
       padding: 0 !important;
       border-radius: 14px !important;
-      transition: transform .10s ease, filter .10s ease, opacity .10s ease;
-    }}
-    .handDock div[data-testid="column"] .stButton > button:hover{{
-      transform: translateY(-4px);
-      filter: drop-shadow(0 12px 20px rgba(0,0,0,.20));
-    }}
-    .handDock div[data-testid="column"] .stButton > button:disabled{{
-      opacity: .28 !important;
-      transform:none !important;
-      filter:none !important;
+      cursor: pointer !important;
     }}
 
-    .handDock .cardOverlay{{
+    .handDock .cardOverlay {{
+      position: absolute !important;
+      inset: 0 !important;
       width: var(--hand-card-w) !important;
       height: var(--hand-card-h) !important;
       margin: 0 auto !important;
-      margin-top: calc(-1 * var(--hand-card-h)) !important;
-      pointer-events: none !important;
+      pointer-events: none !important; /* ✅ clique passa pro botão */
+      z-index: 2 !important;
     }}
+
     .cardBtnInner{{
       width:100%;
       height:100%;
       position:relative;
       border-radius:14px;
       overflow:hidden;
+      transform: translateY(0px);
+      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
     }}
+
+    /* hover “app” */
+    .handDock div[data-testid="column"]:hover .cardBtnInner {{
+      transform: translateY(-4px);
+      filter: drop-shadow(0 14px 22px rgba(0,0,0,.22));
+    }}
+
     .cardBtnTL{{ position:absolute; top:10px; left:10px; font-weight:900; font-size:14px; line-height:14px; }}
     .cardBtnBR{{ position:absolute; bottom:10px; right:10px; font-weight:900; font-size:14px; line-height:14px; transform: rotate(180deg); }}
     .cardBtnMid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:900; opacity:.92; }}
+
     @keyframes flyAway {{
       0%   {{ transform: translateY(0px) scale(1); opacity: 1; }}
       55%  {{ transform: translateY(-26px) scale(1.03); opacity: .85; }}
@@ -548,9 +494,6 @@ def inject_app_css(theme_name: str):
       .card .mid{{ font-size: 26px; }}
       .topbar{{ flex-direction:column; align-items:flex-start; }}
       .topRight{{ justify-content:flex-start; }}
-
-      .hudScore{{ width: 185px; right: 12px; top: 12px; }}
-      .hudName{{ max-width: 105px; }}
     }}
     </style>
     """
@@ -595,7 +538,7 @@ def play_sound_if_needed():
             g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.01);
             g.gain.exponentialRampToValueAtTime(0.0001, t0 + {dur});
             o.stop(t0 + {dur} + 0.02);
-            setTimeout(()=>ctx.close(), 200);
+            setTimeout(()=>ctx.close(), 220);
           }} catch(e) {{}}
         }})();
         </script>
@@ -1076,7 +1019,7 @@ st.markdown(
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
     <div style="opacity:.78;font-weight:900;font-size:12px;color:rgba(255,255,255,.85);">
-      HUD mini placar na mesa • Premium UI • Mobile fullscreen
+      Premium UI • Tema Neon/Classic • Placar recolhível • Mobile dock
     </div>
   </div>
   <div class="badges">
@@ -1090,7 +1033,7 @@ st.markdown(
 )
 
 # =========================
-# QUICK CONTROLS
+# QUICK CONTROLS (top menu)
 # =========================
 ctrl = st.columns([1.25, 1.05, 0.9, 0.9, 1.0])
 with ctrl[0]:
@@ -1240,7 +1183,7 @@ if st.session_state.fase == "prognostico":
     st.stop()
 
 # =========================
-# MESA + HUD + animação
+# MESA
 # =========================
 def seat_positions(ordem):
     n = len(ordem)
@@ -1255,69 +1198,6 @@ def seat_positions(ordem):
         ty = cy + (ry*0.70)*math.sin(ang)
         pos[nome] = {"seat": (x, y), "target": (tx, ty)}
     return pos
-
-def build_hud_html():
-    # Top 3 + "Você" (se não estiver no top3)
-    if not st.session_state.started:
-        return ""
-
-    pontos = st.session_state.pontos or {}
-    for n in st.session_state.nomes:
-        pontos.setdefault(n, 0)
-
-    ranking = sorted(pontos.items(), key=lambda x: x[1], reverse=True)
-    medals = ["🥇", "🥈", "🥉"]
-
-    top3 = ranking[:3]
-    humano = st.session_state.nomes[st.session_state.humano_idx]
-    humano_in_top3 = any(n == humano for n, _ in top3)
-    humano_row = None
-
-    if not humano_in_top3:
-        # encontra posição do humano
-        for idx, (n, pts) in enumerate(ranking, start=1):
-            if n == humano:
-                humano_row = (idx, n, pts)
-                break
-
-    rows_html = ""
-    for i, (nome, pts) in enumerate(top3, start=1):
-        medal = medals[i-1] if i <= 3 else ""
-        you_cls = " you" if nome == humano else ""
-        rows_html += f"""
-<div class="hudRow{you_cls}">
-  <div class="hudLeft">
-    <div class="hudPos">{medal}</div>
-    <div class="hudName">{nome}</div>
-  </div>
-  <div class="hudPts">{pts}</div>
-</div>
-"""
-
-    if humano_row is not None:
-        pos, nome, pts = humano_row
-        rows_html += '<div class="hudDivider"></div>'
-        rows_html += f"""
-<div class="hudRow you">
-  <div class="hudLeft">
-    <div class="hudPos">{pos}º</div>
-    <div class="hudName">{nome} (Você)</div>
-  </div>
-  <div class="hudPts">{pts}</div>
-</div>
-"""
-
-    return f"""
-<div class="hudScore">
-  <div class="hudHead">
-    <div>📌 Placar</div>
-    <div class="hudSub">Rod {st.session_state.rodada}</div>
-  </div>
-  <div class="hudList">
-    {rows_html}
-  </div>
-</div>
-"""
 
 def render_mesa():
     ordem = st.session_state.ordem
@@ -1427,13 +1307,10 @@ def render_mesa():
     if anim_css.strip():
         st.markdown(f"<style>{anim_css}</style>", unsafe_allow_html=True)
 
-    hud_html = build_hud_html()  # ✅ HUD mini placar
-
     st.markdown('<div class="mesaWrap animFadeUp">', unsafe_allow_html=True)
     st.markdown(
         f"""
 <div class="mesa">
-  {hud_html}
   {seats_html}
   {chips_html}
   {piles_html}
@@ -1446,7 +1323,7 @@ def render_mesa():
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
-# MÃO clicável
+# MÃO clicável (agora SEM retângulo “por cima”)
 # =========================
 def render_hand_clickable_streamlit():
     ordem = st.session_state.ordem
@@ -1479,7 +1356,7 @@ def render_hand_clickable_streamlit():
         )
 
         with cols[i % 10]:
-            if st.button(" ", key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}", disabled=disabled, use_container_width=False):
+            if st.button(" ", key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}", disabled=disabled):
                 st.session_state.sound_event = "click"
                 play_sound_if_needed()
                 clicked = c
