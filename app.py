@@ -152,15 +152,18 @@ def inject_css():
   --hand-card-h: 118px;
 }}
 
-header[data-testid="stHeader"] {{
-  height: .2rem;
-}}
+header[data-testid="stHeader"]{
+  height: 0rem;               /* tira a faixa extra */
+}
 
-.block-container {{
-  padding-top: calc(var(--pad) + 14px) !important; /* desce o conteúdo (fix título na faixa branca) */
-  padding-bottom: var(--pad) !important;
-  max-width: var(--app-max);
-}}
+.block-container{
+  padding-top: calc(var(--pad) + 34px) !important; /* desce mais tudo */
+}
+
+.topbar{
+  top: 1.05rem;               /* desce a barra sticky */
+}
+
 
 [data-testid="stAppViewContainer"] {{
   background:
@@ -277,36 +280,46 @@ div[data-testid="stHorizontalBlock"] .stButton > button.iconBtn:hover {{
 
 /* ===== Mesa ===== */
 .mesaWrap{{ margin-top: 6px; }}
-.mesa{{
-  border-radius: 26px;
-  border: 1px solid rgba(255,255,255,.14);
+.mesa{
+  border-radius: 999px; /* deixa oval automaticamente */
+  border: 1px solid rgba(255,255,255,.18);
+
   background:
+    radial-gradient(900px 420px at 50% 45%, rgba(255,255,255,.10), transparent 60%),
     radial-gradient(circle at 22% 18%, rgba(255,255,255,.12), transparent 42%),
     radial-gradient(circle at 80% 70%, rgba(0,0,0,.30), transparent 55%),
     linear-gradient(180deg, rgba(16,110,70,1) 0%, rgba(10,78,50,1) 55%, rgba(8,60,40,1) 100%);
+
   height: 470px;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow);
-}}
-.mesa:before{{
+  box-shadow: 0 22px 60px rgba(0,0,0,.34);
+}
+
+/* textura */
+.mesa:before{
   content:"";
   position:absolute; inset:0;
   background:
-    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, rgba(255,255,255,0) 1px 3px),
-    repeating-linear-gradient(90deg, rgba(0,0,0,.016) 0 1px, rgba(0,0,0,0) 1px 4px);
+    repeating-linear-gradient(0deg, rgba(255,255,255,.016) 0 1px, rgba(255,255,255,0) 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.014) 0 1px, rgba(0,0,0,0) 1px 4px);
   opacity:.55;
   pointer-events:none;
-}}
-.mesa:after{{
+}
+
+/* aro interno oval + brilho */
+.mesa:after{
   content:"";
   position:absolute;
   inset: 14px;
-  border-radius: 22px;
-  border: 1px solid rgba(255,255,255,.10);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
+  border-radius: 999px;  /* acompanha o oval */
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,.16),
+    inset 0 0 40px rgba(0,0,0,.16);
   pointer-events:none;
-}}
+}
+
 .mesaCenter{{
   position:absolute; inset:0;
   display:flex; align-items:center; justify-content:center;
@@ -316,6 +329,26 @@ div[data-testid="stHorizontalBlock"] .stButton > button.iconBtn:hover {{
   letter-spacing: .08em;
   color: rgba(255,255,255,.90);
 }}
+
+@keyframes shimmer {
+  0%   { transform: translateX(-40%) rotate(10deg); opacity: 0; }
+  15%  { opacity: .10; }
+  55%  { opacity: .06; }
+  100% { transform: translateX(140%) rotate(10deg); opacity: 0; }
+}
+
+.mesa .shimmer{
+  position:absolute;
+  top: -35%;
+  left: -30%;
+  width: 60%;
+  height: 170%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+  filter: blur(6px);
+  opacity: 0;
+  pointer-events:none;
+  animation: shimmer 6.2s ease-in-out infinite;
+}
 
 /* Assentos */
 .seat{{
@@ -1104,6 +1137,20 @@ def render_topbar():
         with c3:
             st.session_state.menu_open = st.checkbox("Manter menu aberto", value=st.session_state.menu_open)
 
+        st.markdown("---")
+
+        # Botão topo: Próxima rodada (mesma regra do sidebar)
+        if st.session_state.fase == "jogo" and fim_de_rodada_pronto():
+            if st.session_state.cartas_alvo > 1:
+                if st.button("➡️ Próxima rodada", use_container_width=True, key="btn_next_round_top"):
+                    start_next_round()
+                    st.rerun()
+            else:
+                pontuar_rodada()
+                vencedor, pts = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)[0]
+                st.success(f"🏆 Fim do jogo! {vencedor} com {pts} pts")
+
+
         st.markdown("### 📊 Placar (ao vivo)")
         if st.session_state.started:
             for n in st.session_state.nomes:
@@ -1387,8 +1434,9 @@ def render_mesa():
 
     st.markdown('<div class="mesaWrap">', unsafe_allow_html=True)
     st.markdown(
-        f"""
+    f"""
 <div class="mesa">
+  <div class="shimmer"></div>
   {seats_html}
   {chips_html}
   {piles_html}
@@ -1396,8 +1444,8 @@ def render_mesa():
   <div class="mesaCenter">{centro_txt}</div>
 </div>
 """,
-        unsafe_allow_html=True
-    )
+    unsafe_allow_html=True
+)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
