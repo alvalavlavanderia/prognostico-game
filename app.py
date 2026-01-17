@@ -117,7 +117,7 @@ def inject_css():
         card_shadow = "0 10px 22px rgba(0,0,0,.16)"
         seat_bg = "rgba(255,255,255,.92)"
 
-    APP_CSS = f"""
+    APP_CSS = """
 <style>
 :root{{
   --app-max: 1200px;
