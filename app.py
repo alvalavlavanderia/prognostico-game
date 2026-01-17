@@ -4,6 +4,7 @@ import math
 import time
 import base64
 import streamlit as st
+import pandas as pd
 
 # =========================
 # CONFIG
@@ -12,88 +13,153 @@ st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="
 
 # =========================
 # CSS (premium + app-like + mobile + clique correto nas cartas)
+#   - CSS ÚNICO (sem duplicar regras)
+#   - Mão com tamanho fixo (não estica)
 # =========================
 APP_CSS = """
 <style>
 :root{
   --app-max: 1200px;
   --pad: .8rem;
+
+  --bg1: #0b1220;
+  --bg2: #0a1a14;
+
+  --card: rgba(255,255,255,.78);
+  --stroke: rgba(255,255,255,.14);
+
+  --shadow: 0 18px 44px rgba(0,0,0,.28);
+  --shadow2: 0 14px 34px rgba(0,0,0,.22);
+
+  --radius: 18px;
+  --radius2: 22px;
+
   --dock-h: 190px;
+
+  /* tamanho fixo das cartas na mão */
+  --hand-card-w: 86px;
+  --hand-card-h: 118px;
 }
 
-/* Layout base */
-.block-container { padding-top: var(--pad) !important; padding-bottom: var(--pad) !important; max-width: var(--app-max); }
+.block-container{
+  padding-top: var(--pad) !important;
+  padding-bottom: var(--pad) !important;
+  max-width: var(--app-max);
+}
+
 header[data-testid="stHeader"] { height: .4rem; }
 div[data-testid="stSidebarContent"] { padding-top: 1rem; }
-[data-testid="stAppViewContainer"] { background: radial-gradient(circle at 20% 10%, rgba(0,150,110,.10), transparent 40%); }
-[data-testid="stVerticalBlock"] { gap: .55rem; }
+[data-testid="stVerticalBlock"]{ gap: .55rem; }
 
-/* Sidebar placar */
+[data-testid="stAppViewContainer"]{
+  background:
+    radial-gradient(1200px 700px at 15% 10%, rgba(56,189,248,.10), transparent 55%),
+    radial-gradient(900px 600px at 80% 35%, rgba(34,197,94,.10), transparent 55%),
+    linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
+}
+
+html, body, [class*="css"]{ letter-spacing: .1px; }
+
+/* =========================
+   HEADER
+========================= */
+.titleRow{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 6px; }
+.titleRow h1{ margin:0; font-size: 28px; color: rgba(255,255,255,.92); }
+.badges{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.badge{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 10px; border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.85);
+  font-size:12px; font-weight:900;
+}
+
+/* =========================
+   SIDEBAR placar
+========================= */
 .scoreItem{
   display:flex; justify-content:space-between;
   padding:8px 10px;
   border-radius:12px;
-  border:1px solid rgba(0,0,0,.06);
-  background:rgba(255,255,255,.70);
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.08);
+  color: rgba(255,255,255,.88);
   margin-bottom:8px;
 }
 .scoreName{ font-weight:900; }
 .scorePts{ font-weight:900; }
-.smallMuted{ opacity:.70; font-size:12px; }
+.smallMuted{ opacity:.75; font-size:12px; color: rgba(255,255,255,.82); }
 
-/* Header */
-.titleRow{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 6px; }
-.titleRow h1{ margin:0; font-size: 28px; }
-.badges{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-.badge{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(0,0,0,.06); font-size:12px; font-weight:800; }
-
-/* Topbar estilo app */
+/* =========================
+   TOPBAR estilo app
+========================= */
 .topbar{
   position: sticky;
-  top: .35rem;
+  top: .45rem;
   z-index: 60;
-  border-radius: 18px;
-  border:1px solid rgba(0,0,0,.10);
-  background: rgba(255,255,255,.78);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 14px 32px rgba(0,0,0,.10);
-  padding: 10px 12px;
+
+  border-radius: 22px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,.10);
+  backdrop-filter: blur(14px);
+
+  box-shadow: var(--shadow2);
+  padding: 12px 14px;
+
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap: 10px;
-  margin: 10px 0 12px 0;
+  gap: 12px;
 }
-.topLeft{ display:flex; flex-direction:column; gap:2px; }
-.topTitle{ font-weight: 950; font-size: 14px; }
-.topSub{ font-weight: 850; opacity:.70; font-size: 12px; }
-.topRight{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+
+.topbar:before{
+  content:"";
+  position:absolute; inset:0;
+  border-radius: 22px;
+  background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.18), transparent 40%);
+  pointer-events:none;
+}
+
+.topLeft{ display:flex; flex-direction:column; gap:3px; position:relative; z-index:1; }
+.topTitle{ font-weight: 950; font-size: 14px; color: rgba(255,255,255,.92); }
+.topSub{ font-weight: 850; font-size: 12px; color: rgba(255,255,255,.70); }
+
+.topRight{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; position:relative; z-index:1; }
+
 .pill{
-  display:inline-flex; align-items:center; gap:6px;
-  padding:6px 10px; border-radius:999px;
-  border:1px solid rgba(0,0,0,.10);
-  background: rgba(255,255,255,.70);
+  display:inline-flex; align-items:center; gap:7px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.92);
   font-weight: 900;
   font-size: 12px;
 }
-.pillGood{ background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.25); }
-.pillWarn{ background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.25); }
-.pillInfo{ background: rgba(59,130,246,.12); border-color: rgba(59,130,246,.25); }
+.pillGood{ background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.26); }
+.pillWarn{ background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.26); }
+.pillInfo{ background: rgba(56,189,248,.10); border-color: rgba(56,189,248,.22); }
 
-/* Mesa */
+/* =========================
+   MESA
+========================= */
 .mesaWrap{ margin-top: 6px; }
 .mesa{
-  border-radius:22px;
-  border:1px solid rgba(0,0,0,.14);
+  border-radius: 26px;
+  border: 1px solid rgba(255,255,255,.14);
+
   background:
-    radial-gradient(circle at 30% 20%, rgba(255,255,255,.12) 0%, rgba(255,255,255,0) 42%),
-    radial-gradient(circle at 70% 80%, rgba(0,0,0,.10) 0%, rgba(0,0,0,0) 48%),
-    linear-gradient(180deg, rgba(18,90,55,1) 0%, rgba(13,72,45,1) 55%, rgba(10,58,36,1) 100%);
+    radial-gradient(circle at 22% 18%, rgba(255,255,255,.12), transparent 42%),
+    radial-gradient(circle at 80% 70%, rgba(0,0,0,.30), transparent 55%),
+    linear-gradient(180deg, rgba(16,110,70,1) 0%, rgba(10,78,50,1) 55%, rgba(8,60,40,1) 100%);
+
   height: 470px;
-  position:relative;
-  overflow:hidden;
-  box-shadow: 0 18px 42px rgba(0,0,0,.18);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow);
 }
+
 .mesa:before{
   content:"";
   position:absolute; inset:0;
@@ -103,13 +169,17 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
   opacity:.55;
   pointer-events:none;
 }
+
 .mesa:after{
   content:"";
-  position:absolute; inset:14px;
-  border-radius:18px;
-  border:1px solid rgba(255,255,255,.10);
+  position:absolute;
+  inset: 14px;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
   pointer-events:none;
 }
+
 .mesaCenter{
   position:absolute; inset:0;
   display:flex; align-items:center; justify-content:center;
@@ -136,6 +206,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 }
 .seat.you{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }
 .seat.dealer{ border-color: rgba(34,197,94,.35); background: rgba(255,255,255,.95); }
+
 .avatarImg{
   width:26px; height:26px;
   border-radius:50%;
@@ -162,7 +233,7 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 @keyframes popIn { 0% { transform: translate(-50%,-50%) scale(.92); opacity: 0; } 100% { transform: translate(-50%,-50%) scale(1); opacity: 1; } }
 .playCard.pop{ animation: popIn .16s ease-out; }
 
-/* Carta (visual) */
+/* Carta visual */
 .card{
   width:70px;
   height:102px;
@@ -265,46 +336,64 @@ div[data-testid="stSidebarContent"] { padding-top: 1rem; }
 .handDock{
   margin-top: 10px;
   border-radius: 18px;
-  border:1px solid rgba(0,0,0,.10);
-  background: rgba(255,255,255,.75);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 14px 34px rgba(0,0,0,.08);
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.10);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow2);
   padding: 12px;
+  color: rgba(255,255,255,.92);
 }
 .handTitle{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 6px; }
 .handTitle h3{ margin:0; font-size:16px; }
-.hint{ font-size:12px; opacity:.70; font-weight:800; }
+.hint{ font-size:12px; opacity:.75; font-weight:900; }
 
 /* ===== Clique correto: botão invisível + carta por cima ===== */
-/* o botão (Streamlit) captura clique, mas fica invisível */
-div[data-testid="column"] .stButton > button{
+.handDock div[data-testid="column"] .stButton > button{
+  width: var(--hand-card-w) !important;
+  min-width: var(--hand-card-w) !important;
+  max-width: var(--hand-card-w) !important;
+
+  height: var(--hand-card-h) !important;
+  min-height: var(--hand-card-h) !important;
+
+  margin: 0 auto !important;
+  display: block !important;
+
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  min-height: 118px !important;
-  width: 100% !important;
   padding: 0 !important;
   border-radius: 14px !important;
-  transition: transform .10s ease, filter .10s ease;
+
+  transition: transform .10s ease, filter .10s ease, opacity .10s ease;
 }
-div[data-testid="column"] .stButton > button:hover{
+.handDock div[data-testid="column"] .stButton > button:hover{
   transform: translateY(-4px);
-  filter: drop-shadow(0 12px 20px rgba(0,0,0,.16));
+  filter: drop-shadow(0 12px 20px rgba(0,0,0,.20));
 }
-div[data-testid="column"] .stButton > button:disabled{
+.handDock div[data-testid="column"] .stButton > button:disabled{
   opacity: .28 !important;
   transform:none !important;
   filter:none !important;
 }
 
-/* carta visual por cima do botão */
-.cardOverlay{
-  margin-top: -118px;
-  pointer-events: none; /* deixa clique passar pro botão */
+/* overlay da carta por cima */
+.handDock .cardOverlay{
+  width: var(--hand-card-w) !important;
+  height: var(--hand-card-h) !important;
+  margin: 0 auto !important;
+  margin-top: calc(-1 * var(--hand-card-h)) !important;
+  pointer-events: none !important;
 }
 
 /* face da carta no botão */
-.cardBtnInner{ width:100%; height:118px; position:relative; border-radius:14px; overflow:hidden; }
+.cardBtnInner{
+  width:100%;
+  height:100%;
+  position:relative;
+  border-radius:14px;
+  overflow:hidden;
+}
 .cardBtnTL{ position:absolute; top:10px; left:10px; font-weight:900; font-size:14px; line-height:14px; }
 .cardBtnBR{ position:absolute; bottom:10px; right:10px; font-weight:900; font-size:14px; line-height:14px; transform: rotate(180deg); }
 .cardBtnMid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:900; opacity:.92; }
@@ -344,84 +433,10 @@ div[data-testid="column"] .stButton > button:disabled{
 
   .card{ width:62px; height:92px; border-radius: 13px; }
   .card .mid{ font-size: 26px; }
+
   .topbar{ flex-direction:column; align-items:flex-start; }
   .topRight{ justify-content:flex-start; }
 }
-/* ===== CARTAS DA MÃO: tamanho fixo (não esticar) ===== */
-:root{
-  --hand-card-w: 86px;
-  --hand-card-h: 118px;
-}
-
-/* botão invisível do streamlit */
-.handDock div[data-testid="column"] .stButton > button{
-  width: var(--hand-card-w) !important;
-  min-width: var(--hand-card-w) !important;
-  max-width: var(--hand-card-w) !important;
-
-  min-height: var(--hand-card-h) !important;
-  height: var(--hand-card-h) !important;
-
-  margin: 0 auto !important;     /* centraliza dentro da coluna */
-  display: block !important;
-}
-
-/* overlay (carta desenhada por cima do botão) */
-.handDock .cardOverlay{
-  width: var(--hand-card-w) !important;
-  height: var(--hand-card-h) !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  margin-top: calc(-1 * var(--hand-card-h)) !important;
-}
-
-/* a “carta” desenhada dentro do overlay */
-.handDock .cardBtnInner{
-  width: var(--hand-card-w) !important;
-  height: var(--hand-card-h) !important;
-  border-radius: 14px;
-}
-/* ===== FIX FINAL: mão não estica carta ===== */
-:root{
-  --hand-card-w: 86px;
-  --hand-card-h: 118px;
-}
-
-/* botão do streamlit (fica atrás) */
-.handDock div[data-testid="column"] .stButton > button{
-  width: var(--hand-card-w) !important;
-  min-width: var(--hand-card-w) !important;
-  max-width: var(--hand-card-w) !important;
-
-  height: var(--hand-card-h) !important;
-  min-height: var(--hand-card-h) !important;
-
-  margin: 0 auto !important;
-  display: block !important;
-
-  background: rgba(255,255,255,0.0) !important; /* continua “invisível” */
-  border: 1px solid rgba(0,0,0,.12) !important; /* opcional: se quiser o retângulo funcional, deixe */
-  border-radius: 14px !important;
-  box-shadow: 0 10px 22px rgba(0,0,0,.10) !important;
-  padding: 0 !important;
-}
-
-/* overlay (a carta desenhada) */
-.handDock .cardOverlay{
-  width: var(--hand-card-w) !important;
-  height: var(--hand-card-h) !important;
-  margin: 0 auto !important;
-  margin-top: calc(-1 * var(--hand-card-h)) !important;
-  pointer-events: none !important;
-}
-
-/* a carta desenhada precisa ser fixa também */
-.handDock .cardBtnInner{
-  width: var(--hand-card-w) !important;
-  height: var(--hand-card-h) !important;
-  border-radius: 14px;
-}
-
 </style>
 """
 st.markdown(APP_CSS, unsafe_allow_html=True)
@@ -592,8 +607,6 @@ def ss_init():
         "mao_primeira_sorteada": False,
 
         "fase": "setup",
-        "show_final": False,
-
 
         "prognosticos": {},
         "progn_pre": {},
@@ -607,27 +620,23 @@ def ss_init():
         "copas_quebrada": False,
 
         "pontuou_rodada": False,
-
         "pending_play": None,
 
         "table_pop_until": 0.0,
         "winner_flash_name": None,
         "winner_flash_until": 0.0,
 
-        # Trick animation state
         "trick_pending": False,
-        "trick_phase": None,          # "show" -> "fly"
+        "trick_phase": None,
         "trick_resolve_at": 0.0,
         "trick_fly_until": 0.0,
         "trick_winner": None,
         "trick_snapshot": [],
 
         "pile_counts": {},
-
-        # autoplay
         "autoplay_last": 0.0,
-        "final_rendered": False,
 
+        "show_final": False,  # controla tela final
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -714,17 +723,14 @@ def cartas_validas_para_jogar(nome):
     if not mao:
         return []
 
-    # Seguir naipe se tiver
     if naipe_base and tem_naipe(mao, naipe_base):
         return [c for c in mao if c[0] == naipe_base]
 
-    # Não tem naipe base
     if naipe_base and not tem_naipe(mao, naipe_base):
         if primeira_vaza and not somente_trunfo(mao):
             return [c for c in mao if c[0] != TRUNFO]
         return mao[:]
 
-    # Mão abrindo
     if naipe_base is None:
         if primeira_vaza:
             if somente_trunfo(mao):
@@ -807,10 +813,6 @@ def rodada_terminou():
     return all(len(st.session_state.maos[n]) == 0 for n in st.session_state.nomes)
 
 def fim_de_rodada_pronto():
-    # Só finaliza quando:
-    # - todo mundo sem cartas
-    # - nenhuma animação pendente
-    # - mesa já foi limpa
     return (
         rodada_terminou()
         and (not st.session_state.trick_pending)
@@ -834,7 +836,6 @@ def avancar_ate_humano_ou_fim():
     humano = st.session_state.nomes[st.session_state.humano_idx]
     ordem = st.session_state.ordem
 
-    # Se já tem animação, não avança jogadas
     if st.session_state.trick_pending:
         return
 
@@ -843,45 +844,32 @@ def avancar_ate_humano_ou_fim():
     while steps < limit:
         steps += 1
 
-        # 1) resolve fases de animação se for o caso
         if resolve_trick_if_due():
             return
         if st.session_state.trick_pending:
             return
 
-        # 2) Se acabou a rodada mas existe vaza completa na mesa, agendar animação da última vaza
         if rodada_terminou() and (not st.session_state.trick_pending):
             if len(st.session_state.mesa) == len(ordem):
                 schedule_trick_resolution()
                 return
 
-        # 3) Se rodada pronta de verdade: pontua
         if fim_de_rodada_pronto():
             pontuar_rodada()
-
-            # Se é a última rodada (1 carta), entra na tela final
             if st.session_state.cartas_alvo <= 1:
                 st.session_state.fase = "fim"
                 st.session_state.show_final = True
-                st.rerun()
+            return
 
-            # Se não é a última, só encerra a rodada normalmente
-            st.success("✅ Rodada finalizada. Vá ao sidebar para continuar.")
-            st.stop()
-
-
-        # 4) Próximo jogador
         atual = ordem[st.session_state.turn_idx]
 
         if len(st.session_state.maos[atual]) == 0:
             st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
             continue
 
-        # Para quando chegar no humano
         if atual == humano and len(st.session_state.maos[humano]) > 0:
             return
 
-        # IA joga
         carta = ai_escolhe_carta(atual)
         if carta is None:
             st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
@@ -890,7 +878,6 @@ def avancar_ate_humano_ou_fim():
         jogar_carta(atual, carta)
         st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
 
-        # Se completou vaza, agendar animação
         if len(st.session_state.mesa) == len(ordem):
             schedule_trick_resolution()
             return
@@ -964,17 +951,12 @@ with st.sidebar:
         if st.session_state.fase == "jogo" and fim_de_rodada_pronto():
             st.markdown("---")
             if st.session_state.cartas_alvo > 1:
-                if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True):
+                if st.button("➡️ Próxima rodada (-1 carta)", use_container_width=True, key="btn_next_round"):
                     start_next_round()
                     st.rerun()
-            else:
-                pontuar_rodada()
-                vencedor, pts = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)[0]
-                st.success(f"🏆 Fim do jogo! {vencedor} com {pts} pts")
-
 
         st.markdown("---")
-        if st.button("🔁 Reiniciar", use_container_width=True):
+        if st.button("🔁 Reiniciar", use_container_width=True, key="btn_reset"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             ss_init()
@@ -983,14 +965,16 @@ with st.sidebar:
         st.info("Inicie uma partida.")
 
 # =========================
-# HEADER (título fixo)
+# HEADER (título)
 # =========================
 st.markdown(
     """
 <div class="titleRow">
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
-    <div style="opacity:.70;font-weight:800;font-size:12px;">Premium UI • Avatares cartoon • Montinho animado • Mobile Dock</div>
+    <div style="opacity:.75;font-weight:900;font-size:12px;color:rgba(255,255,255,.85);">
+      Premium UI • Avatares cartoon • Montinho animado • Mobile Dock
+    </div>
   </div>
   <div class="badges">
     <span class="badge">Trunfo: ♥</span>
@@ -1006,11 +990,11 @@ st.markdown(
 # SETUP
 # =========================
 if not st.session_state.started:
-    st.markdown("### Configuração")
+    st.markdown("### Configuração", help="Defina os jogadores. O último será você.")
     nomes_txt = st.text_input("Jogadores (separados por vírgula). O último será Você", value=", ".join(st.session_state.nomes))
     colA, colB = st.columns([1, 2])
     with colA:
-        start = st.button("▶️ Iniciar jogo", use_container_width=True)
+        start = st.button("▶️ Iniciar jogo", use_container_width=True, key="btn_start")
     with colB:
         st.info("As cartas serão distribuídas igualmente até acabar o baralho (sobras no monte). A cada rodada diminui 1 carta por jogador.")
 
@@ -1037,10 +1021,9 @@ if not st.session_state.started:
     st.stop()
 
 # =========================
-# TOPBAR (uma só, sempre que started=True)
+# TOPBAR (única)
 # =========================
 def render_topbar():
-    # garante ordem
     if not st.session_state.ordem:
         st.session_state.ordem = ordem_da_mesa(st.session_state.nomes, st.session_state.mao_da_rodada)
     st.session_state.turn_idx = st.session_state.turn_idx % len(st.session_state.ordem)
@@ -1099,9 +1082,9 @@ if st.session_state.fase == "prognostico":
         rows = [(n, vis[n]) for n in ordem_preview if n in vis]
         st.table({"Jogador": [r[0] for r in rows], "Prognóstico": [r[1] for r in rows]})
 
-    palpite = st.number_input("Seu prognóstico", min_value=0, max_value=len(mao_humano), value=0, step=1)
+    palpite = st.number_input("Seu prognóstico", min_value=0, max_value=len(mao_humano), value=0, step=1, key="inp_palpite")
 
-    if st.button("Confirmar meu prognóstico", use_container_width=True):
+    if st.button("Confirmar meu prognóstico", use_container_width=True, key="btn_confirm_progn"):
         st.session_state.prognosticos = {}
         st.session_state.prognosticos.update(st.session_state.progn_pre)
         st.session_state.prognosticos[humano_nome] = int(palpite)
@@ -1212,7 +1195,6 @@ def render_mesa():
         cls = "playCard"
         extra_style = f"left:{x}%; top:{y}%;"
 
-
         if pop_active and is_last and not st.session_state.trick_pending:
             cls += " pop"
 
@@ -1257,7 +1239,7 @@ def render_mesa():
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
-# MÃO clicável (sem retângulo / clique funciona)
+# MÃO clicável (fixo, não estica)
 # =========================
 def render_hand_clickable_streamlit():
     ordem = st.session_state.ordem
@@ -1280,7 +1262,7 @@ def render_hand_clickable_streamlit():
     clicked = None
     pending = st.session_state.pending_play
 
-    # ✅ grade fixa: evita “cartas esticadas”
+    # grade fixa 10 colunas (as cartas têm largura fixa por CSS)
     cols = st.columns(10)
 
     for i, c in enumerate(mao_ord):
@@ -1292,51 +1274,40 @@ def render_hand_clickable_streamlit():
         )
 
         with cols[i % 10]:
-            # botão (fica “atrás” da carta e captura clique)
             if st.button(
                 " ",
                 key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
                 disabled=disabled,
-                use_container_width=True
+                use_container_width=False
             ):
                 clicked = c
 
             extra = "flyAway" if (pending is not None and c == pending) else ""
-            st.markdown(
-                f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
-                unsafe_allow_html=True
-            )
+            st.markdown(f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
     return clicked
 
-import pandas as pd
-
+# =========================
+# TELA FINAL (ÚNICA)
+# =========================
 def render_tela_final():
     st.markdown("## 🏁 Placar final")
 
     ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
+    medals = ["🥇", "🥈", "🥉"]
 
     linhas = []
     for i, (nome, pts) in enumerate(ranking, start=1):
-        medalha = ""
-        if i == 1: medalha = "🥇"
-        elif i == 2: medalha = "🥈"
-        elif i == 3: medalha = "🥉"
-
-        linhas.append({
-            "Posição": f"{medalha} {i}º".strip(),
-            "Jogador": nome,
-            "Pontos": pts
-        })
+        medalha = medals[i-1] if i <= 3 else ""
+        linhas.append({"Posição": f"{medalha} {i}º".strip(), "Jogador": nome, "Pontos": pts})
 
     df = pd.DataFrame(linhas)
     st.dataframe(df, use_container_width=True, hide_index=True)
 
     vencedor, pts = ranking[0]
-    st.success(f"🏆 Vencedor: {vencedor} com {pts} pontos!")
+    st.success(f"🏆 Vencedor: **{vencedor}** com **{pts}** pontos!")
 
-    # ✅ key fixa para nunca duplicar
     if st.button("🔁 Jogar novamente", use_container_width=True, key="btn_play_again"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
@@ -1359,19 +1330,18 @@ if st.session_state.fase == "jogo":
     atual = ordem[st.session_state.turn_idx]
     humano = st.session_state.nomes[st.session_state.humano_idx]
 
-    # 3) Se vaza completa na mesa e terminou cartas, agenda animação final (garante última mão)
+    # 3) Se vaza completa na mesa e terminou cartas, agenda animação final
     if rodada_terminou() and (not st.session_state.trick_pending) and (len(st.session_state.mesa) == len(ordem)):
         schedule_trick_resolution()
         st.rerun()
 
-    # 4) Se rodada terminou de verdade (mesa limpa + sem animação), pontua e para
-    # ✅ Fim de rodada só quando a última vaza já foi resolvida
+    # 4) Se rodada terminou de verdade (mesa limpa + sem animação), pontua e segue
     if fim_de_rodada_pronto():
         pontuar_rodada()
 
-        # se era a última rodada (1 carta), vai pra tela final
         if st.session_state.cartas_alvo <= 1:
             st.session_state.fase = "fim"
+            st.session_state.show_final = True
             st.rerun()
 
         st.success("✅ Rodada finalizada. Vá ao sidebar para continuar.")
@@ -1400,7 +1370,12 @@ if st.session_state.fase == "jogo":
 
     # 8) Executa jogada do humano com pequeno delay
     if st.session_state.pending_play is not None and atual == humano:
-        st.markdown('<div style="padding:10px 12px;border-radius:14px;border:1px solid rgba(0,0,0,.08);background:rgba(255,255,255,.85);font-weight:900;margin-top:10px;">✨ Jogando carta...</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.14);'
+            'background:rgba(255,255,255,.10);backdrop-filter:blur(10px);'
+            'font-weight:950;margin-top:10px;color:rgba(255,255,255,.92);">✨ Jogando carta...</div>',
+            unsafe_allow_html=True
+        )
         time.sleep(0.18)
 
         carta = st.session_state.pending_play
@@ -1415,57 +1390,9 @@ if st.session_state.fase == "jogo":
         avancar_ate_humano_ou_fim()
         st.rerun()
 
+# =========================
+# FIM
+# =========================
 if st.session_state.fase == "fim" and st.session_state.show_final:
-    st.markdown("## 🏁 Placar final")
-
-    ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
-
-    # Medalhas só pros 3 primeiros (se existirem)
-    medals = ["🥇", "🥈", "🥉"]
-    pos = []
-    nomes_tbl = []
-    pontos_tbl = []
-
-    for i, (nome, pts) in enumerate(ranking):
-        medal = medals[i] if i < 3 else ""
-        pos.append(f"{medal} {i+1}º".strip())
-        nomes_tbl.append(nome)
-        pontos_tbl.append(pts)
-
-    # ✅ Tabela final com medalhas
-    st.table({
-        "Posição": pos,
-        "Jogador": nomes_tbl,
-        "Pontos": pontos_tbl
-    })
-
-    vencedor, pts = ranking[0]
-    st.success(f"🏆 Vencedor: **{vencedor}** com **{pts}** pontos!")
-
-    if st.button("🔁 Jogar novamente", use_container_width=True):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        ss_init()
-        st.rerun()
-   
-if st.session_state.fase == "fim" and st.session_state.show_final:
-    st.markdown("## 🏁 Placar final")
-
-    ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
-
-    # ✅ placar completo (abaixo)
-    st.markdown("### 📊 Pontuação completa")
-    st.table({"Jogador": [n for n, _ in ranking], "Pontos": [p for _, p in ranking]})
-
-    vencedor, pts = ranking[0]
-    st.success(f"🏆 Vencedor: **{vencedor}** com **{pts}** pontos!")
-
-    if st.button("🔁 Jogar novamente", use_container_width=True):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        ss_init()
-        st.rerun()
-
-if st.session_state.fase == "fim":
     render_tela_final()
     st.stop()
