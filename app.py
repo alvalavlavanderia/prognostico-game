@@ -295,15 +295,11 @@ html, body, [class*="css"] {{
 
 .mesaWrap{{ margin-top: 6px; }}
 .mesa{{
-  border-radius: 38px;
-  border: 1px solid var(--mesaBorder);
-  background:
-    radial-gradient(circle at 22% 18%, rgba(255,255,255,.10), transparent 42%),
-    radial-gradient(circle at 80% 70%, rgba(0,0,0,.32), transparent 55%),
-    linear-gradient(180deg, var(--felt1) 0%, rgba(10,78,50,1) 55%, var(--felt2) 100%);
+  border: 1px solid transparent;
+  background: transparent;
   height: 470px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: var(--shadow);
 }}
 
