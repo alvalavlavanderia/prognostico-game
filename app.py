@@ -208,9 +208,9 @@ titleRow h1 {{
 }}
 
 /* em telas menores, quebra melhor */
-@media (max-width: 900px){ {
-  .pillGroup{ { justify-content:flex-start; } }
-} }
+@media (max-width: 900px){{
+  .pillGroup{{ justify-content:flex-start; }}
+}}
 
 .topbar {{
   position: sticky;
