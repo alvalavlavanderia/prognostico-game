@@ -273,6 +273,7 @@ html, body, [class*="css"] {{
   backdrop-filter: blur(10px);
   box-shadow: var(--shadow2);
   padding: 10px 12px;
+  margin-top: 12px;
 }}
 .menuHint {{
   color: var(--textSub);
