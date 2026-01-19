@@ -300,12 +300,18 @@ html, body, [class*="css"] {{
 .mesa{{
   border-radius: 50% / 46%;
   border: 1px solid transparent;
-  background: transparent;
+  background:
+    radial-gradient(circle at 25% 22%, rgba(34,197,94,.18), transparent 45%),
+    radial-gradient(circle at 78% 72%, rgba(0,0,0,.28), transparent 55%),
+    linear-gradient(180deg, var(--felt1) 0%, rgba(10,78,50,1) 55%, var(--felt2) 100%);
+  background-color: var(--felt1);
+  clip-path: ellipse(48% 42% at 50% 50%);
   height: 470px;
   position: relative;
-  overflow: visible;
+  overflow: hidden;
   box-shadow: var(--shadow);
 }}
+
 
 .mesa:before{{
   content:"";
