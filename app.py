@@ -1310,10 +1310,12 @@ def render_hand_clickable_streamlit():
     mao = st.session_state.maos[humano]
     validas = set(cartas_validas_para_jogar(humano))
 
-    st.markdown(
-        Sua mão</h3><div class="hint">{hint}</div></div>',
-        unsafe_allow_html=True,
+    hand_title_html = (
+        f'<div class="handTitle"><h3>🂠 Sua mão</h3>'
+        f'<div class="hint">{hint}</div></div>'
     )
+    st.markdown(hand_title_html, unsafe_allow_html=True)
+
 
     mao_ord = sorted(mao, key=peso_carta)
     if not mao_ord:
