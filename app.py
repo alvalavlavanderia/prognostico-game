@@ -240,7 +240,7 @@ html, body, [class*="css"] {{
 
 .topLeft{{ display:flex; flex-direction:column; gap:4px; min-width: 210px; }}
 .topTitle{{ font-weight: 950; font-size: 14px; color: var(--textMain); }}
-topSub{{ font-weight: 800; font-size: 12px; color: var(--textSub); }}
+.topSub{{ font-weight: 800; font-size: 12px; color: var(--textSub); }}
 
 .topRight{{
   display:flex;
@@ -273,7 +273,7 @@ topSub{{ font-weight: 800; font-size: 12px; color: var(--textSub); }}
   box-shadow: var(--shadow2);
   padding: 10px 12px;
 }}
-menuHint {{
+.menuHint {{
   color: var(--textSub);
   font-weight: 800;
   font-size: 12px;
@@ -288,12 +288,12 @@ menuHint {{
   margin-bottom:8px;
   color: var(--textMain);
 }}
-scoreName{{ font-weight:900; }}
-scorePts{{ font-weight:900; }}
-smallMuted{{ opacity:.70; font-size:12px; color: var(--textSub); }}
+.scoreName{{ font-weight:900; }}
+.scorePts{{ font-weight:900; }}
+.smallMuted{{ opacity:.70; font-size:12px; color: var(--textSub); }}
 
 .mesaWrap{{ margin-top: 6px; }}
-mesa{{
+.mesa{{
   border-radius: 38px;
   border: 1px solid var(--mesaBorder);
   background:
@@ -348,9 +348,9 @@ mesa{{
   gap:8px;
   color: rgba(240,255,252,.92);
 }}
-seat.you{{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }}
-seat.dealer{{ border-color: rgba(34,197,94,.35); }}
-avatarImg{{
+.seat.you{{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }}
+.seat.dealer{{ border-color: rgba(34,197,94,.35); }}
+.avatarImg{{
   width:26px; height:26px;
   border-radius:50%;
   border: 1px solid rgba(0,0,0,.12);
@@ -364,7 +364,7 @@ avatarImg{{
   35% {{ box-shadow: 0 0 0 6px rgba(34,197,94,.22), 0 14px 28px rgba(0,0,0,.14); transform: translate(-50%,-50%) scale(1.03); }}
   100% {{ box-shadow: 0 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }}
 }}
-seat.winnerFlash{{
+.seat.winnerFlash{{
   animation: winnerGlow 1.2s ease-out;
   outline: 2px solid rgba(34,197,94,.55);
   background: rgba(255,255,255,.97);
@@ -375,7 +375,7 @@ seat.winnerFlash{{
   0% {{ transform: translate(-50%,-50%) scale(.92); opacity: 0; }}
   100% {{ transform: translate(-50%,-50%) scale(1); opacity: 1; }}
 }}
-playCard.pop{{ animation: popIn .16s ease-out; }}
+.playCard.pop{{ animation: popIn .16s ease-out; }}
 
 .card{{
   width:70px;
@@ -388,8 +388,8 @@ playCard.pop{{ animation: popIn .16s ease-out; }}
   user-select:none;
 }}
 .card .tl{{ position:absolute; top:7px; left:7px; font-weight:900; font-size:13px; line-height:13px; }}
-card .br{{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }}
-card .mid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }}
+.card .br{{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }}
+.card .mid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }}
 
 .chipWrap{{ position:absolute; transform: translate(-50%,-50%); z-index: 16; }}
 .chipRow{{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width: 140px; }}
@@ -644,11 +644,10 @@ def avatar_svg_data_uri(idx: int) -> str:
   <circle cx="26" cy="28" r="2.2" fill="#111827"/>
   <circle cx="38" cy="28" r="2.2" fill="#111827"/>
   <path d="M26 34c2.2 2 4.4 3 6 3s3.8-1 6-3" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
-  <circle cx="22" cy="33" r="2.1" fill="rgba(244,114,182,.35)"/>
-  <circle cx="42" cy="33" r="2.1" fill="rgba(244,114,182,.35)"/>
+  <circle cx="22" cy="33" r="2.1" fill="#EAA5A5"/>
+  <circle cx="42" cy="33" r="2.1" fill="#EAA5A5"/>
 </svg>
-""".strip()
-
+"""
     svg_b64 = base64.b64encode(svg.encode("utf-8")).decode("ascii")
     return f"data:image/svg+xml;base64,{svg_b64}"
 
@@ -1317,7 +1316,10 @@ def render_hand_clickable_streamlit():
     hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
     if st.session_state.trick_pending:
         hint = "Vaza completa — animação"
-    st.markdown(f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>',
+        unsafe_allow_html=True,
+    )
 
     mao_ord = sorted(mao, key=peso_carta)
     if not mao_ord:
@@ -1328,41 +1330,33 @@ def render_hand_clickable_streamlit():
     pending = st.session_state.pending_play
 
     # grade responsiva: desktop 10, mobile 5
-cols_per_row = 10
-try:
-    # hack simples: em telas pequenas normalmente Streamlit muda layout; podemos reduzir quando dock fixo está ativo
-    # se quiser, você pode trocar isso por um toggle "modo mobile"
     cols_per_row = 10
-except Exception:
-    cols_per_row = 10
+    rows = [mao_ord[i:i + cols_per_row] for i in range(0, len(mao_ord), cols_per_row)]
 
-rows = [mao_ord[i:i+cols_per_row] for i in range(0, len(mao_ord), cols_per_row)]
-
-for r, row_cards in enumerate(rows):
-    cols = st.columns(cols_per_row)
-    for j, c in enumerate(row_cards):
-        disabled = (
-            (c not in validas) or
-            (atual != humano) or
-            (pending is not None) or
-            st.session_state.trick_pending
-        )
-
-        with cols[j]:
-            if st.button(
-                " ",
-                key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{r}_{j}",
-                disabled=disabled,
-                use_container_width=True
-            ):
-                clicked = c
-
-            extra = "flyAway" if (pending is not None and c == pending) else ""
-            st.markdown(
-                f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
-                unsafe_allow_html=True
+    for r, row_cards in enumerate(rows):
+        cols = st.columns(cols_per_row)
+        for j, c in enumerate(row_cards):
+            disabled = (
+                (c not in validas)
+                or (atual != humano)
+                or (pending is not None)
+                or st.session_state.trick_pending
             )
 
+            with cols[j]:
+                if st.button(
+                    " ",
+                    key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{r}_{j}",
+                    disabled=disabled,
+                    use_container_width=True,
+                ):
+                    clicked = c
+
+                extra = "flyAway" if (pending is not None and c == pending) else ""
+                st.markdown(
+                    f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
+                    unsafe_allow_html=True,
+                )
 
     st.markdown('</div>', unsafe_allow_html=True)
     return clicked
@@ -1377,7 +1371,7 @@ def render_tela_final():
     linhas = []
     medals = ["🥇", "🥈", "🥉"]
     for i, (nome, pts) in enumerate(ranking, start=1):
-        medalha = medals[i-1] if i <= 3 else ""
+        medalha = medals[i - 1] if i <= 3 else ""
         linhas.append({"Posição": f"{medalha} {i}º".strip(), "Jogador": nome, "Pontos": pts})
 
     df = pd.DataFrame(linhas)
