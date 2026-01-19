@@ -193,23 +193,23 @@ html, body, [class*="css"] {{
 }}
 
 /* grupo de pills dentro da topbar */
-.pillGroup{
+.pillGroup{{
   display:flex;
   gap:8px;
   flex-wrap:wrap;
   justify-content:flex-end;
   align-items:center;
-}
+}}
 
 /* pills “secundárias” (regras) um pouco mais discretas */
-.pillSoft{
+.pillSoft{{
   opacity:.92;
-}
+}}
 
 /* em telas menores, quebra melhor */
-@media (max-width: 900px){
-  .pillGroup{ justify-content:flex-start; }
-}
+@media (max-width: 900px){{
+  .pillGroup{{ justify-content:flex-start; }}
+}}
 
 .topbar {{
   position: sticky;
@@ -240,7 +240,7 @@ html, body, [class*="css"] {{
 
 .topLeft{{ display:flex; flex-direction:column; gap:4px; min-width: 210px; }}
 .topTitle{{ font-weight: 950; font-size: 14px; color: var(--textMain); }}
-.topSub{{ font-weight: 800; font-size: 12px; color: var(--textSub); }}
+topSub{{ font-weight: 800; font-size: 12px; color: var(--textSub); }}
 
 .topRight{{
   display:flex;
@@ -273,7 +273,7 @@ html, body, [class*="css"] {{
   box-shadow: var(--shadow2);
   padding: 10px 12px;
 }}
-.menuHint {{
+menuHint {{
   color: var(--textSub);
   font-weight: 800;
   font-size: 12px;
@@ -288,12 +288,12 @@ html, body, [class*="css"] {{
   margin-bottom:8px;
   color: var(--textMain);
 }}
-.scoreName{{ font-weight:900; }}
-.scorePts{{ font-weight:900; }}
-.smallMuted{{ opacity:.70; font-size:12px; color: var(--textSub); }}
+scoreName{{ font-weight:900; }}
+scorePts{{ font-weight:900; }}
+smallMuted{{ opacity:.70; font-size:12px; color: var(--textSub); }}
 
 .mesaWrap{{ margin-top: 6px; }}
-.mesa{{
+mesa{{
   border-radius: 38px;
   border: 1px solid var(--mesaBorder);
   background:
@@ -348,9 +348,9 @@ html, body, [class*="css"] {{
   gap:8px;
   color: rgba(240,255,252,.92);
 }}
-.seat.you{{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }}
-.seat.dealer{{ border-color: rgba(34,197,94,.35); }}
-.avatarImg{{
+seat.you{{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }}
+seat.dealer{{ border-color: rgba(34,197,94,.35); }}
+avatarImg{{
   width:26px; height:26px;
   border-radius:50%;
   border: 1px solid rgba(0,0,0,.12);
@@ -364,7 +364,7 @@ html, body, [class*="css"] {{
   35% {{ box-shadow: 0 0 0 6px rgba(34,197,94,.22), 0 14px 28px rgba(0,0,0,.14); transform: translate(-50%,-50%) scale(1.03); }}
   100% {{ box-shadow: 0 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }}
 }}
-.seat.winnerFlash{{
+seat.winnerFlash{{
   animation: winnerGlow 1.2s ease-out;
   outline: 2px solid rgba(34,197,94,.55);
   background: rgba(255,255,255,.97);
@@ -375,7 +375,7 @@ html, body, [class*="css"] {{
   0% {{ transform: translate(-50%,-50%) scale(.92); opacity: 0; }}
   100% {{ transform: translate(-50%,-50%) scale(1); opacity: 1; }}
 }}
-.playCard.pop{{ animation: popIn .16s ease-out; }}
+playCard.pop{{ animation: popIn .16s ease-out; }}
 
 .card{{
   width:70px;
@@ -388,8 +388,8 @@ html, body, [class*="css"] {{
   user-select:none;
 }}
 .card .tl{{ position:absolute; top:7px; left:7px; font-weight:900; font-size:13px; line-height:13px; }}
-.card .br{{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }}
-.card .mid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }}
+card .br{{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }}
+card .mid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }}
 
 .chipWrap{{ position:absolute; transform: translate(-50%,-50%); z-index: 16; }}
 .chipRow{{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width: 140px; }}
