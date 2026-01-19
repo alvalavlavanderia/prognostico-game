@@ -297,19 +297,21 @@ html, body, [class*="css"] {{
 .smallMuted{{ opacity:.70; font-size:12px; color: var(--textSub); }}
 
 .mesaWrap{{ margin-top: 6px; }}
-.mesa{{
-  border-radius: 50% / 46%;
-  border: 1px solid transparent;
-  background:
-    radial-gradient(circle at 25% 22%, rgba(34,197,94,.18), transparent 45%),
-    radial-gradient(circle at 78% 72%, rgba(0,0,0,.28), transparent 55%),
-    linear-gradient(180deg, var(--felt1) 0%, rgba(10,78,50,1) 55%, var(--felt2) 100%);
-  background-color: var(--felt1);
-  clip-path: ellipse(48% 42% at 50% 50%);
-  height: 470px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: var(--shadow);
+.mesa {{
+    border-radius: 50% / 46%;
+    border: 1px solid transparent;
+    /* --- ALTERAÇÃO AQUI --- */
+    background: 
+        radial-gradient(circle at 25% 22%, rgba(255,255,255,.1) 0%, transparent 50%), /* Brilho leve */
+        radial-gradient(circle at 78% 72%, rgba(0,0,0,.35) 0%, transparent 60%),      /* Sombra no canto */
+        linear-gradient(180deg, #15803d 0%, #166534 55%, #14532d 100%); /* Verde Feltro */
+    /* ---------------------- */
+    background-color: #15803d; /* Fallback (cor de segurança) */
+    clip-path: ellipse(48% 42% at 50% 50%);
+    height: 470px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow);
 }}
 
 
