@@ -208,9 +208,9 @@ titleRow h1 {{
 }}
 
 /* em telas menores, quebra melhor */
-@media (max-width: 900px){{
-  .pillGroup{{ justify-content:flex-start; }}
-}}
+@media (max-width: 900px){ {
+  .pillGroup{ { justify-content:flex-start; } }
+} }
 
 .topbar {{
   position: sticky;
@@ -1063,26 +1063,24 @@ def render_topbar():
     quebrada_txt = "Sim" if st.session_state.copas_quebrada else "Não"
     primeira_txt = "Sim" if st.session_state.primeira_vaza else "Não"
 
-    topbar_html = f"""
-<div class="topbar">
-  <div class="topLeft">
-    <div class="topTitle">Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>
-    <div class="topSub">Vez: <b>{vez}</b></div>
-  </div>
-
-  <div class="topRight pillGroup">
-    <span class="pill">Naipe {naipe_txt}</span>
-    <span class="pill">♥ quebrada: {quebrada_txt}</span>
-    <span class="pill">1ª vaza: {primeira_txt}</span>
-    <span class="pill">Sobras {st.session_state.sobras_monte}</span>
-
-    <span class="pill pillSoft">Trunfo: ♥</span>
-    <span class="pill pillSoft">1ª vaza: ♥ proibida</span>
-    <span class="pill pillSoft">Abrir ♥ só após quebrar</span>
-  </div>
-</div>
-"""
-    st.markdown(textwrap.dedent(topbar_html), unsafe_allow_html=True)
+        barra_superior_html = (
+        f'<div class="topbar">'
+        f'<div class="topLeft">'
+        f'<div class="topTitle">Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>'
+        f'<div class="topSub">Vez: <b>{vez}</b></div>'
+        f'</div>'
+        f'<div class="topRight pillGroup">'
+        f'<span class="pill">Naipe {naipe_txtfspan>'
+        f'<span class="pill">♥ quebrada: {quebrada_txt}</span>'
+        f'<span class="pill">1ª vaza: {primeira_txt}</span>'
+        f'<span class="pill">Sobras {st.session_state.sobras_monte}</span>'
+        f'<span class="pill pillSoft">Trunfo: ♥</span>'
+        f'<span class="pill pillSoft">1ª vaza: ♥ proibida</span>'
+        f'<span class="pill pillSoft">Abrir ♥ só após quebrar</span>'
+        f'</div>'
+        f'</div>'
+    )
+    st.markdown(topbar_html, unsafe_allow_html=True)
 
 render_topbar()
 
@@ -1311,12 +1309,8 @@ def render_hand_clickable_streamlit():
     mao = st.session_state.maos[humano]
     validas = set(cartas_validas_para_jogar(humano))
 
-    st.markdown('<div class="handDock">', unsafe_allow_html=True)
-    hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
-    if st.session_state.trick_pending:
-        hint = "Vaza completa — animação"
     st.markdown(
-        f'<div class="handTitle"><h3>🂠 Sua mão</h3><div class="hint">{hint}</div></div>',
+        Sua mão</h3><div class="hint">{hint}</div></div>',
         unsafe_allow_html=True,
     )
 
@@ -1329,29 +1323,28 @@ def render_hand_clickable_streamlit():
     pending = st.session_state.pending_play
 
     # grade responsiva: desktop 10, mobile 5
-    cols_per_row = 10
-    rows = [mao_ord[i:i + cols_per_row] for i in range(0, len(mao_ord), cols_per_row)]
+    linhas = [mao_ord[i:i + cols_per_row] para i em range(0, len(mao_ord), cols_per_row)]
 
-    for r, row_cards in enumerate(rows):
+    para r, row_cards em enumerate(rows):
         cols = st.columns(cols_per_row)
-        for j, c in enumerate(row_cards):
-            disabled = (
-                (c not in validas)
+        para j, c em enumerate(row_cards):
+            desativado = (
+                (c inválido)
                 or (atual != humano)
-                or (pending is not None)
-                or st.session_state.trick_pending
+                ou (pendente não é Nenhum)
+                ou st.session_state.trick_pending
             )
 
-            with cols[j]:
-                if st.button(
+            com cols[j]:
+                se st.botão(
                     " ",
-                    key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{r}_{j}",
-                    disabled=disabled,
+                    chave=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{r}_{j}",
+                    desativado=desativado,
                     use_container_width=True,
                 ):
-                    clicked = c
+                    clicado = c
 
-                extra = "flyAway" if (pending is not None and c == pending) else ""
+                extra = "flyAway" se (pending não for None e c == pending) senão ""
                 st.markdown(
                     f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
                     unsafe_allow_html=True,
@@ -1370,7 +1363,7 @@ def render_tela_final():
     linhas = []
     medals = ["🥇", "🥈", "🥉"]
     for i, (nome, pts) in enumerate(ranking, start=1):
-        medalha = medals[i - 1] if i <= 3 else ""
+        medalha = medalhas[i - 1] se i <= 3 senão ""
         linhas.append({"Posição": f"{medalha} {i}º".strip(), "Jogador": nome, "Pontos": pts})
 
     df = pd.DataFrame(linhas)
