@@ -92,7 +92,7 @@ def inject_css(neon: bool):
         pill_bg = "rgba(0,255,210,.08)"
         pill_border = "rgba(0,255,210,.18)"
         text_main = "rgba(240,255,252,.92)"
-        text_sub = "rgba(240,255,252,.70)"
+        text_sub = "rgba(240,255,252,.84)"
         seat_bg = "rgba(10,14,20,.70)"
         seat_border = "rgba(0,255,210,.16)"
         card_face_bg = "linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(248,248,248,.92) 100%)"
@@ -110,7 +110,7 @@ def inject_css(neon: bool):
         pill_bg = "rgba(255,255,255,.08)"
         pill_border = "rgba(255,255,255,.16)"
         text_main = "rgba(255,255,255,.92)"
-        text_sub = "rgba(255,255,255,.70)"
+        text_sub = "rgba(255,255,255,.82)"
         seat_bg = "rgba(255,255,255,.88)"
         seat_border = "rgba(0,0,0,.10)"
         card_face_bg = "linear-gradient(180deg, #ffffff 0%, #f8f8f8 100%)"
@@ -204,7 +204,7 @@ titleRow h1 {{
 
 /* pills “secundárias” (regras) um pouco mais discretas */
 .pillSoft{{
-  opacity:.92;
+  opacity:.98;
 }}
 
 /* em telas menores, quebra melhor */
@@ -219,7 +219,7 @@ titleRow h1 {{
 
   border-radius: 26px;
   border: 1px solid var(--stroke);
-  background: rgba(255,255,255,.08);
+  background: rgba(255,255,255,.2 8);
   backdrop-filter: blur(16px);
 
   box-shadow: var(--shadow2);
