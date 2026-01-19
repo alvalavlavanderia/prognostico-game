@@ -315,7 +315,6 @@ html, body, [class*="css"] {{
     radial-gradient(circle at 78% 72%, rgba(0,0,0,.28), transparent 55%),
     linear-gradient(180deg, var(--felt1) 0%, rgba(10,78,50,1) 55%, var(--felt2) 100%);
   background-color: var(--felt1);
-  border-radius: 50% / 46%;
   clip-path: ellipse(48% 42% at 50% 50%);
   box-shadow:
     0 0 0 2px rgba(0,0,0,.85),
