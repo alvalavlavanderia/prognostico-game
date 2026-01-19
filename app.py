@@ -1063,14 +1063,14 @@ def render_topbar():
     quebrada_txt = "Sim" if st.session_state.copas_quebrada else "Não"
     primeira_txt = "Sim" if st.session_state.primeira_vaza else "Não"
 
-        barra_superior_html = (
+    topbar_html = (
         f'<div class="topbar">'
         f'<div class="topLeft">'
         f'<div class="topTitle">Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>'
         f'<div class="topSub">Vez: <b>{vez}</b></div>'
         f'</div>'
         f'<div class="topRight pillGroup">'
-        f'<span class="pill">Naipe {naipe_txtfspan>'
+        f'<span class="pill">Naipe {naipe_txt}</span>'
         f'<span class="pill">♥ quebrada: {quebrada_txt}</span>'
         f'<span class="pill">1ª vaza: {primeira_txt}</span>'
         f'<span class="pill">Sobras {st.session_state.sobras_monte}</span>'
@@ -1081,6 +1081,7 @@ def render_topbar():
         f'</div>'
     )
     st.markdown(topbar_html, unsafe_allow_html=True)
+
 
 render_topbar()
 
