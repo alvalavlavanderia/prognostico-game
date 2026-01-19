@@ -311,18 +311,26 @@ html, body, [class*="css"] {{
   content:"";
   position:absolute; inset:0;
   background:
-    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, rgba(255,255,255,0) 1px 3px),
-    repeating-linear-gradient(90deg, rgba(0,0,0,.016) 0 1px, rgba(0,0,0,0) 1px 4px);
-  opacity:.55;
+    radial-gradient(circle at 25% 22%, rgba(255,255,255,.08), transparent 45%),
+    radial-gradient(circle at 78% 72%, rgba(0,0,0,.28), transparent 55%),
+    linear-gradient(180deg, var(--felt1) 0%, rgba(10,78,50,1) 55%, var(--felt2) 100%);
+  border-radius: 50% / 46%;
+  clip-path: ellipse(48% 42% at 50% 50%);
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,.85),
+    0 0 0 6px rgba(212,175,55,.65),
+    0 16px 32px rgba(0,0,0,.25);
+  opacity:1;
   pointer-events:none;
 }}
 .mesa:after{{
   content:"";
   position:absolute;
-  inset: 14px;
-  border-radius: 30px;
-  border: 1px solid rgba(255,255,255,.10);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
+  inset: 18px;
+  border-radius: 50% / 46%;
+  border: 2px solid rgba(212,175,55,.55);
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.45);
+  clip-path: ellipse(47% 41% at 50% 50%);
   pointer-events:none;
 }}
 .mesaCenter{{
