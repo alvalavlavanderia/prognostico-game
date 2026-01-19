@@ -224,6 +224,7 @@ html, body, [class*="css"] {{
 
   box-shadow: var(--shadow2);
   padding: 14px 16px;
+  margin-bottom: 14px;
 
   display:flex;
   align-items:center;
@@ -273,7 +274,7 @@ html, body, [class*="css"] {{
   backdrop-filter: blur(10px);
   box-shadow: var(--shadow2);
   padding: 10px 12px;
-  margin-top: 20px;
+  margin-top: 0;
 }}
 .menuHint {{
   color: var(--textSub);
