@@ -298,6 +298,7 @@ html, body, [class*="css"] {{
 
 .mesaWrap{{ margin-top: 6px; }}
 .mesa{{
+  border-radius: 50% / 46%;
   border: 1px solid transparent;
   background: transparent;
   height: 470px;
