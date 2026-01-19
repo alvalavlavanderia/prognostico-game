@@ -76,7 +76,7 @@ def ss_init():
 ss_init()
 
 # =========================
-# CSS (Premium + Neon toggle + FIX topo + mão fixa + microanim)
+# CSS
 # =========================
 def inject_css(neon: bool):
     if neon:
@@ -97,7 +97,6 @@ def inject_css(neon: bool):
         card_face_bg = "linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(248,248,248,.92) 100%)"
         card_face_border = "1px solid rgba(255,255,255,.22)"
         card_shadow = "0 14px 30px rgba(0,0,0,.38)"
-        seat_text = "rgba(240,255,252,.92)"
     else:
         bg1 = "#0b1220"
         bg2 = "#0a1a14"
@@ -116,7 +115,6 @@ def inject_css(neon: bool):
         card_face_bg = "linear-gradient(180deg, #ffffff 0%, #f8f8f8 100%)"
         card_face_border = "1px solid rgba(0,0,0,.14)"
         card_shadow = "0 10px 22px rgba(0,0,0,.12)"
-        seat_text = "rgba(0,0,0,.85)"
 
     css = f"""
 <style>
@@ -142,7 +140,6 @@ def inject_css(neon: bool):
 
   --seatBg: {seat_bg};
   --seatBorder: {seat_border};
-  --seatText: {seat_text};
 
   --cardFaceBg: {card_face_bg};
   --cardFaceBorder: {card_face_border};
@@ -175,54 +172,78 @@ div[data-testid="stToolbar"] {{ display:none !important; }}
 }}
 
 [data-testid="stVerticalBlock"] {{ gap: .55rem; }}
-html, body, [class*="css"] {{ letter-spacing: .1px; }}
+
+html, body, [class*="css"] {{
+  letter-spacing: .1px;
+}}
 
 .titleRow {{
-  display:flex; align-items:flex-start; justify-content:space-between;
-  gap:12px; margin: 6px 0 6px 0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin: 10px 0 10px 0;
 }}
 .titleRow h1 {{
   margin:0;
-  font-size: 28px;
+  font-size: 30px;
+  font-weight: 950;
+  letter-spacing: .04em;
+  text-transform: uppercase;
   color: var(--textMain);
 }}
 
 .topbar {{
   position: sticky;
-  top: .55rem;
+  top: .65rem;
   z-index: 60;
-  border-radius: 22px;
+
+  border-radius: 26px;
   border: 1px solid var(--stroke);
   background: rgba(255,255,255,.08);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(16px);
+
   box-shadow: var(--shadow2);
-  padding: 12px 14px;
+  padding: 14px 16px;
+
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap: 12px;
 }}
+
 .topbar:before {{
   content:"";
   position:absolute; inset:0;
-  border-radius: 22px;
+  border-radius: 26px;
   background: radial-gradient(circle at 20% 10%, {top_glow}, transparent 40%);
   pointer-events:none;
 }}
-.topLeft{{ display:flex; flex-direction:column; gap:3px; }}
+
+.topLeft{{ display:flex; flex-direction:column; gap:4px; min-width: 210px; }}
 .topTitle{{ font-weight: 950; font-size: 14px; color: var(--textMain); }}
 .topSub{{ font-weight: 800; font-size: 12px; color: var(--textSub); }}
-.topRight{{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }}
+
+.topRight{{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  align-items:center;
+  max-width: 780px;
+}}
 
 .pill {{
-  display:inline-flex; align-items:center; gap:7px;
-  padding:6px 10px;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 10px;
   border-radius:999px;
   border:1px solid var(--pillBorder);
-  background: var(--pillBg);
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
   color: var(--textMain);
   font-weight: 900;
   font-size: 12px;
+  white-space: nowrap;
 }}
 
 .menuCard {{
@@ -254,7 +275,7 @@ html, body, [class*="css"] {{ letter-spacing: .1px; }}
 
 .mesaWrap{{ margin-top: 6px; }}
 .mesa{{
-  border-radius: 34px;
+  border-radius: 38px;
   border: 1px solid var(--mesaBorder);
   background:
     radial-gradient(circle at 22% 18%, rgba(255,255,255,.10), transparent 42%),
@@ -265,6 +286,7 @@ html, body, [class*="css"] {{ letter-spacing: .1px; }}
   overflow: hidden;
   box-shadow: var(--shadow);
 }}
+
 .mesa:before{{
   content:"";
   position:absolute; inset:0;
@@ -278,7 +300,7 @@ html, body, [class*="css"] {{ letter-spacing: .1px; }}
   content:"";
   position:absolute;
   inset: 14px;
-  border-radius: 28px;
+  border-radius: 30px;
   border: 1px solid rgba(255,255,255,.10);
   box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
   pointer-events:none;
@@ -305,7 +327,7 @@ html, body, [class*="css"] {{ letter-spacing: .1px; }}
   display:flex;
   align-items:center;
   gap:8px;
-  color: var(--seatText);
+  color: rgba(240,255,252,.92);
 }}
 .seat.you{{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }}
 .seat.dealer{{ border-color: rgba(34,197,94,.35); }}
@@ -317,6 +339,7 @@ html, body, [class*="css"] {{ letter-spacing: .1px; }}
   box-shadow: 0 6px 12px rgba(0,0,0,.10);
   flex: 0 0 auto;
 }}
+
 @keyframes winnerGlow {{
   0% {{ box-shadow: 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }}
   35% {{ box-shadow: 0 0 0 6px rgba(34,197,94,.22), 0 14px 28px rgba(0,0,0,.14); transform: translate(-50%,-50%) scale(1.03); }}
@@ -498,28 +521,6 @@ html, body, [class*="css"] {{ letter-spacing: .1px; }}
 }}
 .flyAway{{ animation: flyAway .25s ease-in forwards; }}
 
-/* ===== MICROANIMAÇÕES PREMIUM ===== */
-@keyframes mesaPulse {{
-  0%   {{ transform: scale(1); filter: brightness(1); }}
-  35%  {{ transform: scale(1.008); filter: brightness(1.06); }}
-  100% {{ transform: scale(1); filter: brightness(1); }}
-}}
-.mesa.pulse {{
-  animation: mesaPulse .35s ease-out;
-}}
-@keyframes chipPop {{
-  0%   {{ transform: translate(-50%,-50%) scale(1); }}
-  40%  {{ transform: translate(-50%,-50%) scale(1.16); }}
-  100% {{ transform: translate(-50%,-50%) scale(1); }}
-}}
-.chipWrap.winnerChip {{
-  animation: chipPop .38s ease-out;
-}}
-.seat.turnGlow {{
-  outline: 2px solid rgba(56,189,248,.55);
-  box-shadow: 0 0 0 6px rgba(56,189,248,.16), 0 16px 34px rgba(0,0,0,.20);
-}}
-
 @media (max-width: 900px){{
   :root{{ --pad: .62rem; --dock-h: 230px; }}
   .block-container{{ padding-left: .55rem !important; padding-right: .55rem !important; }}
@@ -530,7 +531,7 @@ html, body, [class*="css"] {{ letter-spacing: .1px; }}
   .card{{ width:62px; height:92px; border-radius: 13px; }}
   .card .mid{{ font-size: 26px; }}
   .topbar{{ flex-direction:column; align-items:flex-start; }}
-  .topRight{{ justify-content:flex-start; }}
+  .topRight{{ justify-content:flex-start; max-width: 100%; }}
 }}
 </style>
 """
@@ -597,7 +598,7 @@ def tem_naipe(mao, naipe):
     return any(n == naipe for (n, _) in mao)
 
 # =========================
-# AVATAR CARTOON (SVG inline)
+# AVATAR
 # =========================
 def avatar_svg_data_uri(idx: int) -> str:
     skins = ["#F6D3B3", "#E9BE9D", "#D9A074", "#C6865F"]
@@ -608,6 +609,7 @@ def avatar_svg_data_uri(idx: int) -> str:
     hair = hairs[idx % len(hairs)]
     shirt = shirts[idx % len(shirts)]
     b = bg[idx % len(bg)]
+
     svg = f"""
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <defs>
@@ -627,28 +629,25 @@ def avatar_svg_data_uri(idx: int) -> str:
   <circle cx="42" cy="33" r="2.1" fill="rgba(244,114,182,.35)"/>
 </svg>
 """.strip()
+
     svg_b64 = base64.b64encode(svg.encode("utf-8")).decode("ascii")
     return f"data:image/svg+xml;base64,{svg_b64}"
 
 # =========================
-# IA: PROGNÓSTICO
+# IA
 # =========================
 def ai_prognostico(mao, cartas_por_jogador: int) -> int:
     if not mao:
         return 0
-
     suit_counts = {"♠": 0, "♦": 0, "♣": 0, "♥": 0}
     for n, v in mao:
         suit_counts[n] += 1
-
     trumps = suit_counts["♥"]
     strength = 0.0
     strength += trumps * 0.95
-
     for n, v in mao:
         base = HIGH_POINTS.get(v, 0.0)
         strength += base * (1.35 if n == "♥" else 1.00)
-
     for s in ["♠", "♦", "♣"]:
         c = suit_counts[s]
         if c == 0:
@@ -657,14 +656,11 @@ def ai_prognostico(mao, cartas_por_jogador: int) -> int:
             strength += 0.30 + (0.18 if trumps >= 2 else 0.0)
         elif c == 2:
             strength += 0.12
-
     distinct_nontrump_suits = sum(1 for s in ["♠", "♦", "♣"] if suit_counts[s] > 0)
     if trumps == 0 and distinct_nontrump_suits >= 3:
         strength -= 0.25
-
     expected = strength / 2.4
     expected += random.uniform(-0.25, 0.25)
-
     guess = int(round(expected))
     guess = max(0, min(cartas_por_jogador, guess))
     return guess
@@ -719,9 +715,7 @@ def preparar_prognosticos_anteriores():
     humano = nomes[st.session_state.humano_idx]
     pos_h = ordem.index(humano)
     prev = ordem[:pos_h]
-    st.session_state.progn_pre = {
-        n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo) for n in prev
-    }
+    st.session_state.progn_pre = {n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo) for n in prev}
 
 def preparar_prognosticos_posteriores():
     nomes = st.session_state.nomes
@@ -729,9 +723,7 @@ def preparar_prognosticos_posteriores():
     humano = nomes[st.session_state.humano_idx]
     pos_h = ordem.index(humano)
     post = ordem[pos_h+1:]
-    st.session_state.progn_pos = {
-        n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo) for n in post
-    }
+    st.session_state.progn_pos = {n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo) for n in post}
 
 def iniciar_fase_jogo():
     nomes = st.session_state.nomes
@@ -793,9 +785,7 @@ def schedule_trick_resolution():
     st.session_state.trick_pending = True
     st.session_state.trick_phase = "show"
     st.session_state.trick_snapshot = st.session_state.mesa[:]
-    st.session_state.trick_winner = vencedor_da_vaza(
-        st.session_state.trick_snapshot, st.session_state.naipe_base
-    )
+    st.session_state.trick_winner = vencedor_da_vaza(st.session_state.trick_snapshot, st.session_state.naipe_base)
     show_seconds = 1.10
     fly_seconds = 0.55
     st.session_state.trick_resolve_at = now + show_seconds
@@ -844,7 +834,11 @@ def rodada_terminou():
     return all(len(st.session_state.maos[n]) == 0 for n in st.session_state.nomes)
 
 def fim_de_rodada_pronto():
-    return rodada_terminou() and (not st.session_state.trick_pending) and (len(st.session_state.mesa) == 0)
+    return (
+        rodada_terminou()
+        and (not st.session_state.trick_pending)
+        and (len(st.session_state.mesa) == 0)
+    )
 
 def pontuar_rodada():
     if st.session_state.pontuou_rodada:
@@ -919,7 +913,7 @@ def start_next_round():
     preparar_prognosticos_anteriores()
 
 # =========================
-# UI helpers: chips + pile
+# UI helpers
 # =========================
 def chip_color_for_index(idx: int) -> str:
     palette = [
@@ -950,15 +944,13 @@ def render_small_pile_html(won: int) -> str:
         dx = i * 1.1
         dy = -i * 1.2
         rot = (i % 3 - 1) * 2
-        parts.append(
-            f'<div class="cardBackLayer" style="left:{dx}px; top:{dy}px; transform: rotate({rot}deg);"></div>'
-        )
+        parts.append(f'<div class="cardBackLayer" style="left:{dx}px; top:{dy}px; transform: rotate({rot}deg);"></div>')
     label = f"{won}" if won > 10 else ""
     label_html = f'<div class="pileLabel">{label}</div>' if label else ''
     return f'<div class="pileStack">{"".join(parts)}</div>{label_html}'
 
 # =========================
-# SIDEBAR (SEM rerun infinito!)
+# SIDEBAR
 # =========================
 with st.sidebar:
     st.markdown("## 📊 Placar")
@@ -980,30 +972,22 @@ with st.sidebar:
         )
 
         st.markdown("---")
-
-        neon_new = st.toggle("✨ Modo Neon", value=st.session_state.neon_mode, key="sb_neon")
-        if neon_new != st.session_state.neon_mode:
-            st.session_state.neon_mode = neon_new
-            st.rerun()
-
-        if st.button("🔄 Reiniciar", use_container_width=True, key="sb_reset_btn"):
+        st.session_state.neon_mode = st.toggle("✨ Modo Neon", value=st.session_state.neon_mode)
+        if st.button("🔄 Reiniciar", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             ss_init()
             st.rerun()
-
     else:
         st.info("Inicie uma partida.")
 
 # =========================
-# HEADER (limpo)
+# HEADER (sempre)
 # =========================
 st.markdown(
     """
 <div class="titleRow">
-  <div>
-    <h1>🃏 Jogo de Prognóstico</h1>
-  </div>
+  <h1>JOGO DE PROGNÓSTICO</h1>
 </div>
 """,
     unsafe_allow_html=True
@@ -1014,14 +998,11 @@ st.markdown(
 # =========================
 if not st.session_state.started:
     st.markdown("### Configuração")
-    nomes_txt = st.text_input(
-        "Jogadores (separados por vírgula). O último será Você",
-        value=", ".join(st.session_state.nomes),
-        key="setup_names"
-    )
+    nomes_txt = st.text_input("Jogadores (separados por vírgula). O último será Você",
+                             value=", ".join(st.session_state.nomes))
     colA, colB = st.columns([1, 2])
     with colA:
-        start = st.button("▶️ Iniciar jogo", use_container_width=True, key="btn_start_game")
+        start = st.button("▶️ Iniciar partida", use_container_width=True)
     with colB:
         st.info("As cartas serão distribuídas igualmente até acabar o baralho (sobras no monte). A cada rodada diminui 1 carta por jogador.")
 
@@ -1048,7 +1029,7 @@ if not st.session_state.started:
     st.stop()
 
 # =========================
-# TOPBAR (com regras embutidas)
+# TOPBAR (com regras dentro)
 # =========================
 def render_topbar():
     if not st.session_state.ordem:
@@ -1066,15 +1047,15 @@ def render_topbar():
         f"""
 <div class="topbar">
   <div class="topLeft">
-    <div class="topTitle">🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>
+    <div class="topTitle">Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>
     <div class="topSub">Vez: <b>{vez}</b></div>
   </div>
 
   <div class="topRight">
-    <span class="pill">Naipe {naipe_txt}</span>
-    <span class="pill">♥ quebrada: {quebrada}</span>
+    <span class="pill">Naipe: {naipe_txt}</span>
+    <span class="pill">♥ quebrada: {quebada}</span>
     <span class="pill">1ª vaza: {primeira}</span>
-    <span class="pill">Sobras {st.session_state.sobras_monte}</span>
+    <span class="pill">Sobras: {st.session_state.sobras_monte}</span>
 
     <span class="pill">Trunfo: ♥</span>
     <span class="pill">1ª vaza: ♥ proibida</span>
@@ -1088,7 +1069,7 @@ def render_topbar():
 render_topbar()
 
 # =========================
-# MENU RECOLHÍVEL (ícones)
+# MENU RECOLHÍVEL
 # =========================
 with st.expander("☰ Menu", expanded=False):
     st.markdown('<div class="menuCard">', unsafe_allow_html=True)
@@ -1129,16 +1110,10 @@ if st.session_state.fase == "prognostico":
 
     mao_humano = st.session_state.maos.get(humano_nome, [])
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="handTitle"><h3>🃏 Suas cartas (prognóstico)</h3><div class="hint">Ordenadas por naipe e valor</div></div>',
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        '<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
-        "".join(carta_html(c) for c in sorted(mao_humano, key=peso_carta)) +
-        "</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown('<div class="handTitle"><h3>🃏 Suas cartas (prognóstico)</h3><div class="hint">Ordenadas por naipe e valor</div></div>', unsafe_allow_html=True)
+    st.markdown('<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
+                "".join(carta_html(c) for c in sorted(mao_humano, key=peso_carta)) +
+                "</div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("#### ✅ Prognósticos visíveis (anteriores na mesa)")
@@ -1152,9 +1127,9 @@ if st.session_state.fase == "prognostico":
         rows = [(n, vis[n]) for n in ordem_preview if n in vis]
         st.table({"Jogador": [r[0] for r in rows], "Prognóstico": [r[1] for r in rows]})
 
-    palpite = st.number_input("Seu prognóstico", min_value=0, max_value=len(mao_humano), value=0, step=1, key="inp_palpite")
+    palpite = st.number_input("Seu prognóstico", min_value=0, max_value=len(mao_humano), value=0, step=1)
 
-    if st.button("Confirmar meu prognóstico", use_container_width=True, key="btn_confirm_prog"):
+    if st.button("Confirmar meu prognóstico", use_container_width=True):
         st.session_state.prognosticos = {}
         st.session_state.prognosticos.update(st.session_state.progn_pre)
         st.session_state.prognosticos[humano_nome] = int(palpite)
@@ -1169,7 +1144,7 @@ if st.session_state.fase == "prognostico":
     st.stop()
 
 # =========================
-# MESA + animação do montinho + microanim
+# MESA
 # =========================
 def seat_positions(ordem):
     n = len(ordem)
@@ -1177,11 +1152,11 @@ def seat_positions(ordem):
     rx, ry = 42, 36
     pos = {}
     for i, nome in enumerate(ordem):
-        ang = (2*math.pi) * (i/n) - (math.pi/2)
-        x = cx + rx*math.cos(ang)
-        y = cy + ry*math.sin(ang)
-        tx = cx + (rx*0.70)*math.cos(ang)
-        ty = cy + (ry*0.70)*math.sin(ang)
+        ang = (2 * math.pi) * (i / n) - (math.pi / 2)
+        x = cx + rx * math.cos(ang)
+        y = cy + ry * math.sin(ang)
+        tx = cx + (rx * 0.70) * math.cos(ang)
+        ty = cy + (ry * 0.70) * math.sin(ang)
         pos[nome] = {"seat": (x, y), "target": (tx, ty)}
     return pos
 
@@ -1205,18 +1180,12 @@ def render_mesa():
     plays_html = ""
     anim_css = ""
 
-    current_turn = st.session_state.ordem[st.session_state.turn_idx] if st.session_state.ordem else None
-
     for i, nome in enumerate(ordem):
         x, y = pos[nome]["seat"]
         tx, ty = pos[nome]["target"]
 
         cls = "seat"
         label = nome
-
-        if nome == current_turn and not st.session_state.trick_pending:
-            cls += " turnGlow"
-
         if nome == humano:
             cls += " you"
             label = f"{nome} (Você)"
@@ -1238,12 +1207,8 @@ def render_mesa():
         won = st.session_state.pile_counts.get(nome, 0)
         color = chip_color_for_index(i)
 
-        chip_cls = "chipWrap"
-        if flash_name and nome == flash_name:
-            chip_cls += " winnerChip"
-
         chips_html += f"""
-<div class="{chip_cls}" style="left:{tx}%; top:{ty}%;">
+<div class="chipWrap" style="left:{tx}%; top:{ty}%;">
   {render_progn_chips_html(prog, color)}
 </div>
 """
@@ -1265,11 +1230,11 @@ def render_mesa():
 
     for idx, (nome, carta) in enumerate(mesa_to_render):
         i = ordem.index(nome)
-        ang = (2*math.pi) * (i/n) - (math.pi/2)
+        ang = (2 * math.pi) * (i / n) - (math.pi / 2)
         cx, cy = 50, 50
         rx, ry = 42, 36
-        x = cx + (rx*0.47)*math.cos(ang)
-        y = cy + (ry*0.47)*math.sin(ang)
+        x = cx + (rx * 0.47) * math.cos(ang)
+        y = cy + (ry * 0.47) * math.sin(ang)
 
         is_last = (idx == len(mesa_to_render) - 1)
         cls = "playCard"
@@ -1303,14 +1268,10 @@ def render_mesa():
     if anim_css.strip():
         st.markdown(f"<style>{anim_css}</style>", unsafe_allow_html=True)
 
-    mesa_cls = "mesa"
-    if flash_name:
-        mesa_cls += " pulse"
-
     st.markdown('<div class="mesaWrap">', unsafe_allow_html=True)
     st.markdown(
         f"""
-<div class="{mesa_cls}">
+<div class="mesa">
   {seats_html}
   {chips_html}
   {piles_html}
@@ -1347,7 +1308,6 @@ def render_hand_clickable_streamlit():
     pending = st.session_state.pending_play
 
     cols = st.columns(10)
-
     for i, c in enumerate(mao_ord):
         disabled = (
             (c not in validas) or
@@ -1355,21 +1315,13 @@ def render_hand_clickable_streamlit():
             (pending is not None) or
             st.session_state.trick_pending
         )
-
         with cols[i % 10]:
-            if st.button(
-                " ",
-                key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
-                disabled=disabled,
-                use_container_width=True
-            ):
+            if st.button(" ", key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
+                         disabled=disabled, use_container_width=True):
                 clicked = c
 
             extra = "flyAway" if (pending is not None and c == pending) else ""
-            st.markdown(
-                f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
-                unsafe_allow_html=True
-            )
+            st.markdown(f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
     return clicked
@@ -1379,7 +1331,6 @@ def render_hand_clickable_streamlit():
 # =========================
 def render_tela_final():
     st.markdown("## 🏁 Placar final")
-
     ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
 
     linhas = []
@@ -1399,6 +1350,7 @@ def render_tela_final():
             del st.session_state[key]
         ss_init()
         st.rerun()
+
 
 # =========================
 # JOGO
