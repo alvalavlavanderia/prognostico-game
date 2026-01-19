@@ -1013,7 +1013,7 @@ with st.sidebar:
 st.markdown(
     """
 <div class="titleRow">
-  <h1>JOGO DE PROGNÓSTICO</h1>
+  <h1 style="color:#D4AF37;">JOGO DE PROGNÓSTICO</h1>
 </div>
 """,
     unsafe_allow_html=True
