@@ -79,7 +79,6 @@ ss_init()
 # CSS (Premium + Neon toggle + FIX topo + mão fixa + sem placar na mesa)
 # =========================
 def inject_css(neon: bool):
-    # Variáveis de tema
     if neon:
         bg1 = "#06040d"
         bg2 = "#02030a"
@@ -95,7 +94,7 @@ def inject_css(neon: bool):
         text_sub = "rgba(240,255,252,.70)"
         seat_bg = "rgba(10,14,20,.70)"
         seat_border = "rgba(0,255,210,.16)"
-        # carta no dock: precisa SER VISÍVEL no neon
+        # carta do dock precisa ser clara no neon
         card_face_bg = "linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(248,248,248,.92) 100%)"
         card_face_border = "1px solid rgba(255,255,255,.22)"
         card_shadow = "0 14px 30px rgba(0,0,0,.38)"
@@ -122,7 +121,7 @@ def inject_css(neon: bool):
 <style>
 :root {{
   --app-max: 1200px;
-  --pad: .92rem;
+  --pad: .98rem;
   --dock-h: 210px;
 
   --bg1: {bg1};
@@ -154,12 +153,12 @@ def inject_css(neon: bool):
   --hand-card-h: 118px;
 }}
 
- /* ===== FIX: esconder faixa padrão e dar espaço pro topo ===== */
 header[data-testid="stHeader"] {{
   background: transparent !important;
   height: 0px !important;
 }}
 div[data-testid="stToolbar"] {{ display:none !important; }}
+
 [data-testid="stAppViewContainer"] {{
   background:
     radial-gradient(1200px 700px at 15% 10%, rgba(56,189,248,.10), transparent 55%),
@@ -168,7 +167,7 @@ div[data-testid="stToolbar"] {{ display:none !important; }}
 }}
 
 .block-container {{
-  padding-top: calc(var(--pad) + 18px) !important;  /* empurra o título pra baixo */
+  padding-top: calc(var(--pad) + 22px) !important;  /* empurra o topo */
   padding-bottom: var(--pad) !important;
   max-width: var(--app-max);
 }}
@@ -179,10 +178,9 @@ html, body, [class*="css"] {{
   letter-spacing: .1px;
 }}
 
- /* ===== HEADER TÍTULO ===== */
 .titleRow {{
   display:flex; align-items:flex-start; justify-content:space-between;
-  gap:12px; margin: 6px 0 6px 0;
+  gap:12px; margin: 8px 0 6px 0;
 }}
 .titleRow h1 {{
   margin:0;
@@ -207,7 +205,6 @@ html, body, [class*="css"] {{
   font-size:12px; font-weight:800;
 }}
 
- /* ===== TOPBAR ===== */
 .topbar {{
   position: sticky;
   top: .55rem;
@@ -246,7 +243,6 @@ html, body, [class*="css"] {{
   font-size: 12px;
 }}
 
- /* ===== MENU RECOLHÍVEL ===== */
 .menuCard {{
   border-radius: 18px;
   border: 1px solid var(--stroke);
@@ -261,7 +257,6 @@ html, body, [class*="css"] {{
   font-size: 12px;
 }}
 
- /* ===== SIDEBAR PLACAR ===== */
 .scoreItem{{
   display:flex; justify-content:space-between;
   padding:8px 10px;
@@ -275,10 +270,9 @@ html, body, [class*="css"] {{
 .scorePts{{ font-weight:900; }}
 .smallMuted{{ opacity:.70; font-size:12px; color: var(--textSub); }}
 
- /* ===== MESA ===== */
 .mesaWrap{{ margin-top: 6px; }}
 .mesa{{
-  border-radius: 34px;              /* mais oval */
+  border-radius: 36px;
   border: 1px solid var(--mesaBorder);
   background:
     radial-gradient(circle at 22% 18%, rgba(255,255,255,.10), transparent 42%),
@@ -302,7 +296,7 @@ html, body, [class*="css"] {{
   content:"";
   position:absolute;
   inset: 14px;
-  border-radius: 28px;
+  border-radius: 30px;
   border: 1px solid rgba(255,255,255,.10);
   box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
   pointer-events:none;
@@ -317,7 +311,6 @@ html, body, [class*="css"] {{
   color: rgba(255,255,255,.90);
 }}
 
- /* ===== ASSENTOS ===== */
 .seat{{
   position:absolute;
   padding:6px 10px;
@@ -330,12 +323,8 @@ html, body, [class*="css"] {{
   display:flex;
   align-items:center;
   gap:8px;
-  color: rgba(0,0,0,.85);
+  color: {"rgba(240,255,252,.92)" if neon else "rgba(0,0,0,.85)"};
 }}
-/* no neon, seat_bg é escuro -> texto claro */
-{"".join([
-".seat{ color: rgba(240,255,252,.92) !important; }" if neon else ""
-])}
 .seat.you{{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }}
 .seat.dealer{{ border-color: rgba(34,197,94,.35); }}
 .avatarImg{{
@@ -346,6 +335,7 @@ html, body, [class*="css"] {{
   box-shadow: 0 6px 12px rgba(0,0,0,.10);
   flex: 0 0 auto;
 }}
+
 @keyframes winnerGlow {{
   0% {{ box-shadow: 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }}
   35% {{ box-shadow: 0 0 0 6px rgba(34,197,94,.22), 0 14px 28px rgba(0,0,0,.14); transform: translate(-50%,-50%) scale(1.03); }}
@@ -357,7 +347,6 @@ html, body, [class*="css"] {{
   background: rgba(255,255,255,.97);
 }}
 
- /* ===== CARTA (mesa) ===== */
 .playCard{{ position:absolute; transform: translate(-50%,-50%); pointer-events:none; z-index: 18; }}
 @keyframes popIn {{
   0% {{ transform: translate(-50%,-50%) scale(.92); opacity: 0; }}
@@ -379,7 +368,6 @@ html, body, [class*="css"] {{
 .card .br{{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }}
 .card .mid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }}
 
- /* ===== CHIPS / PILHA ===== */
 .chipWrap{{ position:absolute; transform: translate(-50%,-50%); z-index: 16; }}
 .chipRow{{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width: 140px; }}
 .chipMini{{
@@ -462,7 +450,6 @@ html, body, [class*="css"] {{
   text-shadow: 0 2px 6px rgba(0,0,0,.25);
 }}
 
- /* ===== DOCK DA MÃO ===== */
 .handDock{{
   margin-top: 10px;
   border-radius: 18px;
@@ -476,7 +463,7 @@ html, body, [class*="css"] {{
 .handTitle h3{{ margin:0; font-size:16px; color: var(--textMain); }}
 .hint{{ font-size:12px; opacity:.72; font-weight:800; color: var(--textSub); }}
 
- /* botão invisível (captura clique) */
+/* botão invisível (captura clique) somente na mão */
 .handDock div[data-testid="column"] .stButton > button{{
   width: var(--hand-card-w) !important;
   min-width: var(--hand-card-w) !important;
@@ -501,8 +488,6 @@ html, body, [class*="css"] {{
   transform:none !important;
   filter:none !important;
 }}
-
- /* overlay da carta (desenha em cima do botão) */
 .handDock .cardOverlay{{
   width: var(--hand-card-w) !important;
   height: var(--hand-card-h) !important;
@@ -511,7 +496,7 @@ html, body, [class*="css"] {{
   pointer-events: none !important;
 }}
 
- /* carta visível SEMPRE (principal fix do neon) */
+/* carta do dock sempre visível (neon fix) */
 .cardBtnInner{{
   width: var(--hand-card-w) !important;
   height: var(--hand-card-h) !important;
@@ -522,7 +507,6 @@ html, body, [class*="css"] {{
   box-shadow: var(--cardShadow);
   position: relative;
 }}
-
 .cardBtnTL{{ position:absolute; top:10px; left:10px; font-weight:900; font-size:14px; line-height:14px; }}
 .cardBtnBR{{ position:absolute; bottom:10px; right:10px; font-weight:900; font-size:14px; line-height:14px; transform: rotate(180deg); }}
 .cardBtnMid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:900; opacity:.92; }}
@@ -813,7 +797,6 @@ def schedule_trick_resolution():
 def resolve_trick_if_due():
     if not st.session_state.trick_pending:
         return False
-
     now = time.time()
 
     if st.session_state.trick_phase == "show":
@@ -853,11 +836,7 @@ def rodada_terminou():
     return all(len(st.session_state.maos[n]) == 0 for n in st.session_state.nomes)
 
 def fim_de_rodada_pronto():
-    return (
-        rodada_terminou()
-        and (not st.session_state.trick_pending)
-        and (len(st.session_state.mesa) == 0)
-    )
+    return rodada_terminou() and (not st.session_state.trick_pending) and (len(st.session_state.mesa) == 0)
 
 def pontuar_rodada():
     if st.session_state.pontuou_rodada:
@@ -969,7 +948,7 @@ def render_small_pile_html(won: int) -> str:
     return f'<div class="pileStack">{"".join(parts)}</div>{label_html}'
 
 # =========================
-# SIDEBAR
+# SIDEBAR (NUNCA rerun() automático aqui)
 # =========================
 with st.sidebar:
     st.markdown("## 📊 Placar")
@@ -984,13 +963,18 @@ with st.sidebar:
                 f'<div class="scoreItem"><div class="scoreName">{nome}</div><div class="scorePts">{pts}</div></div>',
                 unsafe_allow_html=True
             )
+
         st.markdown(
             f'<div class="smallMuted">Rodada: {st.session_state.rodada} • Cartas/jogador: {st.session_state.cartas_alvo} • Sobras: {st.session_state.sobras_monte}</div>',
             unsafe_allow_html=True
         )
 
         st.markdown("---")
-        st.session_state.neon_mode = st.toggle("✨ Modo Neon", value=st.session_state.neon_mode)
+        neon_val = st.toggle("✨ Modo Neon", value=st.session_state.neon_mode)
+        if neon_val != st.session_state.neon_mode:
+            st.session_state.neon_mode = neon_val
+            st.rerun()
+
         colS1, colS2 = st.columns([1, 1])
         with colS1:
             if st.button("🎨", use_container_width=True, key="sb_apply_theme", help="Aplicar/atualizar tema"):
@@ -1002,8 +986,6 @@ with st.sidebar:
                 ss_init()
                 st.rerun()
 
-            ss_init()
-            st.rerun()
     else:
         st.info("Inicie uma partida.")
 
@@ -1032,10 +1014,14 @@ st.markdown(
 # =========================
 if not st.session_state.started:
     st.markdown("### Configuração")
-    nomes_txt = st.text_input("Jogadores (separados por vírgula). O último será Você", value=", ".join(st.session_state.nomes))
+    nomes_txt = st.text_input(
+        "Jogadores (separados por vírgula). O último será Você",
+        value=", ".join(st.session_state.nomes),
+        key="inp_nomes"
+    )
     colA, colB = st.columns([1, 2])
     with colA:
-        start = st.button("▶️ Iniciar jogo", use_container_width=True)
+        start = st.button("▶️ Iniciar jogo", use_container_width=True, key="btn_start_game")
     with colB:
         st.info("As cartas serão distribuídas igualmente até acabar o baralho (sobras no monte). A cada rodada diminui 1 carta por jogador.")
 
@@ -1097,7 +1083,7 @@ def render_topbar():
 render_topbar()
 
 # =========================
-# MENU RECOLHÍVEL (no topo da mesa) + botão próxima rodada aqui também
+# MENU RECOLHÍVEL
 # =========================
 with st.expander("☰ Menu", expanded=False):
     st.markdown('<div class="menuCard">', unsafe_allow_html=True)
@@ -1111,19 +1097,18 @@ with st.expander("☰ Menu", expanded=False):
                 del st.session_state[key]
             ss_init()
             st.rerun()
-    
+
     with c2:
         can_next = (st.session_state.fase == "jogo" and fim_de_rodada_pronto() and st.session_state.cartas_alvo > 1)
         if st.button("⏭️", use_container_width=True, key="menu_next_round_icon", help="Próxima rodada", disabled=not can_next):
             start_next_round()
             st.rerun()
-    
+
     with c3:
         neon_new = st.toggle("💚", value=st.session_state.neon_mode, key="menu_neon_icon", help="Modo Neon")
         if neon_new != st.session_state.neon_mode:
             st.session_state.neon_mode = neon_new
             st.rerun()
-
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1255,7 +1240,6 @@ def render_mesa():
         wx, wy = pos[winner]["target"]
         winner_target = (wx, wy + 12)
 
-    # ✅ IMPORTANTÍSSIMO: ESCAPAR CHAVES nas keyframes ({{ }})
     for idx, (nome, carta) in enumerate(mesa_to_render):
         i = ordem.index(nome)
         ang = (2*math.pi) * (i/n) - (math.pi/2)
@@ -1335,7 +1319,7 @@ def render_hand_clickable_streamlit():
     clicked = None
     pending = st.session_state.pending_play
 
-    cols = st.columns(10)  # grade fixa
+    cols = st.columns(10)
 
     for i, c in enumerate(mao_ord):
         disabled = (
@@ -1375,11 +1359,7 @@ def render_tela_final():
     medals = ["🥇", "🥈", "🥉"]
     for i, (nome, pts) in enumerate(ranking, start=1):
         medalha = medals[i-1] if i <= 3 else ""
-        linhas.append({
-            "Posição": f"{medalha} {i}º".strip(),
-            "Jogador": nome,
-            "Pontos": pts
-        })
+        linhas.append({"Posição": f"{medalha} {i}º".strip(), "Jogador": nome, "Pontos": pts})
 
     df = pd.DataFrame(linhas)
     st.dataframe(df, use_container_width=True, hide_index=True)
@@ -1392,7 +1372,6 @@ def render_tela_final():
             del st.session_state[key]
         ss_init()
         st.rerun()
-
 
 # =========================
 # JOGO
