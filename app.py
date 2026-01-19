@@ -184,7 +184,7 @@ html, body, [class*="css"] {{
   justify-content:center;
   margin: 10px 0 10px 0;
 }}
-titleRow h1 {{
+. titleRow h1 {{
   margin:0;
   font-size: 30px;
   font-weight: 950;
@@ -231,7 +231,7 @@ titleRow h1 {{
   gap: 12px;
 }}
 
-topbar:before {{
+.topbar:before {{
   content:"";
   position:absolute; inset:0;
   border-radius: 26px;
@@ -239,11 +239,11 @@ topbar:before {{
   pointer-events:none;
 }}
 
-topLeft{{ display:flex; flex-direction:column; gap:4px; min-width: 210px; }}
-topTitle{{ font-weight: 950; font-size: 14px; color: var(--textMain); }}
-topSub{{ font-weight: 800; font-size: 12px; color: var(--textSub); }}
+.topLeft{{ display:flex; flex-direction:column; gap:4px; min-width: 210px; }}
+.topTitle{{ font-weight: 950; font-size: 14px; color: var(--textMain); }}
+.topSub{{ font-weight: 800; font-size: 12px; color: var(--textSub); }}
 
-topRight{{
+.topRight{{
   display:flex;
   gap:8px;
   flex-wrap:wrap;
@@ -252,7 +252,7 @@ topRight{{
   max-width: 780px;
 }}
 
-pill {{
+.pill {{
   display:inline-flex;
   align-items:center;
   gap:7px;
@@ -266,7 +266,7 @@ pill {{
   white-space: nowrap;
 }}
 
-menuCard {{
+.menuCard {{
   border-radius: 18px;
   border: 1px solid var(--stroke);
   background: rgba(255,255,255,.07);
@@ -274,13 +274,13 @@ menuCard {{
   box-shadow: var(--shadow2);
   padding: 10px 12px;
 }}
-menuHint {{
+.menuHint {{
   color: var(--textSub);
   font-weight: 800;
   font-size: 12px;
 }}
 
-scoreItem{{
+.scoreItem{{
   display:flex; justify-content:space-between;
   padding:8px 10px;
   border-radius:12px;
@@ -289,12 +289,12 @@ scoreItem{{
   margin-bottom:8px;
   color: var(--textMain);
 }}
-scoreName{{ font-weight:900; }}
-scorePts{{ font-weight:900; }}
-smallMuted{{ opacity:.70; font-size:12px; color: var(--textSub); }}
+.scoreName{{ font-weight:900; }}
+.scorePts{{ font-weight:900; }}
+.smallMuted{{ opacity:.70; font-size:12px; color: var(--textSub); }}
 
-mesaWrap{{ margin-top: 6px; }}
-mesa{{
+.mesaWrap{{ margin-top: 6px; }}
+.mesa{{
   border-radius: 38px;
   border: 1px solid var(--mesaBorder);
   background:
@@ -307,7 +307,7 @@ mesa{{
   box-shadow: var(--shadow);
 }}
 
-mesa:before{{
+.mesa:before{{
   content:"";
   position:absolute; inset:0;
   background:
@@ -316,7 +316,7 @@ mesa:before{{
   opacity:.55;
   pointer-events:none;
 }}
-mesa:after{{
+.mesa:after{{
   content:"";
   position:absolute;
   inset: 14px;
@@ -325,7 +325,7 @@ mesa:after{{
   box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
   pointer-events:none;
 }}
-mesaCenter{{
+.mesaCenter{{
   position:absolute; inset:0;
   display:flex; align-items:center; justify-content:center;
   font-weight:900; opacity:.55;
@@ -335,7 +335,7 @@ mesaCenter{{
   color: rgba(255,255,255,.90);
 }}
 
-seat{{
+.seat{{
   position:absolute;
   padding:6px 10px;
   border-radius:999px;
@@ -349,9 +349,9 @@ seat{{
   gap:8px;
   color: rgba(240,255,252,.92);
 }}
-seat.you{{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }}
-seat.dealer{{ border-color: rgba(34,197,94,.35); }}
-avatarImg{{
+.seat.you{{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }}
+.seat.dealer{{ border-color: rgba(34,197,94,.35); }}
+.avatarImg{{{
   width:26px; height:26px;
   border-radius:50%;
   border: 1px solid rgba(0,0,0,.12);
@@ -365,20 +365,20 @@ avatarImg{{
   35% {{ box-shadow: 0 0 0 6px rgba(34,197,94,.22), 0 14px 28px rgba(0,0,0,.14); transform: translate(-50%,-50%) scale(1.03); }}
   100% {{ box-shadow: 0 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }}
 }}
-seat.winnerFlash{{
+.seat.winnerFlash{{
   animation: winnerGlow 1.2s ease-out;
   outline: 2px solid rgba(34,197,94,.55);
   background: rgba(255,255,255,.97);
 }}
 
-playCard{{ position:absolute; transform: translate(-50%,-50%); pointer-events:none; z-index: 18; }}
+.playCard{{ position:absolute; transform: translate(-50%,-50%); pointer-events:none; z-index: 18; }}
 @keyframes popIn {{
   0% {{ transform: translate(-50%,-50%) scale(.92); opacity: 0; }}
   100% {{ transform: translate(-50%,-50%) scale(1); opacity: 1; }}
 }}
-playCard.pop{{ animation: popIn .16s ease-out; }}
+.playCard.pop{{ animation: popIn .16s ease-out; }}
 
-card{{
+.card{{
   width:70px;
   height:102px;
   border-radius:14px;
@@ -388,9 +388,9 @@ card{{
   position:relative;
   user-select:none;
 }}
-card .tl{{ position:absolute; top:7px; left:7px; font-weight:900; font-size:13px; line-height:13px; }}
-card .br{{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }}
-card .mid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }}
+.card .tl{{ position:absolute; top:7px; left:7px; font-weight:900; font-size:13px; line-height:13px; }}
+.card .br{{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }}
+.card .mid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }}
 
 chipWrap{{ position:absolute; transform: translate(-50%,-50%); z-index: 16; }}
 chipRow{{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width: 140px; }}
@@ -427,7 +427,7 @@ chipMini{{
     );
   background-color: var(--chip-base, rgba(16,185,129,.88));
 }}
-chipMini:after{{
+.chipMini:after{{
   content:"";
   position:absolute;
   inset:5px;
@@ -447,9 +447,9 @@ chipNote{{
   display:inline-block;
 }}
 
-pileWrap{{ position:absolute; transform: translate(-50%,-50%); z-index: 15; }}
-pileStack{{ position:relative; width:26px; height:40px; }}
-cardBackLayer{{
+.pileWrap{{ position:absolute; transform: translate(-50%,-50%); z-index: 15; }}
+.pileStack{{ position:relative; width:26px; height:40px; }}
+.cardBackLayer{{
   position:absolute;
   width:26px; height:40px;
   border-radius:8px;
@@ -458,13 +458,13 @@ cardBackLayer{{
   box-shadow: 0 6px 10px rgba(0,0,0,.12);
   overflow:hidden;
 }}
-cardBackLayer:before{{
+.cardBackLayer:before{{
   content:"";
   position:absolute; inset:-28%;
   background: repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 8px, rgba(255,255,255,0) 8px 16px);
   transform: rotate(14deg);
 }}
-pileLabel{{
+.pileLabel{{
   margin-top:4px;
   text-align:center;
   font-weight:900;
@@ -474,7 +474,7 @@ pileLabel{{
   text-shadow: 0 2px 6px rgba(0,0,0,.25);
 }}
 
-handDock{{
+.handDock{{
   margin-top: 10px;
   border-radius: 18px;
   border:1px solid rgba(255,255,255,.14);
@@ -483,11 +483,11 @@ handDock{{
   box-shadow: var(--shadow2);
   padding: 12px;
 }}
-handTitle{{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 6px; }}
-handTitle h3{{ margin:0; font-size:16px; color: var(--textMain); }}
-hint{{ font-size:12px; opacity:.72; font-weight:800; color: var(--textSub); }}
+.handTitle{{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 6px; }}
+.handTitle h3{{ margin:0; font-size:16px; color: var(--textMain); }}
+.hint{{ font-size:12px; opacity:.72; font-weight:800; color: var(--textSub); }}
 
-handDock div[data-testid="column"] .stButton > button{{
+.handDock div[data-testid="column"] .stButton > button{{
   width: var(--hand-card-w) !important;
   min-width: var(--hand-card-w) !important;
   max-width: var(--hand-card-w) !important;
@@ -502,17 +502,17 @@ handDock div[data-testid="column"] .stButton > button{{
   padding: 0 !important;
   transition: transform .10s ease, filter .10s ease;
 }}
-handDock div[data-testid="column"] .stButton > button:hover{{
+.handDock div[data-testid="column"] .stButton > button:hover{{
   transform: translateY(-4px);
   filter: drop-shadow(0 14px 22px rgba(0,0,0,.20));
 }}
-handDock div[data-testid="column"] .stButton > button:disabled{{
+.handDock div[data-testid="column"] .stButton > button:disabled{{
   opacity: .28 !important;
   transform:none !important;
   filter:none !important;
 }}
 
-handDock .cardOverlay{{
+.handDock .cardOverlay{{
   width: var(--hand-card-w) !important;
   height: var(--hand-card-h) !important;
   margin: 0 auto !important;
@@ -520,7 +520,7 @@ handDock .cardOverlay{{
   pointer-events: none !important;
 }}
 
-cardBtnInner{{
+.cardBtnInner{{
   width: var(--hand-card-w) !important;
   height: var(--hand-card-h) !important;
   border-radius: 14px;
@@ -530,16 +530,16 @@ cardBtnInner{{
   box-shadow: var(--cardShadow);
   position: relative;
 }}
-cardBtnTL{{ position:absolute; top:10px; left:10px; font-weight:900; font-size:14px; line-height:14px; }}
-cardBtnBR{{ position:absolute; bottom:10px; right:10px; font-weight:900; font-size:14px; line-height:14px; transform: rotate(180deg); }}
-cardBtnMid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:900; opacity:.92; }}
+.cardBtnTL{{ position:absolute; top:10px; left:10px; font-weight:900; font-size:14px; line-height:14px; }}
+.cardBtnBR{{ position:absolute; bottom:10px; right:10px; font-weight:900; font-size:14px; line-height:14px; transform: rotate(180deg); }}
+.cardBtnMid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:900; opacity:.92; }}
 
 @keyframes flyAway {{
   0%   {{ transform: translateY(0px) scale(1); opacity: 1; }}
   55%  {{ transform: translateY(-26px) scale(1.03); opacity: .85; }}
   100% {{ transform: translateY(-70px) scale(.96); opacity: 0; }}
 }}
-flyAway{{ animation: flyAway .25s ease-in forwards; }}
+.flyAway{{ animation: flyAway .25s ease-in forwards; }}
 
 @media (max-width: 900px){{
   :root{{ --pad: .62rem; --dock-h: 230px; }}
