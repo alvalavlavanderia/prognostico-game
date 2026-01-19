@@ -351,7 +351,7 @@ html, body, [class*="css"] {{
 }}
 .seat.you{{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }}
 .seat.dealer{{ border-color: rgba(34,197,94,.35); }}
-.avatarImg{{{
+.avatarImg{{
   width:26px; height:26px;
   border-radius:50%;
   border: 1px solid rgba(0,0,0,.12);
