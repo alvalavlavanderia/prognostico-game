@@ -1090,34 +1090,33 @@ def render_topbar():
 render_topbar()
 
 # =========================
-# MENU RECOLHÍVEL
+# AÇÕES RÁPIDAS (SEMPRE VISÍVEIS)
 # =========================
-with st.expander("☰ Menu", expanded=False):
-    st.markdown('<div class="menuCard">', unsafe_allow_html=True)
-    st.markdown('<div class="menuHint">Ações rápidas</div>', unsafe_allow_html=True)
+st.markdown('<div class="menuCard">', unsafe_allow_html=True)
+st.markdown('<div class="menuHint">Ações rápidas</div>', unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns([1, 1, 1])
+c1, c2, c3 = st.columns([1, 1, 1])
 
-    with c1:
-        if st.button("🔄", use_container_width=True, key="menu_reset_icon", help="Reiniciar o jogo"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            ss_init()
-            st.rerun()
+with c1:
+    if st.button("🔄 Reiniciar partida", use_container_width=True, key="menu_reset_icon", help="Reiniciar o jogo"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        ss_init()
+        st.rerun()
 
-    with c2:
-        can_next = (st.session_state.fase == "jogo" and fim_de_rodada_pronto() and st.session_state.cartas_alvo > 1)
-        if st.button("⏭️", use_container_width=True, key="menu_next_round_icon", help="Próxima rodada", disabled=not can_next):
-            start_next_round()
-            st.rerun()
+with c2:
+    can_next = (st.session_state.fase == "jogo" and fim_de_rodada_pronto() and st.session_state.cartas_alvo > 1)
+    if st.button("⏭️ Próxima rodada", use_container_width=True, key="menu_next_round_icon", help="Próxima rodada", disabled=not can_next):
+        start_next_round()
+        st.rerun()
 
-    with c3:
-        neon_new = st.toggle("💚", value=st.session_state.neon_mode, key="menu_neon_icon", help="Modo Neon")
-        if neon_new != st.session_state.neon_mode:
-            st.session_state.neon_mode = neon_new
-            st.rerun()
+with c3:
+    neon_new = st.toggle("💚 Modo Neon", value=st.session_state.neon_mode, key="menu_neon_icon", help="Modo Neon")
+    if neon_new != st.session_state.neon_mode:
+        st.session_state.neon_mode = neon_new
+        st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
 # PROGNÓSTICO
