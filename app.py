@@ -190,7 +190,8 @@ html, body, [class*="css"] {{
   font-weight: 950;
   letter-spacing: .04em;
   text-transform: uppercase;
-   color: #D4AF37;
+  color: #D4AF37 !important;
+  text-shadow: 0 2px 6px rgba(0,0,0,.35);
 }}
 
 /* grupo de pills dentro da topbar */
