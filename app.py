@@ -546,6 +546,13 @@ html, body, [class*="css"] {{
   .topbar{{ flex-direction:column; align-items:flex-start; }}
   .topRight{{ justify-content:flex-start; }}
 }}
+
+/* Botões ícone (menu/sidebar) mais “app” */
+button[kind="secondary"] {
+  border-radius: 999px !important;
+  font-weight: 900 !important;
+}
+
 </style>
 """
     st.markdown(css, unsafe_allow_html=True)
@@ -991,13 +998,17 @@ with st.sidebar:
 
         st.markdown("---")
         st.session_state.neon_mode = st.toggle("✨ Modo Neon", value=st.session_state.neon_mode)
-        if st.button("🔁 Aplicar tema", use_container_width=True):
-            st.rerun()
+        colS1, colS2 = st.columns([1, 1])
+        with colS1:
+            if st.button("🎨", use_container_width=True, key="sb_apply_theme", help="Aplicar/atualizar tema"):
+                st.rerun()
+        with colS2:
+            if st.button("🔄", use_container_width=True, key="sb_reset", help="Reiniciar o jogo"):
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                ss_init()
+                st.rerun()
 
-        st.markdown("---")
-        if st.button("🔁 Reiniciar", use_container_width=True):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
             ss_init()
             st.rerun()
     else:
@@ -1100,27 +1111,26 @@ with st.expander("☰ Menu", expanded=False):
     st.markdown('<div class="menuHint">Ações rápidas</div>', unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns([1, 1, 1])
+
     with c1:
-        if st.button("🔁 Reiniciar", use_container_width=True, key="menu_reset"):
+        if st.button("🔄", use_container_width=True, key="menu_reset_icon", help="Reiniciar o jogo"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             ss_init()
             st.rerun()
-
+    
     with c2:
-        # Próxima rodada sem depender do sidebar
-        if st.session_state.fase == "jogo" and fim_de_rodada_pronto() and st.session_state.cartas_alvo > 1:
-            if st.button("⏭ Próxima rodada", use_container_width=True, key="menu_next_round"):
-                start_next_round()
-                st.rerun()
-        else:
-            st.button("⏭ Próxima rodada", use_container_width=True, key="menu_next_round_disabled", disabled=True)
-
+        can_next = (st.session_state.fase == "jogo" and fim_de_rodada_pronto() and st.session_state.cartas_alvo > 1)
+        if st.button("⏭️", use_container_width=True, key="menu_next_round_icon", help="Próxima rodada", disabled=not can_next):
+            start_next_round()
+            st.rerun()
+    
     with c3:
-        neon_new = st.toggle("✨ Neon", value=st.session_state.neon_mode, key="menu_neon")
+        neon_new = st.toggle("💚", value=st.session_state.neon_mode, key="menu_neon_icon", help="Modo Neon")
         if neon_new != st.session_state.neon_mode:
             st.session_state.neon_mode = neon_new
             st.rerun()
+
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1384,11 +1394,12 @@ def render_tela_final():
     vencedor, pts = ranking[0]
     st.success(f"🏆 Vencedor: {vencedor} com {pts} pontos!")
 
-    if st.button("🔁 Jogar novamente", use_container_width=True, key="btn_play_again"):
+    if st.button("🔄", use_container_width=True, key="btn_play_again_icon", help="Jogar novamente"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         ss_init()
         st.rerun()
+
 
 # =========================
 # JOGO
