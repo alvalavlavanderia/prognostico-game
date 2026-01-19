@@ -192,6 +192,25 @@ html, body, [class*="css"] {{
   color: var(--textMain);
 }}
 
+/* grupo de pills dentro da topbar */
+.pillGroup{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  align-items:center;
+}
+
+/* pills “secundárias” (regras) um pouco mais discretas */
+.pillSoft{
+  opacity:.92;
+}
+
+/* em telas menores, quebra melhor */
+@media (max-width: 900px){
+  .pillGroup{ justify-content:flex-start; }
+}
+
 .topbar {{
   position: sticky;
   top: .65rem;
@@ -1044,28 +1063,23 @@ def render_topbar():
     quebrada_txt = "Sim" if st.session_state.copas_quebrada else "Não"
     primeira_txt = "Sim" if st.session_state.primeira_vaza else "Não"
 
-    # Regras dentro da topbar (como você pediu)
-    regras_html = """
-    <span class="pill">Trunfo: ♥</span>
-    <span class="pill">1ª vaza: ♥ proibida</span>
-    <span class="pill">Abrir ♥ só após quebrar</span>
-    """
-
     st.markdown(
         f"""
 <div class="topbar">
   <div class="topLeft">
-    <div class="topTitle">🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>
+    <div class="topTitle">Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>
     <div class="topSub">Vez: <b>{vez}</b></div>
   </div>
 
-  <div class="topRight">
+  <div class="topRight pillGroup">
     <span class="pill">Naipe {naipe_txt}</span>
     <span class="pill">♥ quebrada: {quebrada_txt}</span>
     <span class="pill">1ª vaza: {primeira_txt}</span>
     <span class="pill">Sobras {st.session_state.sobras_monte}</span>
 
-    {regras_html}
+    <span class="pill pillSoft">Trunfo: ♥</span>
+    <span class="pill pillSoft">1ª vaza: ♥ proibida</span>
+    <span class="pill pillSoft">Abrir ♥ só após quebrar</span>
   </div>
 </div>
 """,
@@ -1313,21 +1327,42 @@ def render_hand_clickable_streamlit():
     clicked = None
     pending = st.session_state.pending_play
 
-    cols = st.columns(10)
-    for i, c in enumerate(mao_ord):
+    # grade responsiva: desktop 10, mobile 5
+cols_per_row = 10
+try:
+    # hack simples: em telas pequenas normalmente Streamlit muda layout; podemos reduzir quando dock fixo está ativo
+    # se quiser, você pode trocar isso por um toggle "modo mobile"
+    cols_per_row = 10
+except Exception:
+    cols_per_row = 10
+
+rows = [mao_ord[i:i+cols_per_row] for i in range(0, len(mao_ord), cols_per_row)]
+
+for r, row_cards in enumerate(rows):
+    cols = st.columns(cols_per_row)
+    for j, c in enumerate(row_cards):
         disabled = (
             (c not in validas) or
             (atual != humano) or
             (pending is not None) or
             st.session_state.trick_pending
         )
-        with cols[i % 10]:
-            if st.button(" ", key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{i}",
-                         disabled=disabled, use_container_width=True):
+
+        with cols[j]:
+            if st.button(
+                " ",
+                key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{r}_{j}",
+                disabled=disabled,
+                use_container_width=True
+            ):
                 clicked = c
 
             extra = "flyAway" if (pending is not None and c == pending) else ""
-            st.markdown(f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
+                unsafe_allow_html=True
+            )
+
 
     st.markdown('</div>', unsafe_allow_html=True)
     return clicked
