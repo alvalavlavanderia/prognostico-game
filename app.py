@@ -1303,6 +1303,9 @@ def render_mesa():
 # =========================
 # MÃO clicável
 # =========================
+# =========================
+# MÃO clicável
+# =========================
 def render_hand_clickable_streamlit():
     ordem = st.session_state.ordem
     humano = st.session_state.nomes[st.session_state.humano_idx]
@@ -1310,12 +1313,16 @@ def render_hand_clickable_streamlit():
     mao = st.session_state.maos[humano]
     validas = set(cartas_validas_para_jogar(humano))
 
+    st.markdown('<div class="handDock">', unsafe_allow_html=True)
+    hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
+    if st.session_state.trick_pending:
+        hint = "Vaza completa — animação"
+
     hand_title_html = (
         f'<div class="handTitle"><h3>🂠 Sua mão</h3>'
         f'<div class="hint">{hint}</div></div>'
     )
     st.markdown(hand_title_html, unsafe_allow_html=True)
-
 
     mao_ord = sorted(mao, key=peso_carta)
     if not mao_ord:
@@ -1326,28 +1333,29 @@ def render_hand_clickable_streamlit():
     pending = st.session_state.pending_play
 
     # grade responsiva: desktop 10, mobile 5
+    cols_per_row = 10
     rows = [mao_ord[i:i + cols_per_row] for i in range(0, len(mao_ord), cols_per_row)]
 
-    para r, row_cards em enumerate(rows):
+    for r, row_cards in enumerate(rows):
         cols = st.columns(cols_per_row)
-        para j, c em enumerate(row_cards):
-            desativado = (
-                (c inválido)
+        for j, c in enumerate(row_cards):
+            disabled = (
+                (c not in validas)
                 or (atual != humano)
-                ou (pendente não é Nenhum)
-                ou st.session_state.trick_pending
+                or (pending is not None)
+                or st.session_state.trick_pending
             )
 
-            com cols[j]:
-                se st.botão(
+            with cols[j]:
+                if st.button(
                     " ",
-                    chave=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{r}_{j}",
-                    desativado=desativado,
+                    key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{r}_{j}",
+                    disabled=disabled,
                     use_container_width=True,
                 ):
-                    clicado = c
+                    clicked = c
 
-                extra = "flyAway" se (pending não for None e c == pending) senão ""
+                extra = "flyAway" if (pending is not None and c == pending) else ""
                 st.markdown(
                     f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
                     unsafe_allow_html=True,
@@ -1355,6 +1363,7 @@ def render_hand_clickable_streamlit():
 
     st.markdown('</div>', unsafe_allow_html=True)
     return clicked
+
 
 # =========================
 # TELA FINAL
