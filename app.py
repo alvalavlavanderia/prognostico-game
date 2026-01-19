@@ -1034,32 +1034,38 @@ if not st.session_state.started:
 def render_topbar():
     if not st.session_state.ordem:
         st.session_state.ordem = ordem_da_mesa(st.session_state.nomes, st.session_state.mao_da_rodada)
+
     st.session_state.turn_idx = st.session_state.turn_idx % len(st.session_state.ordem)
 
     ordem = st.session_state.ordem
     vez = ordem[st.session_state.turn_idx]
 
     naipe_txt = st.session_state.naipe_base or "—"
-    quebrada = "Sim" if st.session_state.copas_quebrada else "Não"
-    primeira = "Sim" if st.session_state.primeira_vaza else "Não"
+    quebrada_txt = "Sim" if st.session_state.copas_quebrada else "Não"
+    primeira_txt = "Sim" if st.session_state.primeira_vaza else "Não"
+
+    # Regras dentro da topbar (como você pediu)
+    regras_html = """
+    <span class="pill">Trunfo: ♥</span>
+    <span class="pill">1ª vaza: ♥ proibida</span>
+    <span class="pill">Abrir ♥ só após quebrar</span>
+    """
 
     st.markdown(
         f"""
 <div class="topbar">
   <div class="topLeft">
-    <div class="topTitle">Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>
+    <div class="topTitle">🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>
     <div class="topSub">Vez: <b>{vez}</b></div>
   </div>
 
   <div class="topRight">
-    <span class="pill">Naipe: {naipe_txt}</span>
-    <span class="pill">♥ quebrada: {quebada}</span>
-    <span class="pill">1ª vaza: {primeira}</span>
-    <span class="pill">Sobras: {st.session_state.sobras_monte}</span>
+    <span class="pill">Naipe {naipe_txt}</span>
+    <span class="pill">♥ quebrada: {quebrada_txt}</span>
+    <span class="pill">1ª vaza: {primeira_txt}</span>
+    <span class="pill">Sobras {st.session_state.sobras_monte}</span>
 
-    <span class="pill">Trunfo: ♥</span>
-    <span class="pill">1ª vaza: ♥ proibida</span>
-    <span class="pill">Abrir ♥ só após quebrar</span>
+    {regras_html}
   </div>
 </div>
 """,
