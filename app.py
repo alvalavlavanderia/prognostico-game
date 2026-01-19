@@ -3,8 +3,12 @@ import random
 import math
 import time
 import base64
+import io
+import wave
+import struct
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 # =========================
 # CONFIG
@@ -68,12 +72,71 @@ def ss_init():
 
         # visual
         "neon_mode": False,
+
+        # sound
+        "sound_on": True,
+        "sound_nonce": 0,
+        "sound_rendered_nonce": -1,
+        "sound_kind": "card",  # "card" | "win"
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
 ss_init()
+
+# =========================
+# SOUND (runtime beep wav)
+# =========================
+def make_beep_wav_bytes(freq=880, duration=0.055, volume=0.20, sample_rate=22050):
+    """Gera um WAV PCM mono curto em bytes."""
+    n_samples = int(duration * sample_rate)
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)  # 16-bit
+        wf.setframerate(sample_rate)
+
+        for i in range(n_samples):
+            t = i / sample_rate
+            # envelope rápido (click-free)
+            env = 1.0
+            fade = int(sample_rate * 0.008)
+            if i < fade:
+                env = i / fade
+            elif i > n_samples - fade:
+                env = max(0.0, (n_samples - i) / fade)
+
+            s = math.sin(2 * math.pi * freq * t) * volume * env
+            wf.writeframesraw(struct.pack("<h", int(s * 32767)))
+    return buf.getvalue()
+
+def fire_sound(kind="card"):
+    if not st.session_state.sound_on:
+        return
+    st.session_state.sound_kind = kind
+    st.session_state.sound_nonce += 1
+
+def render_sound_if_needed():
+    if not st.session_state.sound_on:
+        return
+    if st.session_state.sound_nonce == st.session_state.sound_rendered_nonce:
+        return
+
+    # define sons
+    if st.session_state.sound_kind == "win":
+        wav = make_beep_wav_bytes(freq=1046, duration=0.07, volume=0.24)  # C6
+    else:
+        wav = make_beep_wav_bytes(freq=784, duration=0.05, volume=0.20)   # G5
+
+    b64 = base64.b64encode(wav).decode("ascii")
+    html = f"""
+<audio autoplay="true">
+  <source src="data:audio/wav;base64,{b64}" type="audio/wav" />
+</audio>
+"""
+    components.html(html, height=0, width=0)
+    st.session_state.sound_rendered_nonce = st.session_state.sound_nonce
 
 # =========================
 # CSS (Premium + Neon toggle + FIX topo + mão fixa + sem placar na mesa)
@@ -84,20 +147,21 @@ def inject_css(neon: bool):
         bg2 = "#02030a"
         stroke = "rgba(0,255,210,.22)"
         card_glass = "rgba(8,12,18,.55)"
-        top_glow = "rgba(0,255,210,.08)"
+        top_glow = "rgba(0,255,210,.10)"
         felt1 = "rgba(0,120,90,1)"
         felt2 = "rgba(0,60,45,1)"
-        mesa_border = "rgba(0,255,210,.18)"
+        mesa_border = "rgba(0,255,210,.22)"
         pill_bg = "rgba(0,255,210,.08)"
-        pill_border = "rgba(0,255,210,.18)"
+        pill_border = "rgba(0,255,210,.20)"
         text_main = "rgba(240,255,252,.92)"
         text_sub = "rgba(240,255,252,.70)"
         seat_bg = "rgba(10,14,20,.70)"
         seat_border = "rgba(0,255,210,.16)"
-        # carta do dock precisa ser clara no neon
         card_face_bg = "linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(248,248,248,.92) 100%)"
         card_face_border = "1px solid rgba(255,255,255,.22)"
         card_shadow = "0 14px 30px rgba(0,0,0,.38)"
+        mesa_glow = "0 0 0 1px rgba(0,255,210,.14), 0 0 42px rgba(0,255,210,.18), 0 26px 60px rgba(0,0,0,.38)"
+        ring_glow = "0 0 0 1px rgba(0,255,210,.08), 0 0 26px rgba(0,255,210,.16)"
     else:
         bg1 = "#0b1220"
         bg2 = "#0a1a14"
@@ -116,12 +180,14 @@ def inject_css(neon: bool):
         card_face_bg = "linear-gradient(180deg, #ffffff 0%, #f8f8f8 100%)"
         card_face_border = "1px solid rgba(0,0,0,.14)"
         card_shadow = "0 10px 22px rgba(0,0,0,.12)"
+        mesa_glow = "0 20px 54px rgba(0,0,0,.28)"
+        ring_glow = "0 0 0 0 rgba(0,0,0,0)"
 
     css = f"""
 <style>
 :root {{
   --app-max: 1200px;
-  --pad: .98rem;
+  --pad: 1.02rem;
   --dock-h: 210px;
 
   --bg1: {bg1};
@@ -146,8 +212,8 @@ def inject_css(neon: bool):
   --cardFaceBorder: {card_face_border};
   --cardShadow: {card_shadow};
 
-  --shadow: 0 18px 44px rgba(0,0,0,.28);
-  --shadow2: 0 14px 34px rgba(0,0,0,.22);
+  --shadow: {mesa_glow};
+  --ringGlow: {ring_glow};
 
   --hand-card-w: 86px;
   --hand-card-h: 118px;
@@ -167,20 +233,16 @@ div[data-testid="stToolbar"] {{ display:none !important; }}
 }}
 
 .block-container {{
-  padding-top: calc(var(--pad) + 22px) !important;  /* empurra o topo */
+  padding-top: calc(var(--pad) + 24px) !important;
   padding-bottom: var(--pad) !important;
   max-width: var(--app-max);
 }}
 
 [data-testid="stVerticalBlock"] {{ gap: .55rem; }}
 
-html, body, [class*="css"] {{
-  letter-spacing: .1px;
-}}
-
 .titleRow {{
   display:flex; align-items:flex-start; justify-content:space-between;
-  gap:12px; margin: 8px 0 6px 0;
+  gap:12px; margin: 10px 0 6px 0;
 }}
 .titleRow h1 {{
   margin:0;
@@ -213,7 +275,7 @@ html, body, [class*="css"] {{
   border: 1px solid var(--stroke);
   background: rgba(255,255,255,.08);
   backdrop-filter: blur(14px);
-  box-shadow: var(--shadow2);
+  box-shadow: 0 18px 42px rgba(0,0,0,.22);
   padding: 12px 14px;
   display:flex;
   align-items:center;
@@ -248,13 +310,45 @@ html, body, [class*="css"] {{
   border: 1px solid var(--stroke);
   background: rgba(255,255,255,.07);
   backdrop-filter: blur(10px);
-  box-shadow: var(--shadow2);
+  box-shadow: 0 14px 34px rgba(0,0,0,.22);
   padding: 10px 12px;
 }}
 .menuHint {{
   color: var(--textSub);
   font-weight: 800;
   font-size: 12px;
+}}
+
+/* Quick Actions bar */
+.quickBar {{
+  border-radius: 18px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,.06);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 14px 34px rgba(0,0,0,.18);
+  padding: 10px 12px;
+  margin-top: 8px;
+}}
+.quickTitle {{
+  font-weight: 950;
+  color: var(--textMain);
+  font-size: 12px;
+  opacity: .85;
+  margin-bottom: 6px;
+}}
+/* Icon buttons look */
+.quickBar div.stButton > button {{
+  border-radius: 14px !important;
+  border: 1px solid var(--stroke) !important;
+  background: rgba(255,255,255,.06) !important;
+  color: var(--textMain) !important;
+  font-weight: 950 !important;
+  height: 44px !important;
+  box-shadow: 0 10px 20px rgba(0,0,0,.18) !important;
+}}
+.quickBar div.stButton > button:hover {{
+  transform: translateY(-1px);
+  filter: brightness(1.04);
 }}
 
 .scoreItem{{
@@ -266,13 +360,11 @@ html, body, [class*="css"] {{
   margin-bottom:8px;
   color: var(--textMain);
 }}
-.scoreName{{ font-weight:900; }}
-.scorePts{{ font-weight:900; }}
 .smallMuted{{ opacity:.70; font-size:12px; color: var(--textSub); }}
 
 .mesaWrap{{ margin-top: 6px; }}
 .mesa{{
-  border-radius: 36px;
+  border-radius: 40px;
   border: 1px solid var(--mesaBorder);
   background:
     radial-gradient(circle at 22% 18%, rgba(255,255,255,.10), transparent 42%),
@@ -295,10 +387,10 @@ html, body, [class*="css"] {{
 .mesa:after{{
   content:"";
   position:absolute;
-  inset: 14px;
-  border-radius: 30px;
+  inset: 12px;
+  border-radius: 34px;
   border: 1px solid rgba(255,255,255,.10);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.12), var(--ringGlow);
   pointer-events:none;
 }}
 .mesaCenter{{
@@ -456,14 +548,13 @@ html, body, [class*="css"] {{
   border:1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.07);
   backdrop-filter: blur(10px);
-  box-shadow: var(--shadow2);
+  box-shadow: 0 14px 34px rgba(0,0,0,.22);
   padding: 12px;
 }}
 .handTitle{{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 6px; }}
 .handTitle h3{{ margin:0; font-size:16px; color: var(--textMain); }}
 .hint{{ font-size:12px; opacity:.72; font-weight:800; color: var(--textSub); }}
 
-/* botão invisível (captura clique) somente na mão */
 .handDock div[data-testid="column"] .stButton > button{{
   width: var(--hand-card-w) !important;
   min-width: var(--hand-card-w) !important;
@@ -496,7 +587,6 @@ html, body, [class*="css"] {{
   pointer-events: none !important;
 }}
 
-/* carta do dock sempre visível (neon fix) */
 .cardBtnInner{{
   width: var(--hand-card-w) !important;
   height: var(--hand-card-h) !important;
@@ -773,6 +863,7 @@ def jogar_carta(nome, carta):
         st.session_state.copas_quebrada = True
     st.session_state.mesa.append((nome, carta))
     st.session_state.table_pop_until = time.time() + 0.22
+    fire_sound("card")
 
 def vencedor_da_vaza(mesa_snapshot, naipe_base_snapshot):
     copas = [(n, c) for (n, c) in mesa_snapshot if c[0] == TRUNFO]
@@ -797,6 +888,7 @@ def schedule_trick_resolution():
 def resolve_trick_if_due():
     if not st.session_state.trick_pending:
         return False
+
     now = time.time()
 
     if st.session_state.trick_phase == "show":
@@ -815,6 +907,7 @@ def resolve_trick_if_due():
 
         st.session_state.winner_flash_name = win
         st.session_state.winner_flash_until = time.time() + 1.2
+        fire_sound("win")
 
         ordem = st.session_state.ordem
         st.session_state.turn_idx = ordem.index(win)
@@ -948,11 +1041,10 @@ def render_small_pile_html(won: int) -> str:
     return f'<div class="pileStack">{"".join(parts)}</div>{label_html}'
 
 # =========================
-# SIDEBAR (NUNCA rerun() automático aqui)
+# SIDEBAR
 # =========================
 with st.sidebar:
     st.markdown("## 📊 Placar")
-
     if st.session_state.started:
         for n in st.session_state.nomes:
             st.session_state.pontos.setdefault(n, 0)
@@ -960,10 +1052,9 @@ with st.sidebar:
         ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
         for nome, pts in ranking:
             st.markdown(
-                f'<div class="scoreItem"><div class="scoreName">{nome}</div><div class="scorePts">{pts}</div></div>',
+                f'<div class="scoreItem"><div><b>{nome}</b></div><div><b>{pts}</b></div></div>',
                 unsafe_allow_html=True
             )
-
         st.markdown(
             f'<div class="smallMuted">Rodada: {st.session_state.rodada} • Cartas/jogador: {st.session_state.cartas_alvo} • Sobras: {st.session_state.sobras_monte}</div>',
             unsafe_allow_html=True
@@ -975,29 +1066,28 @@ with st.sidebar:
             st.session_state.neon_mode = neon_val
             st.rerun()
 
-        colS1, colS2 = st.columns([1, 1])
-        with colS1:
-            if st.button("🎨", use_container_width=True, key="sb_apply_theme", help="Aplicar/atualizar tema"):
-                st.rerun()
-        with colS2:
-            if st.button("🔄", use_container_width=True, key="sb_reset", help="Reiniciar o jogo"):
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
-                ss_init()
-                st.rerun()
+        sound_val = st.toggle("🔊 Som", value=st.session_state.sound_on)
+        if sound_val != st.session_state.sound_on:
+            st.session_state.sound_on = sound_val
+            st.rerun()
 
+        if st.button("🔄 Reset", use_container_width=True):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            ss_init()
+            st.rerun()
     else:
         st.info("Inicie uma partida.")
 
 # =========================
-# HEADER (sempre)
+# HEADER
 # =========================
 st.markdown(
     """
 <div class="titleRow">
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
-    <div class="subTitle">Premium UI • Avatares • Montinho animado • Dock mobile</div>
+    <div class="subTitle">Premium UI • Avatares • Montinho animado • Dock mobile • Neon</div>
   </div>
   <div class="badges">
     <span class="badge">Trunfo: ♥</span>
@@ -1083,34 +1173,39 @@ def render_topbar():
 render_topbar()
 
 # =========================
-# MENU RECOLHÍVEL
+# QUICK ACTIONS (ícones estilo app)
 # =========================
-with st.expander("☰ Menu", expanded=False):
-    st.markdown('<div class="menuCard">', unsafe_allow_html=True)
-    st.markdown('<div class="menuHint">Ações rápidas</div>', unsafe_allow_html=True)
+def render_quick_actions():
+    can_next = (st.session_state.fase == "jogo" and fim_de_rodada_pronto() and st.session_state.cartas_alvo > 1)
+    st.markdown('<div class="quickBar">', unsafe_allow_html=True)
+    st.markdown('<div class="quickTitle">Ações rápidas</div>', unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns([1, 1, 1])
-
-    with c1:
-        if st.button("🔄", use_container_width=True, key="menu_reset_icon", help="Reiniciar o jogo"):
+    c1, c2, c3, c4, c5 = st.columns([6, 1, 1, 1, 1])
+    with c2:
+        if st.button("⏭️", use_container_width=True, help="Próxima rodada", disabled=not can_next, key="qa_next"):
+            start_next_round()
+            st.rerun()
+    with c3:
+        if st.button("✨", use_container_width=True, help="Alternar Neon", key="qa_neon"):
+            st.session_state.neon_mode = not st.session_state.neon_mode
+            st.rerun()
+    with c4:
+        if st.button("🔊", use_container_width=True, help="Som on/off", key="qa_sound"):
+            st.session_state.sound_on = not st.session_state.sound_on
+            st.rerun()
+    with c5:
+        if st.button("🔄", use_container_width=True, help="Reset", key="qa_reset"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             ss_init()
             st.rerun()
 
-    with c2:
-        can_next = (st.session_state.fase == "jogo" and fim_de_rodada_pronto() and st.session_state.cartas_alvo > 1)
-        if st.button("⏭️", use_container_width=True, key="menu_next_round_icon", help="Próxima rodada", disabled=not can_next):
-            start_next_round()
-            st.rerun()
-
-    with c3:
-        neon_new = st.toggle("💚", value=st.session_state.neon_mode, key="menu_neon_icon", help="Modo Neon")
-        if neon_new != st.session_state.neon_mode:
-            st.session_state.neon_mode = neon_new
-            st.rerun()
-
     st.markdown('</div>', unsafe_allow_html=True)
+
+render_quick_actions()
+
+# Renderiza som se necessário (autoplay)
+render_sound_if_needed()
 
 # =========================
 # PROGNÓSTICO
@@ -1397,7 +1492,7 @@ if st.session_state.fase == "jogo":
             st.session_state.fase = "fim"
             st.session_state.show_final = True
             st.rerun()
-        st.success("✅ Rodada finalizada. Use o Menu (☰) ou Sidebar para continuar.")
+        st.success("✅ Rodada finalizada. Use Ações rápidas ou o Menu para continuar.")
         st.stop()
 
     if st.session_state.trick_pending:
@@ -1419,7 +1514,6 @@ if st.session_state.fase == "jogo":
 
     if st.session_state.pending_play is not None and atual == humano:
         time.sleep(0.14)
-
         carta = st.session_state.pending_play
         st.session_state.pending_play = None
 
