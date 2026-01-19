@@ -620,6 +620,30 @@ div[data-testid="stToolbar"] {{ display:none !important; }}
   .topbar{{ flex-direction:column; align-items:flex-start; }}
   .topRight{{ justify-content:flex-start; }}
 }}
+/* ===== Microanimações premium ===== */
+@keyframes mesaPulse {
+  0%   { transform: scale(1); filter: brightness(1); }
+  35%  { transform: scale(1.008); filter: brightness(1.06); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.mesa.pulse {
+  animation: mesaPulse .35s ease-out;
+}
+
+@keyframes chipPop {
+  0%   { transform: translate(-50%,-50%) scale(1); }
+  40%  { transform: translate(-50%,-50%) scale(1.16); }
+  100% { transform: translate(-50%,-50%) scale(1); }
+}
+.chipWrap.winnerChip {
+  animation: chipPop .38s ease-out;
+}
+
+.seat.turnGlow {
+  outline: 2px solid rgba(56,189,248,.55);
+  box-shadow: 0 0 0 6px rgba(56,189,248,.16), 0 16px 34px rgba(0,0,0,.20);
+}
+
 </style>
 """
     st.markdown(css, unsafe_allow_html=True)
@@ -1087,12 +1111,6 @@ st.markdown(
 <div class="titleRow">
   <div>
     <h1>🃏 Jogo de Prognóstico</h1>
-    <div class="subTitle">Premium UI • Avatares • Montinho animado • Dock mobile • Neon</div>
-  </div>
-  <div class="badges">
-    <span class="badge">Trunfo: ♥</span>
-    <span class="badge">1ª vaza: ♥ proibida</span>
-    <span class="badge">Abrir com ♥ só após quebrar</span>
   </div>
 </div>
 """,
@@ -1153,22 +1171,28 @@ def render_topbar():
     primeira = "Sim" if st.session_state.primeira_vaza else "Não"
 
     st.markdown(
-        f"""
+    f"""
 <div class="topbar">
   <div class="topLeft">
     <div class="topTitle">🎮 Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>
     <div class="topSub">Vez: <b>{vez}</b></div>
   </div>
+
   <div class="topRight">
     <span class="pill">Naipe {naipe_txt}</span>
     <span class="pill">♥ quebrada: {quebrada}</span>
     <span class="pill">1ª vaza: {primeira}</span>
     <span class="pill">Sobras {st.session_state.sobras_monte}</span>
+
+    <span class="pill">Trunfo: ♥</span>
+    <span class="pill">1ª vaza: ♥ proibida</span>
+    <span class="pill">Abrir ♥ só após quebrar</span>
   </div>
 </div>
 """,
-        unsafe_allow_html=True
-    )
+    unsafe_allow_html=True
+)
+
 
 render_topbar()
 
@@ -1292,6 +1316,9 @@ def render_mesa():
         tx, ty = pos[nome]["target"]
 
         cls = "seat"
+        if nome == st.session_state.ordem[st.session_state.turn_idx] and not st.session_state.trick_pending:
+            cls += " turnGlow"
+
         label = nome
         if nome == humano:
             cls += " you"
