@@ -1375,7 +1375,7 @@ def render_tela_final():
     linhas = []
     medals = ["🥇", "🥈", "🥉"]
     for i, (nome, pts) in enumerate(ranking, start=1):
-        medalha = medalhas[i - 1] se i <= 3 senão ""
+        medalha = medals[i - 1] if i <= 3 else ""
         linhas.append({"Posição": f"{medalha} {i}º".strip(), "Jogador": nome, "Pontos": pts})
 
     df = pd.DataFrame(linhas)
