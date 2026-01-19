@@ -1326,7 +1326,7 @@ def render_hand_clickable_streamlit():
     pending = st.session_state.pending_play
 
     # grade responsiva: desktop 10, mobile 5
-    linhas = [mao_ord[i:i + cols_per_row] para i em range(0, len(mao_ord), cols_per_row)]
+    rows = [mao_ord[i:i + cols_per_row] for i in range(0, len(mao_ord), cols_per_row)]
 
     para r, row_cards em enumerate(rows):
         cols = st.columns(cols_per_row)
