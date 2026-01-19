@@ -546,13 +546,6 @@ html, body, [class*="css"] {{
   .topbar{{ flex-direction:column; align-items:flex-start; }}
   .topRight{{ justify-content:flex-start; }}
 }}
-
-/* Botões ícone (menu/sidebar) mais “app” */
-button[kind="secondary"] {
-  border-radius: 999px !important;
-  font-weight: 900 !important;
-}
-
 </style>
 """
     st.markdown(css, unsafe_allow_html=True)
