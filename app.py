@@ -574,7 +574,7 @@ html, body, [class*="css"] {{
 }}
 </style>
 """
-st.markdown(css, unsafe_allow_html=True)
+    st.markdown(css, unsafe_allow_html=True)
 
 inject_css(st.session_state.neon_mode)
 
