@@ -672,7 +672,8 @@ def avatar_svg_data_uri(idx: int) -> str:
 # =========================
 # IA
 # =========================
-def ai_prognostico(mao, cartas_por_jogador: int) -> int:
+def ai_prognostico(mao, cartas_por_jogador: int, hard_mode: bool = False, *_args, **_kwargs) -> int:
+    hard_mode = st.session_state.get("hard_mode", hard_mode)
     if not mao:
         return 0
     suit_counts = {"♠": 0, "♦": 0, "♣": 0, "♥": 0}
