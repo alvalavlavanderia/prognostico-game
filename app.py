@@ -179,12 +179,12 @@ html, body, [class*="css"] {{
   letter-spacing: .1px;
 }}
 
-.titleRow {{
+.titleRow {
   display:flex;
   align-items:center;
   justify-content:center;
   margin: 10px 0 10px 0;
-}}
+}
 .titleRow h1 {{
   margin:0;
   font-size: 30px;
@@ -278,11 +278,11 @@ html, body, [class*="css"] {{
   padding: 10px 12px;
   margin-top: 0;
 }}
-.menuHint {{
+.menuHint {
   color: var(--textSub);
   font-weight: 800;
   font-size: 12px;
-}}
+}
 
 .scoreItem{{
   display:flex; justify-content:space-between;
@@ -493,18 +493,12 @@ html, body, [class*="css"] {{
 .handDock div[data-testid="column"]{{
   position: relative;
 }}
-.cardSlot{{
-  position: relative;
-  width: var(--hand-card-w);
-  height: var(--hand-card-h);
-  margin: 0 auto;
-}}
-.cardSlot .stButton{{
+.handDock div[data-testid="column"] .stButton{{
   position: absolute;
   inset: 0;
   z-index: 2;
 }}
-.cardSlot .stButton > button{{
+.handDock div[data-testid="column"] .stButton > button{{
   width: var(--hand-card-w) !important;
   min-width: var(--hand-card-w) !important;
   max-width: var(--hand-card-w) !important;
@@ -519,23 +513,28 @@ html, body, [class*="css"] {{
   padding: 0 !important;
   transition: transform .10s ease, filter .10s ease;
 }}
-.cardSlot .stButton > button:hover{{
+.handDock div[data-testid="column"] .stButton > button:hover{{
   transform: translateY(-4px);
   filter: drop-shadow(0 14px 22px rgba(0,0,0,.20));
 }}
-.cardSlot .stButton > button:disabled{{
+.handDock div[data-testid="column"] .stButton > button:disabled{{
   opacity: .28 !important;
   transform:none !important;
   filter:none !important;
 }}
-
-.cardSlot .cardOverlay{{
+.handDock .cardOverlay{{
   width: var(--hand-card-w) !important;
   height: var(--hand-card-h) !important;
   position: absolute !important;
   inset: 0;
   z-index: 1;
   pointer-events: none !important;
+}}
+.cardSlot{{
+  position: relative;
+  width: var(--hand-card-w);
+  height: var(--hand-card-h);
+  margin: 0 auto;
 }}
 
 .cardBtnInner{{
@@ -559,8 +558,8 @@ html, body, [class*="css"] {{
 }}
 .flyAway{{ animation: flyAway .25s ease-in forwards; }}
 
-@media (max-width: 900px){{
-  :root{{ --pad: .62rem; --dock-h: 230px; }}
+@media (max-width: 900px){
+  :root{{--pad: .62rem; --dock-h: 230px; }}
   .block-container{{ padding-left: .55rem !important; padding-right: .55rem !important; }}
   .titleRow h1{{ font-size: 22px; }}
   .mesa{{ height: calc(100vh - 70px - var(--dock-h) - 24px); min-height: 340px; }}
