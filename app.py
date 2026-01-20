@@ -1395,7 +1395,7 @@ def render_hand_clickable_streamlit():
     validas = set(cartas_validas_para_jogar(humano))
     
     # --- CSS PARA ESTILIZAR O BOTÃO ---
-    st.markdown(""""
+    st.markdown("""
         <style>
         /* Remove o estilo padrão do botão e centraliza a imagem */
         div.stButton > button {{
