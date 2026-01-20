@@ -506,10 +506,12 @@ html, body, [class*="css"] {{
 
 .handDock div[data-testid="column"]{{
   position: relative;
+  height: var(--hand-card-h);
 }}
 .handDock div[data-testid="column"] .stButton{{
   position: relative;
   z-index: 1;
+  margin-bottom: 0 !important;
 }}
 .handDock div[data-testid="column"] .stButton > button{{
   width: var(--hand-card-w) !important;
@@ -539,11 +541,8 @@ html, body, [class*="css"] {{
 .handDock .cardOverlay{{
   width: var(--hand-card-w) !important;
   height: var(--hand-card-h) !important;
-  position: absolute !important;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  margin: 0 !important;
+  position: relative !important;
+  margin: calc(-1 * var(--hand-card-h) - .65rem) auto 0 !important;
   z-index: 2;
   pointer-events: none !important;
 }}
