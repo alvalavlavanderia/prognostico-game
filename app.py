@@ -614,10 +614,8 @@ def carta_html(c):
 
 def card_btn_html(carta, extra_class=""):
     """Gera o HTML da imagem da carta."""
-    # Substitua pelo seu método de mapeamento carta -> imagem
     img_url = f"https://path/to/cards/{carta[0]}{carta[1]}.png"
     return f'<img src="{img_url}" class="card-img {extra_class}" style="width: 60px; height: auto;">'
-"""
 
 # =========================
 # UTIL
@@ -1389,8 +1387,7 @@ def render_hand_clickable_streamlit():
     validas = set(cartas_validas_para_jogar(humano))
 
     # --- CSS PARA ESTILIZAR O BOTÃO ---
-    st.markdown(
-        """
+    st.markdown("""
         <style>
         /* Remove o estilo padrão do botão e centraliza a imagem */
         div.stButton > button {
@@ -1426,9 +1423,7 @@ def render_hand_clickable_streamlit():
             padding: 0;
         }
         </style>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
 
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
 
@@ -1467,6 +1462,7 @@ def render_hand_clickable_streamlit():
                     st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # =========================
