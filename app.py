@@ -298,22 +298,22 @@ html, body, [class*="css"] {{
 
 .mesaWrap{{ margin-top: 6px; }}
 
-.mesa {{ background: #0f7a4a !important; }}
-
 .mesa{{
   border-radius: 50% / 46%;
   border: 1px solid transparent;
-  background: transparent;
+  background: #0f7a4a !important;
   clip-path: ellipse(48% 42% at 50% 50%);
   height: 470px;
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow);
+  isolation: isolate;
 }}
 
 .mesa:before{{
   content:"";
   position:absolute; inset:0;
+  background: #0f7a4a !important;
   border: 2px solid rgba(0,0,0,.85);
   border-radius: 50% / 46%;
   clip-path: ellipse(48% 42% at 50% 50%);
@@ -322,7 +322,9 @@ html, body, [class*="css"] {{
     0 16px 32px rgba(0,0,0,.25);
   opacity:1;
   pointer-events:none;
+  z-index: 1;
 }}
+
 .mesa:after{{
   content:"";
   position:absolute;
@@ -332,7 +334,9 @@ html, body, [class*="css"] {{
   box-shadow: inset 0 0 0 2px rgba(0,0,0,.45);
   clip-path: ellipse(47% 41% at 50% 50%);
   pointer-events:none;
+  z-index: 2;
 }}
+
 .mesaCenter{{
   position:absolute; inset:0;
   display:flex; align-items:center; justify-content:center;
@@ -341,7 +345,9 @@ html, body, [class*="css"] {{
   text-transform: uppercase;
   letter-spacing: .08em;
   color: rgba(255,255,255,.90);
+  z-index: 3;
 }}
+
 
 .seat{{
   position:absolute;
