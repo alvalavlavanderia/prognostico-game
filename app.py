@@ -612,12 +612,11 @@ def carta_html(c):
         f'</div>'
     )
 
-def card_btn_html(c, extra_class=""):
-    naipe, valor = c
-    cor = COR_NAIPE[naipe]
-    vv = valor_str(valor)
-    cls = f"cardBtnInner {extra_class}".strip()
-    return f"""
+def card_btn_html(carta, extra_class=""):
+    """Gera o HTML da imagem da carta."""
+    # Substitua pelo seu método de mapeamento carta -> imagem
+    img_url = f"https://path/to/cards/{carta[0]}{carta[1]}.png"
+    return f'<img src="{img_url}" class="card-img {extra_class}" style="width: 60px; height: auto;">'
 <div class="{cls}">
   <div class="cardBtnTL" style="color:{cor};">{vv}<br/>{naipe}</div>
   <div class="cardBtnMid" style="color:{cor};">{naipe}</div>
@@ -1395,8 +1394,46 @@ def render_hand_clickable_streamlit():
     mao = st.session_state.maos[humano]
     validas = set(cartas_validas_para_jogar(humano))
     
+    # --- CSS PARA ESTILIZAR O BOTÃO ---
+    st.markdown("""
+        <style>
+        /* Remove o estilo padrão do botão e centraliza a imagem */
+        div.stButton > button {{
+            background-color: transparent;
+            border: none;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+        }}
+        
+        /* Estiliza o container da imagem da carta */
+        .card-img {{
+            border-radius: 8px;
+            transition: transform 0.2s;
+        }}
+        
+        /* Efeito de hover (opcional) */
+        .card-img:hover {{
+            transform: scale(1.05);
+        }}
+        
+        /* Classe para quando a carta está sendo jogada */
+        .flyAway {{
+            animation: flyAway 0.5s forwards;
+        }}
+        
+        @keyframes flyAway {{
+            to {{ transform: translateY(-100px); opacity: 0; }}
+        }}
+        
+        /* Ajusta o padding das colunas no Streamlit */
+        [data-testid="stVerticalBlock"] > div:has(div.stButton) {{
+            padding: 0;
+        }}
+        </style>
+    """, unsafe_allow_html=True)
+    
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
-    # ... (código do hint) ...
     
     mao_ord = sorted(mao, key=peso_carta)
     if not mao_ord:
@@ -1407,11 +1444,10 @@ def render_hand_clickable_streamlit():
     cols_per_row = 10
     rows = [mao_ord[i:i + cols_per_row] for i in range(0, len(mao_ord), cols_per_row)]
 
-    clicked = None
-
     for r, row_cards in enumerate(rows):
         cols = st.columns(cols_per_row)
         for j, c in enumerate(row_cards):
+            # Lógica de desabilitar (disabled)
             disabled = (
                 (c not in validas) or 
                 (atual != humano) or 
@@ -1420,36 +1456,25 @@ def render_hand_clickable_streamlit():
             )
             
             with cols[j]:
-                # Adiciona uma chave única baseada no índice para evitar conflitos
+                # Chave única
                 key = f"card_{c[0]}{c[1]}_{r}_{j}" 
                 
-                # --- A MUDANÇA ---
-                # Em vez de markdown + button, vamos estilizar o próprio botão 
-                # se necessário, ou usar a imagem dentro do container do botão.
+                # HTML da carta
+                is_pending = (pending is not None and c == pending)
+                card_html = card_btn_html(c, extra_class="flyAway" if is_pending else "")
                 
-                # Se card_btn_html gera o HTML da carta, vamos colocá-lo 
-                # no parâmetro 'label' do botão, estilizando com CSS
-                
-                card_html = card_btn_html(c, extra_class="flyAway" if (pending is not None and c == pending) else "")
-                
-                # Esta é a forma mais robusta no Streamlit atual:
-                # O botão contém a imagem da carta.
+                # O BOTÃO: O label contém o HTML da imagem
                 if st.button(
                     label=card_html, 
                     key=key, 
-                    disabled=disabled, 
+                    disabled=disabled,
                     use_container_width=True
                 ):
-                    clicked = c
-
-    st.markdown('</div>', unsafe_allow_html=True)
-    return clicked
-
-# --- Como chamar a função no main ---
-# carta_jogada = render_hand_clickable_streamlit()
-# if carta_jogada:
-#     processar_jogada(carta_jogada) # Sua função de lógica
-#     st.rerun() # Essencial para atualizar a mão
+                    # Ação ao clicar (ex: adicionar a pending_play)
+                    st.session_state.pending_play = c
+                    st.rerun()
+                
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
 # PLACAR PARCIAL
