@@ -1436,32 +1436,42 @@ def render_hand_clickable_streamlit():
     cols_per_row = 10
     rows = [mao_ord[i:i + cols_per_row] for i in range(0, len(mao_ord), cols_per_row)]
 
-    for r, row_cards in enumerate(rows):
-        cols = st.columns(cols_per_row)
-        for j, c in enumerate(row_cards):
-            disabled = (
-                (c not in validas)
-                or (atual != humano)
-                or (pending is not None)
-                or st.session_state.trick_pending
-            )
+for r, row_cards in enumerate(rows):
+    cols = st.columns(cols_per_row)
+    for j, c in enumerate(row_cards):
+        # Lógica de desabilitar (disabled)
+        disabled = (
+            (c not in validas) or 
+            (atual != humano) or 
+            (pending is not None) or 
+            st.session_state.trick_pending
+        )
+        
+        with cols[j]:
+            # Chave única
+            key = f"card_{c[0]}{c[1]}_{r}_{j}" 
+            
+            # HTML da carta
+            is_pending = (pending is not None and c == pending)
+            card_html = card_btn_html(c, extra_class="flyAway" if is_pending else "")
+            
+            st.markdown('<div class="cardSlot">', unsafe_allow_html=True)
+            st.markdown(f'<div class="cardOverlay">{card_html}</div>', unsafe_allow_html=True)
 
-            with cols[j]:
-                key = f"card_{c[0]}{c[1]}_{r}_{j}"
+            # O BOTÃO: rótulo vazio para evitar mostrar HTML cru
+            if st.button(
+                label="",
+                key=key,
+                disabled=disabled,
+                use_container_width=False
+            ):
+                # Ação ao clicar (ex: adicionar a pending_play)
+                st.session_state.pending_play = c
+                st.rerun()
 
-                is_pending = (pending is not None and c == pending)
-                card_html = card_btn_html(c, extra_class="flyAway" if is_pending else "")
-
-                if st.button(
-                    label=card_html,
-                    key=key,
-                    disabled=disabled,
-                    use_container_width=True
-                ):
-                    st.session_state.pending_play = c
-                    st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+st.markdown("</div>", unsafe_allow_html=True)
 
 
 
