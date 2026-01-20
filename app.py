@@ -558,7 +558,7 @@ html, body, [class*="css"] {{
 }}
 .flyAway{{ animation: flyAway .25s ease-in forwards; }}
 
-@media (max-width: 900px){
+@media (max-width: 900px){{
   :root{{--pad: .62rem; --dock-h: 230px; }}
   .block-container{{ padding-left: .55rem !important; padding-right: .55rem !important; }}
   .titleRow h1{{ font-size: 22px; }}
