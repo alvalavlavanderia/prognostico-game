@@ -504,6 +504,13 @@ html, body, [class*="css"] {{
 .handTitle h3{{ margin:0; font-size:16px; color: var(--textMain); }}
 .hint{{ font-size:12px; opacity:.72; font-weight:800; color: var(--textSub); }}
 
+.handDock div[data-testid="column"]{{
+  position: relative;
+}}
+.handDock div[data-testid="column"] .stButton{{
+  position: relative;
+  z-index: 1;
+}}
 .handDock div[data-testid="column"] .stButton > button{{
   width: var(--hand-card-w) !important;
   min-width: var(--hand-card-w) !important;
@@ -532,10 +539,15 @@ html, body, [class*="css"] {{
 .handDock .cardOverlay{{
   width: var(--hand-card-w) !important;
   height: var(--hand-card-h) !important;
-  margin: 0 auto !important;
-  margin-top: calc(-1 * var(--hand-card-h)) !important;
+  position: absolute !important;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0 !important;
+  z-index: 2;
   pointer-events: none !important;
 }}
+
 
 .cardBtnInner{{
   width: var(--hand-card-w) !important;
