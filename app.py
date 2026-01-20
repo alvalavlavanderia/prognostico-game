@@ -1197,6 +1197,7 @@ def render_mesa():
     humano = st.session_state.nomes[st.session_state.humano_idx]
     active_player = ordem[st.session_state.turn_idx] if ordem else None
     dealer = ordem[0]
+    pos = seat_positions(ordem)
 
     now = time.time()
     flash_name = st.session_state.winner_flash_name if now <= st.session_state.winner_flash_until else None
