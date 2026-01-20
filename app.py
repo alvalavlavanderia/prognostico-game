@@ -965,10 +965,12 @@ def render_progn_chips_html(prog, color: str) -> str:
     if isinstance(prog, str) or prog is None:
         return '<span class="chipNote">—</span>'
     p = max(0, int(prog))
+    count_label = f'<span class="chipNote">{p}</span>'
     show = min(p, 12)
     chips = "".join([f'<div class="chipMini" style="--chip-base:{color};"></div>' for _ in range(show)])
     extra = f'<span class="chipNote">+{p-12}</span>' if p > 12 else ''
-    return f'<div class="chipRow">{chips}</div>{extra}'
+    return f'<div class="chipRow">{count_label}{chips}</div>{extra}'
+
 
 def render_small_pile_html(won: int) -> str:
     layers = min(max(won, 0), 10)
