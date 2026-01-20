@@ -613,9 +613,17 @@ def carta_html(c):
     )
 
 def card_btn_html(carta, extra_class=""):
-    """Gera o HTML da imagem da carta."""
-    img_url = f"https://path/to/cards/{carta[0]}{carta[1]}.png"
-    return f'<img src="{img_url}" class="card-img {extra_class}" style="width: 60px; height: auto;">'
+    """Gera o HTML da carta para o botão."""
+    naipe, valor = carta
+    cor = COR_NAIPE[naipe]
+    vv = valor_str(valor)
+    return (
+        f'<div class="cardBtnInner {extra_class}">'
+        f'<div class="cardBtnTL" style="color:{cor};">{vv}<br/>{naipe}</div>'
+        f'<div class="cardBtnMid" style="color:{cor};">{naipe}</div>'
+        f'<div class="cardBtnBR" style="color:{cor};">{vv}<br/>{naipe}</div>'
+        f'</div>'
+    )
 
 # =========================
 # UTIL
