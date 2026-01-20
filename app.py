@@ -77,6 +77,7 @@ def ss_init():
 
 ss_init()
 
+
 # =========================
 # CSS
 # =========================
@@ -494,51 +495,28 @@ html, body, [class*="css"] {{
   position: relative;
   min-height: var(--hand-card-h);
 }}
-.handDock div[data-testid="column"] .stButton{{
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}}
-.handDock div[data-testid="column"] .stButton > button{{
-  width: var(--hand-card-w) !important;
-  min-width: var(--hand-card-w) !important;
-  max-width: var(--hand-card-w) !important;
-  height: var(--hand-card-h) !important;
-  min-height: var(--hand-card-h) !important;
-  margin: 0 auto !important;
-  display: block !important;
-  background: rgba(255,255,255,0.0) !important;
-  border-radius: 14px !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  transition: transform .10s ease, filter .10s ease;
-}}
-.handDock div[data-testid="column"] .stButton > button:hover{{
-  transform: translateY(-4px);
-  filter: drop-shadow(0 14px 22px rgba(0,0,0,.20));
-}}
-.handDock div[data-testid="column"] .stButton > button:disabled{{
-  opacity: .28 !important;
-  transform:none !important;
-  filter:none !important;
-}}
-.handDock .cardOverlay{{
-  width: var(--hand-card-w) !important;
-  height: var(--hand-card-h) !important;
-  position: relative !important;
-  margin: 0 auto;
-  z-index: 1;
-  pointer-events: none !important;
-}}
-.cardSlot{{
-  position: relative;
+.handDock .cardLink{{
   width: var(--hand-card-w);
   height: var(--hand-card-h);
   margin: 0 auto;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform .10s ease, filter .10s ease;
+}}
+.handDock .cardLink:hover{{
+  transform: translateY(-4px);
+  filter: drop-shadow(0 14px 22px rgba(0,0,0,.20));
+}}
+.handDock .cardLink.is-disabled{{
+  opacity: .28;
+  pointer-events: none;
+  transform:none;
+  filter:none;
+}}
+.handDock .cardLink.is-disabled:hover{{
+  transform:none;
+  filter:none;
 }}
 
 .cardBtnInner{{
@@ -563,7 +541,7 @@ html, body, [class*="css"] {{
 .flyAway{{ animation: flyAway .25s ease-in forwards; }}
 
 @media (max-width: 900px){{
-  :root{{--pad: .62rem; --dock-h: 230px; }}
+  :root{{ --pad: .62rem; --dock-h: 230px; }}
   .block-container{{ padding-left: .55rem !important; padding-right: .55rem !important; }}
   .titleRow h1{{ font-size: 22px; }}
   .mesa{{ height: calc(100vh - 70px - var(--dock-h) - 24px); min-height: 340px; }}
@@ -574,13 +552,37 @@ html, body, [class*="css"] {{
   .topbar{{ flex-direction:column; align-items:flex-start; }}
   .topRight{{ justify-content:flex-start; max-width: 100%; }}
 }}
-
-}}
 </style>
 """
     st.markdown(css, unsafe_allow_html=True)
 
 inject_css(st.session_state.neon_mode)
+
+# =========================
+# QUERY PARAM HANDLER
+# =========================
+def handle_card_query_param():
+    param = st.query_params.get("play")
+    if isinstance(param, list):
+        param = param[0] if param else None
+    carta = param_to_carta(param)
+    if param and not carta:
+        st.query_params.pop("play", None)
+        st.rerun()
+    if not carta:
+        return
+    st.query_params.pop("play", None)
+    humano = st.session_state.nomes[st.session_state.humano_idx]
+    atual = st.session_state.ordem[st.session_state.turn_idx]
+    validas = set(cartas_validas_para_jogar(humano))
+    if (
+        (carta in validas)
+        and (atual == humano)
+        and (st.session_state.pending_play is None)
+        and (not st.session_state.trick_pending)
+    ):
+        st.session_state.pending_play = carta
+    st.rerun()
 
 # =========================
 # BARALHO / REGRAS
@@ -591,6 +593,30 @@ COR_NAIPE = {"♦":"#C1121F", "♥":"#C1121F", "♠":"#111827", "♣":"#111827"}
 ORDEM_NAIPE = {"♦":0, "♠":1, "♣":2, "♥":3}
 TRUNFO = "♥"
 HIGH_POINTS = {"A": 1.40, "K": 1.05, "Q": 0.80, "J": 0.55, 10: 0.35, 9: 0.20}
+
+# =========================
+# QUERY PARAMS
+# =========================
+NAIPE_PARAM = {"♠": "S", "♦": "D", "♣": "C", "♥": "H"}
+PARAM_NAIPE = {v: k for k, v in NAIPE_PARAM.items()}
+
+
+def carta_to_param(carta):
+    naipe, valor = carta
+    return f"{valor}{NAIPE_PARAM[naipe]}"
+
+
+def param_to_carta(param):
+    if not param:
+        return None
+    naipe = PARAM_NAIPE.get(param[-1])
+    if not naipe:
+        return None
+    valor_raw = param[:-1]
+    valor = int(valor_raw) if valor_raw.isdigit() else valor_raw
+    if valor not in VALORES:
+        return None
+    return (naipe, valor)
 
 def criar_baralho():
     naipes = ["♠", "♦", "♣", "♥"]
@@ -1013,7 +1039,7 @@ def start_next_round():
     distribuir(prox)
     preparar_prognosticos_anteriores()
 
-# =========================
+    # =========================
 # UI helpers
 # =========================
 def chip_color_for_index(idx: int) -> str:
@@ -1421,29 +1447,22 @@ def render_hand_clickable_streamlit():
             )
             
             with cols[j]:
-                # Chave única
-                key = f"card_{c[0]}{c[1]}_{r}_{j}" 
-                
                 # HTML da carta
                 is_pending = (pending is not None and c == pending)
                 card_html = card_btn_html(c, extra_class="flyAway" if is_pending else "")
-                
-                st.markdown(f'<div class="cardOverlay">{card_html}</div>', unsafe_allow_html=True)
-
-                # O BOTÃO: rótulo vazio para evitar mostrar HTML cru
-                if st.button(
-                    label=" ",
-                    key=key,
-                    disabled=disabled,
-                    use_container_width=True
-                ):
-                    # Ação ao clicar (ex: adicionar a pending_play)
-                    st.session_state.pending_play = c
-                    st.rerun()
+                if disabled:
+                    st.markdown(
+                        f'<span class="cardLink is-disabled">{card_html}</span>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    play_param = carta_to_param(c)
+                    st.markdown(
+                        f'<a class="cardLink" href="?play={play_param}">{card_html}</a>',
+                        unsafe_allow_html=True,
+                    )
 
     st.markdown("</div>", unsafe_allow_html=True)
-
-
 
 # =========================
 # PLACAR PARCIAL
@@ -1491,6 +1510,7 @@ def render_tela_final():
 # JOGO
 # =========================
 if st.session_state.fase == "jogo":
+    handle_card_query_param()
 
     if resolve_trick_if_due():
         st.rerun()
@@ -1554,3 +1574,6 @@ if st.session_state.fase == "jogo":
 if st.session_state.fase == "fim" and st.session_state.show_final:
     render_tela_final()
     st.stop()
+
+    
+
