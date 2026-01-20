@@ -1431,8 +1431,6 @@ if st.session_state.fase == "jogo":
     if resolve_trick_if_due():
         st.rerun()
 
-    render_mesa()
-
     ordem = st.session_state.ordem
     atual = ordem[st.session_state.turn_idx]
     humano = st.session_state.nomes[st.session_state.humano_idx]
@@ -1453,6 +1451,7 @@ if st.session_state.fase == "jogo":
             st.rerun()
         st.stop()
 
+    render_mesa()
 
     if st.session_state.trick_pending:
         time.sleep(0.06)
