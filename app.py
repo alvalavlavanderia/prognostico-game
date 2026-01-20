@@ -617,11 +617,6 @@ def card_btn_html(carta, extra_class=""):
     # Substitua pelo seu método de mapeamento carta -> imagem
     img_url = f"https://path/to/cards/{carta[0]}{carta[1]}.png"
     return f'<img src="{img_url}" class="card-img {extra_class}" style="width: 60px; height: auto;">'
-<div class="{cls}">
-  <div class="cardBtnTL" style="color:{cor};">{vv}<br/>{naipe}</div>
-  <div class="cardBtnMid" style="color:{cor};">{naipe}</div>
-  <div class="cardBtnBR" style="color:{cor};">{vv}<br/>{naipe}</div>
-</div>
 """
 
 # =========================
