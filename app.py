@@ -300,13 +300,17 @@ html, body, [class*="css"] {{
 .mesa{{
   border-radius: 50% / 46%;
   border: 1px solid transparent;
-  background-color: #0f7a4a;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='500' viewBox='0 0 800 500'><defs><radialGradient id='g1' cx='0.25' cy='0.2' r='0.6'><stop offset='0%' stop-color='%2332c96b' stop-opacity='0.35'/><stop offset='100%' stop-color='%230f7a4a' stop-opacity='1'/></radialGradient><radialGradient id='g2' cx='0.8' cy='0.75' r='0.6'><stop offset='0%' stop-color='%23000000' stop-opacity='0.18'/><stop offset='100%' stop-color='%230f7a4a' stop-opacity='1'/></radialGradient><linearGradient id='g3' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='%23107a4a'/><stop offset='55%' stop-color='%23095c38'/><stop offset='100%' stop-color='%2307462c'/></linearGradient></defs><rect width='800' height='500' fill='%230f7a4a'/><rect width='800' height='500' fill='url(%23g1)'/><rect width='800' height='500' fill='url(%23g2)'/><rect width='800' height='500' fill='url(%23g3)'/></svg>");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
   clip-path: ellipse(48% 42% at 50% 50%);
   height: 470px;
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow);
 }}
+
 
 
 .mesa:before{{
