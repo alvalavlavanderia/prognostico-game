@@ -297,6 +297,9 @@ html, body, [class*="css"] {{
 .smallMuted{{ opacity:.70; font-size:12px; color: var(--textSub); }}
 
 .mesaWrap{{ margin-top: 6px; }}
+
+.mesa { background: #0f7a4a !important; }
+
 .mesa{{
   border-radius: 50% / 46%;
   border: 1px solid transparent;
