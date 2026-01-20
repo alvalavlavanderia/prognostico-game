@@ -314,11 +314,12 @@ html, body, [class*="css"] {{
   content:"";
   position:absolute; inset:0;
   background: #0f7a4a !important;
-  border: 2px solid rgba(0,0,0,.85);
+  border: 16px solid #5a3a1e;
   border-radius: 50% / 46%;
   clip-path: ellipse(48% 42% at 50% 50%);
   box-shadow:
-    0 0 0 6px rgba(212,175,55,.65),
+    0 0 0 9px rgba(178,34,34,.85),
+    0 0 0 12px rgba(212,175,55,.9),
     0 16px 32px rgba(0,0,0,.25);
   opacity:1;
   pointer-events:none;
@@ -328,10 +329,10 @@ html, body, [class*="css"] {{
 .mesa:after{{
   content:"";
   position:absolute;
-  inset: 18px;
+  inset: 20px;
   border-radius: 50% / 46%;
-  border: 2px solid rgba(212,175,55,.55);
-  box-shadow: inset 0 0 0 2px rgba(0,0,0,.45);
+  border: 2px solid rgba(212,175,55,.9);
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.55);
   clip-path: ellipse(47% 41% at 50% 50%);
   pointer-events:none;
   z-index: 2;
@@ -347,7 +348,6 @@ html, body, [class*="css"] {{
   color: rgba(255,255,255,.90);
   z-index: 3;
 }}
-
 
 .seat{{
   position:absolute;
