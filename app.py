@@ -1388,9 +1388,6 @@ def render_mesa():
 # =========================
 # MÃO clicável
 # =========================
-# =========================
-# MÃO clicável
-# =========================
 def render_hand_clickable_streamlit():
     ordem = st.session_state.ordem
     humano = st.session_state.nomes[st.session_state.humano_idx]
