@@ -296,7 +296,7 @@ html, body, [class*="css"] {{
 .scorePts{{ font-weight:900; }}
 .smallMuted{{ opacity:.70; font-size:12px; color: var(--textSub); }}
 
-.mesaWrap{{ margin-top: 6px; }}
+.mesaWrap{{ margin-top: 6px; margin-bottom: 0; }}
 
 .mesa{{
   border-radius: 50% / 46%;
@@ -406,9 +406,9 @@ html, body, [class*="css"] {{
 .card .br{{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }}
 .card .mid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }}
 
-chipWrap{{ position:absolute; transform: translate(-50%,-50%); z-index: 16; }}
-chipRow{{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width: 140px; }}
-chipMini{{
+.chipWrap{{ position:absolute; transform: translate(-50%,-50%); z-index: 30; pointer-events:none; }}
+.chipRow{{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; align-items:center; max-width: 140px; }}
+.chipMini{{
   width:22px; height:22px;
   border-radius:50%;
   position:relative;
@@ -449,16 +449,20 @@ chipMini{{
   background: rgba(255,255,255,.78);
   border: 1px solid rgba(0,0,0,.10);
 }}
-chipNote{{
+.chipNote{{
   margin-top: 6px;
   font-size: 10px;
   font-weight: 900;
-  opacity: .72;
-  background: rgba(255,255,255,.76);
+  opacity: .85;
+  color: #111827;
+  background: rgba(255,255,255,.86);
   border: 1px solid rgba(0,0,0,.08);
   padding: 3px 8px;
   border-radius: 999px;
-  display:inline-block;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width: 18px;
 }}
 
 .pileWrap{{ position:absolute; transform: translate(-50%,-50%); z-index: 15; }}
@@ -489,7 +493,7 @@ chipNote{{
 }}
 
 .handDock{{
-  margin-top: 10px;
+  margin-top: 0;
   border-radius: 18px;
   border:1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.07);
@@ -970,7 +974,6 @@ def render_progn_chips_html(prog, color: str) -> str:
     chips = "".join([f'<div class="chipMini" style="--chip-base:{color};"></div>' for _ in range(show)])
     extra = f'<span class="chipNote">+{p-12}</span>' if p > 12 else ''
     return f'<div class="chipRow">{count_label}{chips}</div>{extra}'
-
 
 def render_small_pile_html(won: int) -> str:
     layers = min(max(won, 0), 10)
