@@ -548,6 +548,24 @@ html, body, [class*="css"] {{
   pointer-events: none !important;
 }}
 
+.handDock div[data-testid="column"] .stButton > button:disabled{{
+  opacity: .28 !important;
+  transform:none !important;
+  filter:none !important;
+}}
+
+.handDock .cardOverlay{{
+  width: var(--hand-card-w) !important;
+  height: var(--hand-card-h) !important;
+  position: absolute !important;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0 !important;
+  z-index: 2;
+  pointer-events: none !important;
+}}
+
 
 .cardBtnInner{{
   width: var(--hand-card-w) !important;
