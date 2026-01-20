@@ -179,12 +179,12 @@ html, body, [class*="css"] {{
   letter-spacing: .1px;
 }}
 
-.titleRow {
+.titleRow {{
   display:flex;
   align-items:center;
   justify-content:center;
   margin: 10px 0 10px 0;
-}
+}}
 .titleRow h1 {{
   margin:0;
   font-size: 30px;
@@ -574,7 +574,7 @@ html, body, [class*="css"] {{
 }}
 </style>
 """
-    st.markdown(css, unsafe_allow_html=True)
+st.markdown(css, unsafe_allow_html=True)
 
 inject_css(st.session_state.neon_mode)
 
