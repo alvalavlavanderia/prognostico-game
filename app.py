@@ -185,7 +185,7 @@ html, body, [class*="css"] {{
   justify-content:center;
   margin: 10px 0 10px 0;
 }}
-. titleRow h1 {{
+.titleRow h1 {{
   margin:0;
   font-size: 30px;
   font-weight: 950;
@@ -322,19 +322,6 @@ html, body, [class*="css"] {{
   pointer-events:none;
   z-index: 1;
 }}
-
-.mesa:after{{
-  content:"";
-  position:absolute;
-  inset: 20px;
-  border-radius: 50% / 46%;
-  border: 2px solid rgba(212,175,55,.9);
-  box-shadow: inset 0 0 0 2px rgba(0,0,0,.55);
-  clip-path: ellipse(47% 41% at 50% 50%);
-  pointer-events:none;
-  z-index: 2;
-}}
-
 .mesaCenter{{
   position:absolute; inset:0;
   display:flex; align-items:center; justify-content:center;
@@ -499,71 +486,9 @@ html, body, [class*="css"] {{
   box-shadow: none;
   padding: 12px;
 }}
-
 .handTitle{{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 6px; }}
 .handTitle h3{{ margin:0; font-size:16px; color: var(--textMain); }}
 .hint{{ font-size:12px; opacity:.72; font-weight:800; color: var(--textSub); }}
-
-.handDock div[data-testid="column"]{{
-  position: relative;
-}}
-.handDock div[data-testid="column"] .stButton{{
-  position: relative;
-  height: var(--hand-card-h);
-  margin-top: calc(-1 * var(--hand-card-h));
-  z-index: 2;
-}}
-.handDock div[data-testid="column"] .stButton > button{{
-  width: var(--hand-card-w) !important;
-  min-width: var(--hand-card-w) !important;
-  max-width: var(--hand-card-w) !important;
-  height: var(--hand-card-h) !important;
-  min-height: var(--hand-card-h) !important;
-  margin: 0 auto !important;
-  display: block !important;
-  background: rgba(255,255,255,0.0) !important;
-  border-radius: 14px !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  transition: transform .10s ease, filter .10s ease;
-}}
-.handDock div[data-testid="column"] .stButton > button:hover{{
-  transform: translateY(-4px);
-  filter: drop-shadow(0 14px 22px rgba(0,0,0,.20));
-}}
-.handDock div[data-testid="column"] .stButton > button:disabled{{
-  opacity: .28 !important;
-  transform:none !important;
-  filter:none !important;
-}}
-
-.handDock .cardOverlay{{
-  width: var(--hand-card-w) !important;
-  height: var(--hand-card-h) !important;
-  margin: 0 auto;
-  position: relative !important;
-  z-index: 1;
-  pointer-events: none !important;
-}}
-
-.handDock div[data-testid="column"] .stButton > button:disabled{{
-  opacity: .28 !important;
-  transform:none !important;
-  filter:none !important;
-}}
-
-.handDock .cardOverlay{{
-  width: var(--hand-card-w) !important;
-  height: var(--hand-card-h) !important;
-  position: absolute !important;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  margin: 0 !important;
-  z-index: 2;
-  pointer-events: none !important;
-}}
 
 .handDock div[data-testid="column"]{{
   position: relative;
@@ -627,11 +552,11 @@ html, body, [class*="css"] {{
 .cardBtnBR{{ position:absolute; bottom:10px; right:10px; font-weight:900; font-size:14px; line-height:14px; transform: rotate(180deg); }}
 .cardBtnMid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:900; opacity:.92; }}
 
-@keyframes flyAway {{
+@keyframes flyAway {
   0%   {{ transform: translateY(0px) scale(1); opacity: 1; }}
   55%  {{ transform: translateY(-26px) scale(1.03); opacity: .85; }}
   100% {{ transform: translateY(-70px) scale(.96); opacity: 0; }}
-}}
+}
 .flyAway{{ animation: flyAway .25s ease-in forwards; }}
 
 @media (max-width: 900px){{
@@ -645,6 +570,8 @@ html, body, [class*="css"] {{
   .card .mid{{ font-size: 26px; }}
   .topbar{{ flex-direction:column; align-items:flex-start; }}
   .topRight{{ justify-content:flex-start; max-width: 100%; }}
+}}
+
 }}
 </style>
 """
