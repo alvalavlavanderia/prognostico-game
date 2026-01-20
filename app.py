@@ -1517,14 +1517,7 @@ def render_hand_clickable_streamlit():
                     use_container_width=True,
                 ):
                     clicked = c
-
-                extra = "flyAway" if (pending is not None and c == pending) else ""
-                st.markdown(
-                    f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
-                    unsafe_allow_html=True,
-                )
-    st.markdown("</div>", unsafe_allow_html=True)
-
+    st.markdown('</div>', unsafe_allow_html=True)
     return clicked
 
 # =========================
