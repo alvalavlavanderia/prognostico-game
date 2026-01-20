@@ -552,11 +552,11 @@ html, body, [class*="css"] {{
 .cardBtnBR{{ position:absolute; bottom:10px; right:10px; font-weight:900; font-size:14px; line-height:14px; transform: rotate(180deg); }}
 .cardBtnMid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:900; opacity:.92; }}
 
-@keyframes flyAway {
+@keyframes flyAway {{
   0%   {{ transform: translateY(0px) scale(1); opacity: 1; }}
   55%  {{ transform: translateY(-26px) scale(1.03); opacity: .85; }}
   100% {{ transform: translateY(-70px) scale(.96); opacity: 0; }}
-}
+}}
 .flyAway{{ animation: flyAway .25s ease-in forwards; }}
 
 @media (max-width: 900px){{
