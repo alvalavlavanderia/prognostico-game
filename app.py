@@ -1419,14 +1419,14 @@ def render_mesa():
 # MÃO clicável
 # =========================
 def render_hand_clickable_streamlit():
-    # ... (seu código inicial de estado humano/atual/mao/validas) ...
     humano = st.session_state.nomes[st.session_state.humano_idx]
     atual = st.session_state.ordem[st.session_state.turn_idx]
     mao = st.session_state.maos[humano]
     validas = set(cartas_validas_para_jogar(humano))
-    
+
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
-    
+
+    mao_ord = sorted(mao, key=peso_carta)
     if not mao_ord:
         st.markdown("</div>", unsafe_allow_html=True)
         return None
