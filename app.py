@@ -565,6 +565,53 @@ html, body, [class*="css"] {{
   pointer-events: none !important;
 }}
 
+.handDock div[data-testid="column"]{{
+  position: relative;
+}}
+.cardSlot{{
+  position: relative;
+  width: var(--hand-card-w);
+  height: var(--hand-card-h);
+  margin: 0 auto;
+}}
+.cardSlot .stButton{{
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}}
+.cardSlot .stButton > button{{
+  width: var(--hand-card-w) !important;
+  min-width: var(--hand-card-w) !important;
+  max-width: var(--hand-card-w) !important;
+  height: var(--hand-card-h) !important;
+  min-height: var(--hand-card-h) !important;
+  margin: 0 auto !important;
+  display: block !important;
+  background: rgba(255,255,255,0.0) !important;
+  border-radius: 14px !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  transition: transform .10s ease, filter .10s ease;
+}}
+.cardSlot .stButton > button:hover{{
+  transform: translateY(-4px);
+  filter: drop-shadow(0 14px 22px rgba(0,0,0,.20));
+}}
+.cardSlot .stButton > button:disabled{{
+  opacity: .28 !important;
+  transform:none !important;
+  filter:none !important;
+}}
+
+.cardSlot .cardOverlay{{
+  width: var(--hand-card-w) !important;
+  height: var(--hand-card-h) !important;
+  position: absolute !important;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none !important;
+}}
 
 .cardBtnInner{{
   width: var(--hand-card-w) !important;
@@ -1458,6 +1505,7 @@ def render_hand_clickable_streamlit():
             )
 
             with cols[j]:
+                st.markdown('<div class="cardSlot">', unsafe_allow_html=True)
                 if st.button(
                     " ",
                     key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{r}_{j}",
@@ -1465,14 +1513,13 @@ def render_hand_clickable_streamlit():
                     use_container_width=True,
                 ):
                     clicked = c
-
                 extra = "flyAway" if (pending is not None and c == pending) else ""
                 st.markdown(
                     f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
                     unsafe_allow_html=True,
                 )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
     return clicked
 
 # =========================
