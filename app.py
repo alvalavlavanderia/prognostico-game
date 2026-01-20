@@ -18,8 +18,8 @@ st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="
 def ss_init():
     defaults = {
         "started": False,
-        "nomes": ["Ana", "Bruno", "Carlos", "Você"],
-        "humano_idx": 3,
+        "nomes": ["IA 1", "IA 2", "IA 3", "IA 4", "IA 5", "Você"],
+        "humano_idx": 5,
 
         "pontos": {},
         "vazas_rodada": {},
@@ -69,6 +69,7 @@ def ss_init():
 
         # visual
         "neon_mode": False,
+        "hard_mode": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -694,8 +695,10 @@ def ai_prognostico(mao, cartas_por_jogador: int) -> int:
     distinct_nontrump_suits = sum(1 for s in ["♠", "♦", "♣"] if suit_counts[s] > 0)
     if trumps == 0 and distinct_nontrump_suits >= 3:
         strength -= 0.25
-    expected = strength / 2.4
-    expected += random.uniform(-0.25, 0.25)
+    divisor = 2.25 if hard_mode else 2.4
+    expected = strength / divisor
+    variance = 0.12 if hard_mode else 0.25
+    expected += random.uniform(-variance, variance)
     guess = int(round(expected))
     guess = max(0, min(cartas_por_jogador, guess))
     return guess
@@ -750,7 +753,14 @@ def preparar_prognosticos_anteriores():
     humano = nomes[st.session_state.humano_idx]
     pos_h = ordem.index(humano)
     prev = ordem[:pos_h]
-    st.session_state.progn_pre = {n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo) for n in prev}
+    st.session_state.progn_pre = {
+        n: ai_prognostico(
+            st.session_state.maos[n],
+            st.session_state.cartas_alvo,
+            st.session_state.hard_mode,
+        )
+        for n in prev
+    }
 
 def preparar_prognosticos_posteriores():
     nomes = st.session_state.nomes
@@ -758,7 +768,14 @@ def preparar_prognosticos_posteriores():
     humano = nomes[st.session_state.humano_idx]
     pos_h = ordem.index(humano)
     post = ordem[pos_h+1:]
-    st.session_state.progn_pos = {n: ai_prognostico(st.session_state.maos[n], st.session_state.cartas_alvo) for n in post}
+    st.session_state.progn_pos = {
+        n: ai_prognostico(
+            st.session_state.maos[n],
+            st.session_state.cartas_alvo,
+            st.session_state.hard_mode,
+        )
+        for n in post
+    }
 
 def iniciar_fase_jogo():
     nomes = st.session_state.nomes
@@ -886,7 +903,49 @@ def pontuar_rodada():
 
 def ai_escolhe_carta(nome):
     validas = cartas_validas_para_jogar(nome)
-    return random.choice(validas) if validas else None
+    if not validas:
+        return None
+    if not st.session_state.hard_mode:
+        return random.choice(validas)
+
+    naipe_base = st.session_state.naipe_base
+    mesa = st.session_state.mesa
+    progn = st.session_state.prognosticos.get(nome)
+    vazas = st.session_state.vazas_rodada.get(nome, 0)
+    need_wins = None if progn is None else progn - vazas
+
+    def card_rank(carta, naipe_base_atual):
+        naipe, valor = carta
+        if naipe == TRUNFO:
+            return (2, PESO_VALOR[valor])
+        if naipe_base_atual is None:
+            return (1, PESO_VALOR[valor])
+        if naipe == naipe_base_atual:
+            return (1, PESO_VALOR[valor])
+        return (0, PESO_VALOR[valor])
+
+    def sort_key(carta):
+        rank = card_rank(carta, naipe_base)
+        return (rank[0], rank[1])
+
+    if not mesa or naipe_base is None:
+        if need_wins is not None and need_wins > 0:
+            return max(validas, key=sort_key)
+        return min(validas, key=sort_key)
+
+    current_best = max(mesa, key=lambda item: card_rank(item[1], naipe_base))[1]
+    best_rank = card_rank(current_best, naipe_base)
+    winning_cards = [c for c in validas if card_rank(c, naipe_base) > best_rank]
+
+    if need_wins is not None and need_wins > 0:
+        if winning_cards:
+            return min(winning_cards, key=sort_key)
+        return min(validas, key=sort_key)
+
+    losing_cards = [c for c in validas if c not in winning_cards]
+    if losing_cards:
+        return min(losing_cards, key=sort_key)
+    return min(validas, key=sort_key)
 
 def avancar_ate_humano_ou_fim():
     humano = st.session_state.nomes[st.session_state.humano_idx]
@@ -1032,8 +1091,15 @@ st.markdown(
 # =========================
 # SETUP
 # =========================
+# =========================
+# SETUP
+# =========================
 if not st.session_state.started:
     st.markdown("### Configuração")
+    st.session_state.hard_mode = st.toggle(
+        "🔥 Modo difícil (IA mais próxima do jogador real)",
+        value=st.session_state.hard_mode,
+    )
     nomes_txt = st.text_input("Jogadores (separados por vírgula). O último será Você",
                              value=", ".join(st.session_state.nomes))
     colA, colB = st.columns([1, 2])
