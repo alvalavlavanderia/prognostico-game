@@ -492,11 +492,15 @@ html, body, [class*="css"] {{
 
 .handDock div[data-testid="column"]{{
   position: relative;
+  min-height: var(--hand-card-h);
 }}
 .handDock div[data-testid="column"] .stButton{{
   position: absolute;
   inset: 0;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }}
 .handDock div[data-testid="column"] .stButton > button{{
   width: var(--hand-card-w) !important;
@@ -525,8 +529,8 @@ html, body, [class*="css"] {{
 .handDock .cardOverlay{{
   width: var(--hand-card-w) !important;
   height: var(--hand-card-h) !important;
-  position: absolute !important;
-  inset: 0;
+  position: relative !important;
+  margin: 0 auto;
   z-index: 1;
   pointer-events: none !important;
 }}
@@ -1388,52 +1392,14 @@ def render_mesa():
 # MÃO clicável
 # =========================
 def render_hand_clickable_streamlit():
+    # ... (seu código inicial de estado humano/atual/mao/validas) ...
     humano = st.session_state.nomes[st.session_state.humano_idx]
     atual = st.session_state.ordem[st.session_state.turn_idx]
     mao = st.session_state.maos[humano]
     validas = set(cartas_validas_para_jogar(humano))
-
-    # --- CSS PARA ESTILIZAR O BOTÃO ---
-    st.markdown("""
-        <style>
-        /* Remove o estilo padrão do botão e centraliza a imagem */
-        div.stButton > button {
-            background-color: transparent;
-            border: none;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-        }
-
-        /* Estiliza o container da imagem da carta */
-        .card-img {
-            border-radius: 8px;
-            transition: transform 0.2s;
-        }
-
-        /* Efeito de hover (opcional) */
-        .card-img:hover {
-            transform: scale(1.05);
-        }
-
-        /* Classe para quando a carta está sendo jogada */
-        .flyAway {
-            animation: flyAway 0.5s forwards;
-        }
-
-        @keyframes flyAway {
-            to { transform: translateY(-100px); opacity: 0; }
-        }
-
-        /* Ajusta o padding das colunas no Streamlit */
-        [data-testid="stVerticalBlock"] > div:has(div.stButton) {
-            padding: 0;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
+    
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
-
+    
     mao_ord = sorted(mao, key=peso_carta)
     if not mao_ord:
         st.markdown("</div>", unsafe_allow_html=True)
@@ -1462,22 +1428,19 @@ def render_hand_clickable_streamlit():
                 is_pending = (pending is not None and c == pending)
                 card_html = card_btn_html(c, extra_class="flyAway" if is_pending else "")
                 
-                st.markdown('<div class="cardSlot">', unsafe_allow_html=True)
                 st.markdown(f'<div class="cardOverlay">{card_html}</div>', unsafe_allow_html=True)
-    
+
                 # O BOTÃO: rótulo vazio para evitar mostrar HTML cru
                 if st.button(
-                    label="",
+                    label=" ",
                     key=key,
                     disabled=disabled,
-                    use_container_width=False
+                    use_container_width=True
                 ):
                     # Ação ao clicar (ex: adicionar a pending_play)
                     st.session_state.pending_play = c
                     st.rerun()
-    
-                st.markdown("</div>", unsafe_allow_html=True)
-                
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 
