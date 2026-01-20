@@ -1383,53 +1383,55 @@ def render_mesa():
 # MÃO clicável
 # =========================
 def render_hand_clickable_streamlit():
-    # ... (seu código inicial de estado humano/atual/mao/validas) ...
     humano = st.session_state.nomes[st.session_state.humano_idx]
     atual = st.session_state.ordem[st.session_state.turn_idx]
     mao = st.session_state.maos[humano]
     validas = set(cartas_validas_para_jogar(humano))
-    
+
     # --- CSS PARA ESTILIZAR O BOTÃO ---
-    st.markdown("""
+    st.markdown(
+        """
         <style>
         /* Remove o estilo padrão do botão e centraliza a imagem */
-        div.stButton > button {{
+        div.stButton > button {
             background-color: transparent;
             border: none;
             padding: 0;
             display: flex;
             justify-content: center;
-        }}
-        
+        }
+
         /* Estiliza o container da imagem da carta */
-        .card-img {{
+        .card-img {
             border-radius: 8px;
             transition: transform 0.2s;
-        }}
-        
+        }
+
         /* Efeito de hover (opcional) */
-        .card-img:hover {{
+        .card-img:hover {
             transform: scale(1.05);
-        }}
-        
+        }
+
         /* Classe para quando a carta está sendo jogada */
-        .flyAway {{
+        .flyAway {
             animation: flyAway 0.5s forwards;
-        }}
-        
-        @keyframes flyAway {{
-            to {{ transform: translateY(-100px); opacity: 0; }}
-        }}
-        
+        }
+
+        @keyframes flyAway {
+            to { transform: translateY(-100px); opacity: 0; }
+        }
+
         /* Ajusta o padding das colunas no Streamlit */
-        [data-testid="stVerticalBlock"] > div:has(div.stButton) {{
+        [data-testid="stVerticalBlock"] > div:has(div.stButton) {
             padding: 0;
-        }}
+        }
         </style>
-    """, unsafe_allow_html=True)
-    
+        """,
+        unsafe_allow_html=True
+    )
+
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
-    
+
     mao_ord = sorted(mao, key=peso_carta)
     if not mao_ord:
         st.markdown("</div>", unsafe_allow_html=True)
@@ -1442,34 +1444,30 @@ def render_hand_clickable_streamlit():
     for r, row_cards in enumerate(rows):
         cols = st.columns(cols_per_row)
         for j, c in enumerate(row_cards):
-            # Lógica de desabilitar (disabled)
             disabled = (
-                (c not in validas) or 
-                (atual != humano) or 
-                (pending is not None) or 
-                st.session_state.trick_pending
+                (c not in validas)
+                or (atual != humano)
+                or (pending is not None)
+                or st.session_state.trick_pending
             )
-            
+
             with cols[j]:
-                # Chave única
-                key = f"card_{c[0]}{c[1]}_{r}_{j}" 
-                
-                # HTML da carta
+                key = f"card_{c[0]}{c[1]}_{r}_{j}"
+
                 is_pending = (pending is not None and c == pending)
                 card_html = card_btn_html(c, extra_class="flyAway" if is_pending else "")
-                
-                # O BOTÃO: O label contém o HTML da imagem
+
                 if st.button(
-                    label=card_html, 
-                    key=key, 
+                    label=card_html,
+                    key=key,
                     disabled=disabled,
                     use_container_width=True
                 ):
-                    # Ação ao clicar (ex: adicionar a pending_play)
                     st.session_state.pending_play = c
                     st.rerun()
-                
+
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 # =========================
 # PLACAR PARCIAL
