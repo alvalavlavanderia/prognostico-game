@@ -495,12 +495,13 @@ html, body, [class*="css"] {{
 .handDock{{
   margin-top: 0;
   border-radius: 18px;
-  border:1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.07);
-  backdrop-filter: blur(10px);
-  box-shadow: var(--shadow2);
+  border: none;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
   padding: 12px;
 }}
+
 .handTitle{{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 6px; }}
 .handTitle h3{{ margin:0; font-size:16px; color: var(--textMain); }}
 .hint{{ font-size:12px; opacity:.72; font-weight:800; color: var(--textSub); }}
