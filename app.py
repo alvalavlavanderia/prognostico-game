@@ -1427,40 +1427,40 @@ def render_hand_clickable_streamlit():
     
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
     
-if not mao_ord:
-    st.markdown("</div>", unsafe_allow_html=True)
-    return None
-
-pending = st.session_state.pending_play
-clicked_card = None
-cols_per_row = 10
-rows = [mao_ord[i:i + cols_per_row] for i in range(0, len(mao_ord), cols_per_row)]
-
-for r, row_cards in enumerate(rows):
-    cols = st.columns(cols_per_row)
-    for j, c in enumerate(row_cards):
-        # Lógica de desabilitar (disabled)
-        disabled = (
-            (c not in validas) or 
-            (atual != humano) or 
-            (pending is not None) or 
-            st.session_state.trick_pending
-        )
-        
-        with cols[j]:
-            is_pending = (pending is not None and c == pending)
-            card_html = card_btn_html(c, extra_class="flyAway" if is_pending else "")
-            key = f"card_btn_{c[0]}_{c[1]}_{r}_{j}"
-            st.markdown('<div class="cardSlot">', unsafe_allow_html=True)
-            if st.button(" ", key=key, disabled=disabled, use_container_width=True):
-                clicked_card = c
-            st.markdown(
-                f'<div class="cardOverlay">{card_html}</div></div>',
-                unsafe_allow_html=True,
+    if not mao_ord:
+        st.markdown("</div>", unsafe_allow_html=True)
+        return None
+    
+    pending = st.session_state.pending_play
+    clicked_card = None
+    cols_per_row = 10
+    rows = [mao_ord[i:i + cols_per_row] for i in range(0, len(mao_ord), cols_per_row)]
+    
+    for r, row_cards in enumerate(rows):
+        cols = st.columns(cols_per_row)
+        for j, c in enumerate(row_cards):
+            # Lógica de desabilitar (disabled)
+            disabled = (
+                (c not in validas) or 
+                (atual != humano) or 
+                (pending is not None) or 
+                st.session_state.trick_pending
             )
-
-st.markdown("</div>", unsafe_allow_html=True)
-return clicked_card
+            
+            with cols[j]:
+                is_pending = (pending is not None and c == pending)
+                card_html = card_btn_html(c, extra_class="flyAway" if is_pending else "")
+                key = f"card_btn_{c[0]}_{c[1]}_{r}_{j}"
+                st.markdown('<div class="cardSlot">', unsafe_allow_html=True)
+                if st.button(" ", key=key, disabled=disabled, use_container_width=True):
+                    clicked_card = c
+                st.markdown(
+                    f'<div class="cardOverlay">{card_html}</div></div>',
+                    unsafe_allow_html=True,
+                )
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+    return clicked_card
 
 # =========================
 # PLACAR PARCIAL
