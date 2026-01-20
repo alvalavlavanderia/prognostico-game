@@ -1389,60 +1389,67 @@ def render_mesa():
 # MÃO clicável
 # =========================
 def render_hand_clickable_streamlit():
-    ordem = st.session_state.ordem
+    # ... (seu código inicial de estado humano/atual/mao/validas) ...
     humano = st.session_state.nomes[st.session_state.humano_idx]
-    atual = ordem[st.session_state.turn_idx]
+    atual = st.session_state.ordem[st.session_state.turn_idx]
     mao = st.session_state.maos[humano]
     validas = set(cartas_validas_para_jogar(humano))
-
+    
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
-    hint = "Clique numa carta válida" if atual == humano else "Aguardando sua vez (IA jogando...)"
-    if st.session_state.trick_pending:
-        hint = "Vaza completa — animação"
-
-    hand_title_html = (
-        f'<div class="handTitle"><h3>🂠 Sua mão</h3>'
-        f'<div class="hint">{hint}</div></div>'
-    )
-    st.markdown(hand_title_html, unsafe_allow_html=True)
-
+    # ... (código do hint) ...
+    
     mao_ord = sorted(mao, key=peso_carta)
     if not mao_ord:
         st.markdown("</div>", unsafe_allow_html=True)
         return None
 
-    clicked = None
     pending = st.session_state.pending_play
-
-    # grade responsiva: desktop 10, mobile 5
     cols_per_row = 10
     rows = [mao_ord[i:i + cols_per_row] for i in range(0, len(mao_ord), cols_per_row)]
+
+    clicked = None
 
     for r, row_cards in enumerate(rows):
         cols = st.columns(cols_per_row)
         for j, c in enumerate(row_cards):
             disabled = (
-                (c not in validas)
-                or (atual != humano)
-                or (pending is not None)
-                or st.session_state.trick_pending
+                (c not in validas) or 
+                (atual != humano) or 
+                (pending is not None) or 
+                st.session_state.trick_pending
             )
-
+            
             with cols[j]:
-                extra = "flyAway" if (pending is not None and c == pending) else ""
-                st.markdown(
-                    f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
-                    unsafe_allow_html=True,
-                )
+                # Adiciona uma chave única baseada no índice para evitar conflitos
+                key = f"card_{c[0]}{c[1]}_{r}_{j}" 
+                
+                # --- A MUDANÇA ---
+                # Em vez de markdown + button, vamos estilizar o próprio botão 
+                # se necessário, ou usar a imagem dentro do container do botão.
+                
+                # Se card_btn_html gera o HTML da carta, vamos colocá-lo 
+                # no parâmetro 'label' do botão, estilizando com CSS
+                
+                card_html = card_btn_html(c, extra_class="flyAway" if (pending is not None and c == pending) else "")
+                
+                # Esta é a forma mais robusta no Streamlit atual:
+                # O botão contém a imagem da carta.
                 if st.button(
-                    " ",
-                    key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{r}_{j}",
-                    disabled=disabled,
-                    use_container_width=True,
+                    label=card_html, 
+                    key=key, 
+                    disabled=disabled, 
+                    use_container_width=True
                 ):
                     clicked = c
+
     st.markdown('</div>', unsafe_allow_html=True)
     return clicked
+
+# --- Como chamar a função no main ---
+# carta_jogada = render_hand_clickable_streamlit()
+# if carta_jogada:
+#     processar_jogada(carta_jogada) # Sua função de lógica
+#     st.rerun() # Essencial para atualizar a mão
 
 # =========================
 # PLACAR PARCIAL
