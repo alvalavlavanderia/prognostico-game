@@ -361,6 +361,7 @@ html, body, [class*="css"] {{
 }}
 .seat.you{{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }}
 .seat.dealer{{ border-color: rgba(34,197,94,.35); }}
+.seat.active{{ outline: 3px solid rgba(251,191,36,.9); box-shadow: 0 0 18px rgba(251,191,36,.45); }}
 .avatarImg{{
   width:26px; height:26px;
   border-radius:50%;
@@ -1194,8 +1195,8 @@ def render_mesa():
     ordem = st.session_state.ordem
     n = len(ordem)
     humano = st.session_state.nomes[st.session_state.humano_idx]
+    active_player = ordem[st.session_state.turn_idx] if ordem else None
     dealer = ordem[0]
-    pos = seat_positions(ordem)
 
     now = time.time()
     flash_name = st.session_state.winner_flash_name if now <= st.session_state.winner_flash_until else None
