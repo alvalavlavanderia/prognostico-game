@@ -1381,6 +1381,22 @@ def render_hand_clickable_streamlit():
     st.markdown('</div>', unsafe_allow_html=True)
     return clicked
 
+# =========================
+# PLACAR PARCIAL
+# =========================
+def render_placar_parcial():
+    st.markdown("## 🧾 Placar parcial")
+    ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
+
+    linhas = []
+    medals = ["🥇", "🥈", "🥉"]
+    for i, (nome, pts) in enumerate(ranking, start=1):
+        medalha = medals[i - 1] if i <= 3 else ""
+        linhas.append({"Posição": f"{medalha} {i}º".strip(), "Jogador": nome, "Pontos": pts})
+
+    df = pd.DataFrame(linhas)
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
 
 # =========================
 # TELA FINAL
@@ -1431,8 +1447,12 @@ if st.session_state.fase == "jogo":
             st.session_state.fase = "fim"
             st.session_state.show_final = True
             st.rerun()
-        st.success("✅ Rodada finalizada. Use o Menu (☰) ou Sidebar para continuar.")
+        render_placar_parcial()
+        if st.button("▶️ Continuar jogo", use_container_width=True, key="btn_continue_game"):
+            start_next_round()
+            st.rerun()
         st.stop()
+
 
     if st.session_state.trick_pending:
         time.sleep(0.06)
