@@ -947,6 +947,7 @@ def ai_escolhe_carta(nome):
     progn = st.session_state.prognosticos.get(nome)
     vazas = st.session_state.vazas_rodada.get(nome, 0)
     need_wins = None if progn is None else progn - vazas
+    remaining_cards = len(st.session_state.maos[nome])
 
     def card_rank(carta, naipe_base_atual):
         naipe, valor = carta
@@ -962,25 +963,45 @@ def ai_escolhe_carta(nome):
         rank = card_rank(carta, naipe_base)
         return (rank[0], rank[1])
 
+    def losing_sort_key(carta):
+        naipe, valor = carta
+        is_trump = naipe == TRUNFO
+        rank = card_rank(carta, naipe_base)
+        return (is_trump, rank[0], rank[1])
+
+    def must_win_now():
+        return need_wins is not None and remaining_cards <= need_wins
+
+    def should_avoid_wins():
+        return need_wins is not None and need_wins <= 0
+
     if not mesa or naipe_base is None:
+        if must_win_now():
+            return max(validas, key=sort_key)
         if need_wins is not None and need_wins > 0:
             return max(validas, key=sort_key)
-        return min(validas, key=sort_key)
+        return min(validas, key=losing_sort_key)
 
     current_best = max(mesa, key=lambda item: card_rank(item[1], naipe_base))[1]
     best_rank = card_rank(current_best, naipe_base)
     winning_cards = [c for c in validas if card_rank(c, naipe_base) > best_rank]
 
+    if must_win_now():
+        if winning_cards:
+            return min(winning_cards, key=sort_key)
+        return max(validas, key=sort_key)
+
     if need_wins is not None and need_wins > 0:
         if winning_cards:
             return min(winning_cards, key=sort_key)
-        return min(validas, key=sort_key)
+        return min(validas, key=losing_sort_key)
 
     losing_cards = [c for c in validas if c not in winning_cards]
     if losing_cards:
-        return min(losing_cards, key=sort_key)
+        return min(losing_cards, key=losing_sort_key)
+    if should_avoid_wins():
+        return min(validas, key=losing_sort_key)
     return min(validas, key=sort_key)
-
 def avancar_ate_humano_ou_fim():
     humano = st.session_state.nomes[st.session_state.humano_idx]
     ordem = st.session_state.ordem
