@@ -298,7 +298,7 @@ html, body, [class*="css"] {{
 
 .mesaWrap{{ margin-top: 6px; }}
 
-.mesa { background: #0f7a4a !important; }
+.mesa {{ background: #0f7a4a !important; }}
 
 .mesa{{
   border-radius: 50% / 46%;
