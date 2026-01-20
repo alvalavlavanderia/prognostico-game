@@ -278,11 +278,11 @@ html, body, [class*="css"] {{
   padding: 10px 12px;
   margin-top: 0;
 }}
-.menuHint {
+.menuHint {{
   color: var(--textSub);
   font-weight: 800;
   font-size: 12px;
-}
+}}
 
 .scoreItem{{
   display:flex; justify-content:space-between;
