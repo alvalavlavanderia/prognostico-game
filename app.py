@@ -506,12 +506,12 @@ html, body, [class*="css"] {{
 
 .handDock div[data-testid="column"]{{
   position: relative;
-  height: var(--hand-card-h);
 }}
 .handDock div[data-testid="column"] .stButton{{
   position: relative;
-  z-index: 1;
-  margin-bottom: 0 !important;
+  height: var(--hand-card-h);
+  margin-top: calc(-1 * var(--hand-card-h));
+  z-index: 2;
 }}
 .handDock div[data-testid="column"] .stButton > button{{
   width: var(--hand-card-w) !important;
@@ -541,9 +541,9 @@ html, body, [class*="css"] {{
 .handDock .cardOverlay{{
   width: var(--hand-card-w) !important;
   height: var(--hand-card-h) !important;
+  margin: 0 auto;
   position: relative !important;
-  margin: calc(-1 * var(--hand-card-h) - .65rem) auto 0 !important;
-  z-index: 2;
+  z-index: 1;
   pointer-events: none !important;
 }}
 
@@ -1505,7 +1505,11 @@ def render_hand_clickable_streamlit():
             )
 
             with cols[j]:
-                st.markdown('<div class="cardSlot">', unsafe_allow_html=True)
+                extra = "flyAway" if (pending is not None and c == pending) else ""
+                st.markdown(
+                    f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
+                    unsafe_allow_html=True,
+                )
                 if st.button(
                     " ",
                     key=f"card_{st.session_state.rodada}_{c[0]}_{c[1]}_{r}_{j}",
@@ -1513,6 +1517,7 @@ def render_hand_clickable_streamlit():
                     use_container_width=True,
                 ):
                     clicked = c
+
                 extra = "flyAway" if (pending is not None and c == pending) else ""
                 st.markdown(
                     f'<div class="cardOverlay">{card_btn_html(c, extra_class=extra)}</div>',
