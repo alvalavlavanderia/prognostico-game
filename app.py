@@ -302,7 +302,6 @@ html, body, [class*="css"] {{
   border-radius: 50% / 46%;
   border: 1px solid transparent;
   background: #0f7a4a !important;
-  clip-path: ellipse(48% 42% at 50% 50%);
   height: 470px;
   position: relative;
   overflow: hidden;
@@ -313,13 +312,11 @@ html, body, [class*="css"] {{
 .mesa:before{{
   content:"";
   position:absolute; inset:0;
-  background: #0f7a4a !important;
-  border: 16px solid #5a3a1e;
   border-radius: 50% / 46%;
-  clip-path: ellipse(48% 42% at 50% 50%);
   box-shadow:
-    0 0 0 9px rgba(178,34,34,.85),
-    0 0 0 12px rgba(212,175,55,.9),
+    inset 0 0 0 26px #5a3a1e,
+    inset 0 0 0 38px #b22222,
+    inset 0 0 0 44px #d4af37,
     0 16px 32px rgba(0,0,0,.25);
   opacity:1;
   pointer-events:none;
