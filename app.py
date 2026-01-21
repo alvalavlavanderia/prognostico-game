@@ -1,9 +1,5 @@
-# app.py
-import random
-import math
-import time
-import base64
-import textwrap
+import copy
+from threading import Lock
 import pandas as pd
 import streamlit as st
 
@@ -131,9 +127,8 @@ ROOM_STATE_KEYS = [
 
 class RoomStore:
     def __init__(self):
-        self.lock = threading.Lock()
+        self.lock = Lock()
         self.rooms = {}
-
 
 @st.cache_resource
 def get_room_store():
