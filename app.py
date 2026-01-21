@@ -192,6 +192,9 @@ def stop_with_room_sync():
     st.stop()
 
 _streamlit_autorefresh = getattr(st, "autorefresh", None)
+if getattr(_streamlit_autorefresh, "_is_autorefresh_shim", False):
+    _streamlit_autorefresh = None
+
 
 def online_autorefresh(interval_ms: int, key: str):
     if callable(_streamlit_autorefresh):
@@ -213,7 +216,8 @@ if not callable(_streamlit_autorefresh):
     def _autorefresh(interval: int, key: Optional[str] = None):
         online_autorefresh(interval_ms=interval, key=key or "legacy_autorefresh")
 
-    st.autorefresh = _autorefresh
+    _autorefresh._is_autorefresh_shim = True
+    st.autorefresh = _autorefreshh
     
 # =========================
 # CSS
