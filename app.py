@@ -1416,7 +1416,15 @@ with c1:
             del st.session_state[key]
         ss_init()
         st.rerun()
-
+with colA:
+    start_label = "▶️ Iniciar partida"
+    if st.session_state.online_mode and st.session_state.is_host:
+        start_label = "▶️ Criar sala e iniciar"
+    start = st.button(
+        start_label,
+        use_container_width=True,
+        disabled=st.session_state.online_mode and not st.session_state.is_host,
+    )
 with c2:
     can_next = (st.session_state.fase == "jogo" and fim_de_rodada_pronto() and st.session_state.cartas_alvo > 1)
     if st.button("⏭️ Próxima rodada", use_container_width=True, key="menu_next_round_icon", help="Próxima rodada", disabled=not can_next):
