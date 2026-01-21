@@ -5,6 +5,7 @@ import time
 import base64
 import textwrap
 import copy
+from typing import Optional
 from threading import Lock
 import pandas as pd
 import streamlit as st
@@ -180,7 +181,6 @@ def sync_to_room():
     state = {key: copy.deepcopy(st.session_state.get(key)) for key in ROOM_STATE_KEYS}
     save_room_state(st.session_state.room_code, state)
 
-
 def rerun_with_room_sync():
     sync_to_room()
     st.rerun()
@@ -190,7 +190,28 @@ def stop_with_room_sync():
     sync_to_room()
     st.stop()
 
+def online_autorefresh(interval_ms: int, key: str):
+    if hasattr(st, "autorefresh"):
+        st.autorefresh(interval=interval_ms, key=key)
+        return
+    interval_s = max(interval_ms / 1000.0, 0.2)
+    last = st.session_state.get("online_last_refresh", 0.0)
+    now = time.time()
+    if now - last >= interval_s:
+        st.session_state.online_last_refresh = now
+        time.sleep(interval_s)
+        if hasattr(st, "rerun"):
+            st.rerun()
+        elif hasattr(st, "experimental_rerun"):
+            st.experimental_rerun()
 
+
+if not hasattr(st, "autorefresh"):
+    def _autorefresh(interval: int, key: Optional[str] = None):
+        online_autorefresh(interval_ms=interval, key=key or "legacy_autorefresh")
+
+    st.autorefresh = _autorefresh
+    
 # =========================
 # CSS
 # =========================
