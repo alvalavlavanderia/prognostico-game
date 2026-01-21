@@ -191,9 +191,11 @@ def stop_with_room_sync():
     sync_to_room()
     st.stop()
 
+_streamlit_autorefresh = getattr(st, "autorefresh", None)
+
 def online_autorefresh(interval_ms: int, key: str):
-    if hasattr(st, "autorefresh") and not getattr(st, "_autorefresh_shim", False):
-        st.autorefresh(interval=interval_ms, key=key)
+    if callable(_streamlit_autorefresh):
+        _streamlit_autorefresh(interval=interval_ms, key=key)
         return
     interval_s = max(interval_ms / 1000.0, 0.2)
     last = st.session_state.get("online_last_refresh", 0.0)
@@ -207,11 +209,10 @@ def online_autorefresh(interval_ms: int, key: str):
             st.experimental_rerun()
 
 
-if not hasattr(st, "autorefresh"):
+if not callable(_streamlit_autorefresh):
     def _autorefresh(interval: int, key: Optional[str] = None):
         online_autorefresh(interval_ms=interval, key=key or "legacy_autorefresh")
 
-    st._autorefresh_shim = True
     st.autorefresh = _autorefresh
     
 # =========================
