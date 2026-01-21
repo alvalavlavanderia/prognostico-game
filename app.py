@@ -696,6 +696,12 @@ label,
   .topbar{{ flex-direction:column; align-items:flex-start; }}
   .topRight{{ justify-content:flex-start; max-width: 100%; }}
 }}
+
+label,
+.stMarkdown,
+.stCaption {{
+  color: white !important;
+}}
 </style>
 """
     st.markdown(css, unsafe_allow_html=True)
