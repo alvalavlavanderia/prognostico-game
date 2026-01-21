@@ -1298,7 +1298,7 @@ with st.sidebar:
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             ss_init()
-        rerun_with_room_sync
+            rerun_with_room_sync
             st.session_state.cartas_inicio = cartas_inicio
             st.session_state.cartas_alvo = cartas_inicio
             st.session_state.rodada = 1
