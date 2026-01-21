@@ -1,4 +1,10 @@
 import copy
+import random as rng
+import math
+import time
+import base64
+import textwrap
+import copy
 from threading import Lock
 import pandas as pd
 import streamlit as st
@@ -129,6 +135,7 @@ class RoomStore:
     def __init__(self):
         self.lock = Lock()
         self.rooms = {}
+
 
 @st.cache_resource
 def get_room_store():
@@ -675,6 +682,8 @@ def human_label(nome: str) -> str:
     humanos = human_names()
     if nome not in humanos:
         return nome
+    if st.session_state.online_mode and st.session_state.player_name:
+        return f"{nome} (Você)" if nome == st.session_state.player_name else f"{nome} (Humano)"
     if len(humanos) == 1:
         return f"{nome} (Você)"
     return f"{nome} (Humano)"
@@ -684,7 +693,22 @@ def current_human_turn():
     if not ordem:
         return None
     atual = ordem[st.session_state.turn_idx]
-    return atual if is_human(atual) else None
+    if not is_human(atual):
+        return None
+    if st.session_state.online_mode and st.session_state.player_name:
+        return atual if atual == st.session_state.player_name else None
+    return atual
+
+# =========================
+# ONLINE MODE SYNC
+# =========================
+if st.session_state.online_mode and st.session_state.started:
+    sync_from_room()
+    if st.session_state.player_name:
+        if st.session_state.player_name not in st.session_state.players_online:
+            st.session_state.players_online.append(st.session_state.player_name)
+            sync_to_room()
+    st.autorefresh(interval=1000, key="online_refresh")
 
 # =========================
 # QUERY PARAM HANDLER
@@ -696,7 +720,7 @@ def handle_card_query_param():
     carta = param_to_carta(param)
     if param and not carta:
         st.query_params.pop("play", None)
-        st.rerun()
+        rerun_with_room_sync()
     if not carta:
         return
     st.query_params.pop("play", None)
@@ -712,18 +736,7 @@ def handle_card_query_param():
         and (not st.session_state.trick_pending)
     ):
         st.session_state.pending_play = carta
-    st.rerun()
-    
-# =========================
-# ONLINE MODE SYNC
-# =========================
-if st.session_state.online_mode and st.session_state.started:
-    sync_from_room()
-    if st.session_state.player_name:
-        if st.session_state.player_name not in st.session_state.players_online:
-            st.session_state.players_online.append(st.session_state.player_name)
-            sync_to_room()
-    st.autorefresh(interval=1000, key="online_refresh")
+    rerun_with_room_sync()
 
 # =========================
 # BARALHO / REGRAS
@@ -872,7 +885,7 @@ def ai_prognostico(mao, cartas_por_jogador: int, hard_mode: bool = False, *_args
     divisor = 2.25 if hard_mode else 2.4
     expected = strength / divisor
     variance = 0.12 if hard_mode else 0.25
-    expected += random.uniform(-variance, variance)
+    expected += rng.uniform(-variance, variance)
     guess = int(round(expected))
     guess = max(0, min(cartas_por_jogador, guess))
     return guess
@@ -884,7 +897,7 @@ def distribuir(cartas_alvo: int):
     nomes = st.session_state.nomes
     n = len(nomes)
     baralho = criar_baralho()
-    random.shuffle(baralho)
+    rng.shuffle(baralho)
 
     usadas = cartas_alvo * n
     st.session_state.sobras_monte = len(baralho) - usadas
@@ -899,7 +912,7 @@ def distribuir(cartas_alvo: int):
         st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=peso_carta)
 
     if not st.session_state.mao_primeira_sorteada:
-        st.session_state.mao_da_rodada = random.randint(0, n - 1)
+        st.session_state.mao_da_rodada = rng.randint(0, n - 1)
         st.session_state.mao_primeira_sorteada = True
     else:
         st.session_state.mao_da_rodada = (st.session_state.mao_da_rodada + 1) % n
