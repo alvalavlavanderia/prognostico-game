@@ -1514,23 +1514,23 @@ if st.session_state.fase == "prognostico":
     ordem_preview = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
     st.markdown(f"### 📌 Prognóstico — Rodada {st.session_state.rodada} ({st.session_state.cartas_alvo} cartas/jogador)")
 
-advance_prognostico_until_human()
-if st.session_state.progn_turn_idx >= len(ordem_preview):
-    iniciar_fase_jogo()
-    avancar_ate_humano_ou_fim()
-    rerun_with_room_sync()
-
-humano_nome = ordem_preview[st.session_state.progn_turn_idx]
-if st.session_state.online_mode and st.session_state.player_name and humano_nome != st.session_state.player_name:
-    proximos_humanos = [
-        n for n in ordem_preview[st.session_state.progn_turn_idx:]
-        if n in st.session_state.humanos
-    ]
-    fila_txt = " → ".join(proximos_humanos) if proximos_humanos else "—"
-    st.info(f"⏳ Aguardando prognóstico de {humano_nome}.")
-    st.caption(f"Ordem de prognósticos humanos: {fila_txt}")
-    stop_with_room_sync()
-mao_humano = st.session_state.maos.get(humano_nome, [])
+    advance_prognostico_until_human()
+    if st.session_state.progn_turn_idx >= len(ordem_preview):
+        iniciar_fase_jogo()
+        avancar_ate_humano_ou_fim()
+        rerun_with_room_sync()
+    
+    humano_nome = ordem_preview[st.session_state.progn_turn_idx]
+    if st.session_state.online_mode and st.session_state.player_name and humano_nome != st.session_state.player_name:
+        proximos_humanos = [
+            n for n in ordem_preview[st.session_state.progn_turn_idx:]
+            if n in st.session_state.humanos
+        ]
+        fila_txt = " → ".join(proximos_humanos) if proximos_humanos else "—"
+        st.info(f"⏳ Aguardando prognóstico de {humano_nome}.")
+        st.caption(f"Ordem de prognósticos humanos: {fila_txt}")
+        stop_with_room_sync()
+        mao_humano = st.session_state.maos.get(humano_nome, [])
     st.markdown(
         f"#### 🎯 Vez de {human_label(humano_nome)} — passe o dispositivo",
     )
