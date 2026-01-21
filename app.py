@@ -334,7 +334,7 @@ label,
 .stTextInput input,
 .stNumberInput input,
 .stTextArea textarea {{
-  color: #ffffff !important;
+  color: #111827 !important;
 }}
 
 .titleRow {{
