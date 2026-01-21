@@ -1,3 +1,4 @@
+# app.py
 import random as rng
 import math
 import time
@@ -7,6 +8,8 @@ import copy
 from threading import Lock
 import pandas as pd
 import streamlit as st
+
+random = rng
 
 # =========================
 # CONFIG
