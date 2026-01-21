@@ -315,9 +315,9 @@ label,
 .stSelectbox > label,
 .stMultiSelect > label,
 .stToggle > label,
-.stNumberInput > label {
+.stNumberInput > label {{
   color: var(--textMain) !important;
-}
+}}
 
 .stCaption, .smallMuted {{
   color: var(--textSub) !important;
