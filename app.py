@@ -391,11 +391,11 @@ label,
   gap: 12px;
 }}
 
-.handDock div[data-testid="column"]{
+.handDock div[data-testid="column"]{{
   position: relative;
   min-height: var(--hand-card-h);
-}
-.handDock .cardLink{
+}}
+.handDock .cardLink{{
   width: var(--hand-card-w);
   height: var(--hand-card-h);
   margin: 0 auto;
@@ -403,24 +403,24 @@ label,
   text-decoration: none;
   color: inherit;
   transition: transform .10s ease, filter .10s ease;
-}
-.handDock .cardLink:hover{
+}}
+.handDock .cardLink:hover{{
   transform: translateY(-4px);
   filter: drop-shadow(0 14px 22px rgba(0,0,0,.20));
-}
-.handDock .cardLink.is-disabled{
+}}
+.handDock .cardLink.is-disabled{{
   opacity: .28;
   pointer-events: none;
   transform:none;
   filter:none;
-}
-.handDock .cardLink.is-disabled:hover{
+}}
+.handDock .cardLink.is-disabled:hover{{
   transform:none;
   filter:none;
-}
+}}
 
 
-.cardBtnInner{
+.cardBtnInner{{
   width: var(--hand-card-w) !important;
   height: var(--hand-card-h) !important;
   border-radius: 14px;
@@ -429,30 +429,30 @@ label,
   border: var(--cardFaceBorder);
   box-shadow: var(--cardShadow);
   position: relative;
-}
-.cardBtnTL{ position:absolute; top:10px; left:10px; font-weight:900; font-size:14px; line-height:14px; }
-.cardBtnBR{ position:absolute; bottom:10px; right:10px; font-weight:900; font-size:14px; line-height:14px; transform: rotate(180deg); }
-.cardBtnMid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:900; opacity:.92; }
+}}
+.cardBtnTL{{ position:absolute; top:10px; left:10px; font-weight:900; font-size:14px; line-height:14px; }}
+.cardBtnBR{{ position:absolute; bottom:10px; right:10px; font-weight:900; font-size:14px; line-height:14px; transform: rotate(180deg); }}
+.cardBtnMid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:900; opacity:.92; }}
 
-@keyframes flyAway {
-  0%   { transform: translateY(0px) scale(1); opacity: 1; }
-  55%  { transform: translateY(-26px) scale(1.03); opacity: .85; }
-  100% { transform: translateY(-70px) scale(.96); opacity: 0; }
+@keyframes flyAway {{
+  0%   {{ transform: translateY(0px) scale(1); opacity: 1; }}
+  55%  {{ transform: translateY(-26px) scale(1.03); opacity: .85; }}
+  100% {{ transform: translateY(-70px) scale(.96); opacity: 0; }}
 }
-.flyAway{ animation: flyAway .25s ease-in forwards; }
+.flyAway{{ animation: flyAway .25s ease-in forwards; }}
 
-@media (max-width: 900px){
-  :root{ --pad: .62rem; --dock-h: 230px; }
-  .block-container{ padding-left: .55rem !important; padding-right: .55rem !important; }
-  .titleRow h1{ font-size: 22px; }
-  .mesa{ height: calc(100vh - 70px - var(--dock-h) - 24px); min-height: 340px; }
-  .mesaWrap{ margin-bottom: calc(var(--dock-h) + 10px); }
-  .handDock{ position: fixed; left: .55rem; right: .55rem; bottom: .55rem; margin-top: 0 !important; z-index: 80; }
-  .card{ width:62px; height:92px; border-radius: 13px; }
-  .card .mid{ font-size: 26px; }
-  .topbar{ flex-direction:column; align-items:flex-start; }
-  .topRight{ justify-content:flex-start; max-width: 100%; }
-}
+@media (max-width: 900px){{
+  :root{{ --pad: .62rem; --dock-h: 230px; }}
+  .block-container{{ padding-left: .55rem !important; padding-right: .55rem !important; }}
+  .titleRow h1{{ font-size: 22px; }}
+  .mesa{{ height: calc(100vh - 70px - var(--dock-h) - 24px); min-height: 340px; }}
+  .mesaWrap{{ margin-bottom: calc(var(--dock-h) + 10px); }}
+  .handDock{{ position: fixed; left: .55rem; right: .55rem; bottom: .55rem; margin-top: 0 !important; z-index: 80; }}
+  .card{{ width:62px; height:92px; border-radius: 13px; }}
+  .card .mid{{ font-size: 26px; }}
+  .topbar{{ flex-direction:column; align-items:flex-start; }}
+  .topRight{{ justify-content:flex-start; max-width: 100%; }}
+}}
 </style>
 """
     st.markdown(css, unsafe_allow_html=True)
