@@ -69,6 +69,7 @@ def ss_init():
         # visual
         "neon_mode": False,
         "hard_mode": False,
+        "fast_mode": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -877,12 +878,13 @@ def schedule_trick_resolution():
     if st.session_state.trick_pending:
         return
     now = time.time()
+    timings = timing_config()
     st.session_state.trick_pending = True
     st.session_state.trick_phase = "show"
     st.session_state.trick_snapshot = st.session_state.mesa[:]
     st.session_state.trick_winner = vencedor_da_vaza(st.session_state.trick_snapshot, st.session_state.naipe_base)
-    show_seconds = 1.10
-    fly_seconds = 0.55
+    show_seconds = timings["trick_show"]
+    fly_seconds = timings["trick_fly"]
     st.session_state.trick_resolve_at = now + show_seconds
     st.session_state.trick_fly_until = now + show_seconds + fly_seconds
 
@@ -1130,6 +1132,7 @@ with st.sidebar:
 
         st.markdown("---")
         st.session_state.neon_mode = st.toggle("✨ Modo Neon", value=st.session_state.neon_mode)
+        st.session_state.fast_mode = st.toggle("⚡ Modo rápido", value=st.session_state.fast_mode)
         if st.button("🔄 Reiniciar", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
@@ -1162,6 +1165,10 @@ if not st.session_state.started:
         "🔥 Modo difícil (IA mais próxima do jogador real)",
         value=st.session_state.hard_mode,
     )
+    st.session_state.fast_mode = st.toggle(
+        "⚡ Modo rápido (animações e IA mais ágeis)",
+        value=st.session_state.fast_mode,
+    )
     nomes_txt = st.text_input(
         "Jogadores (separados por vírgula)",
         value=", ".join(st.session_state.nomes),
@@ -1182,6 +1189,7 @@ if not st.session_state.started:
         start = st.button("▶️ Iniciar partida", use_container_width=True)
     with colB:
         st.info("As cartas serão distribuídas igualmente até acabar o baralho (sobras no monte). A cada rodada diminui 1 carta por jogador.")
+        st.caption("Multiplayer online (pela internet) ainda não está disponível — primeiro validaremos o modo local.")
 
     if start:
         nomes = [n.strip() for n in nomes_txt.split(",") if n.strip()]
@@ -1244,6 +1252,25 @@ def render_topbar():
 
 
 render_topbar()
+
+def timing_config():
+    if st.session_state.fast_mode:
+        return {
+            "trick_show": 0.35,
+            "trick_fly": 0.20,
+            "autoplay_delay": 0.02,
+            "trick_tick": 0.02,
+            "play_delay": 0.05,
+            "ai_step_delay": 0.0,
+        }
+    return {
+        "trick_show": 1.10,
+        "trick_fly": 0.55,
+        "autoplay_delay": 0.08,
+        "trick_tick": 0.06,
+        "play_delay": 0.14,
+        "ai_step_delay": 0.03,
+    }
 
 # =========================
 # AÇÕES RÁPIDAS (SEMPRE VISÍVEIS)
@@ -1593,15 +1620,15 @@ if st.session_state.fase == "jogo":
     render_mesa()
 
     if st.session_state.trick_pending:
-        time.sleep(0.06)
+        time.sleep(timing_config()["trick_tick"])
         st.rerun()
 
     if not is_human(atual) and st.session_state.pending_play is None:
         now = time.time()
-        if now - st.session_state.autoplay_last > 0.08:
+        if now - st.session_state.autoplay_last > timing_config()["autoplay_delay"]:
             st.session_state.autoplay_last = now
             avancar_ate_humano_ou_fim()
-            time.sleep(0.03)
+            time.sleep(timing_config()["ai_step_delay"])
             st.rerun()
 
     clicked = render_hand_clickable_streamlit()
@@ -1610,7 +1637,7 @@ if st.session_state.fase == "jogo":
         st.rerun()
 
     if st.session_state.pending_play is not None and atual == humano:
-        time.sleep(0.14)
+        time.sleep(timing_config()["play_delay"])
         carta = st.session_state.pending_play
         st.session_state.pending_play = None
 
@@ -1621,6 +1648,7 @@ if st.session_state.fase == "jogo":
             schedule_trick_resolution()
 
         avancar_ate_humano_ou_fim()
+        st.rerun()
 
 # =========================
 # FIM
