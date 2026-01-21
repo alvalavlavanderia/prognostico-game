@@ -19,7 +19,7 @@ def ss_init():
     defaults = {
         "started": False,
         "nomes": ["IA 1", "IA 2", "IA 3", "IA 4", "IA 5", "Você"],
-        "humano_idx": 5,
+        "humanos": ["Você"],
 
         "pontos": {},
         "vazas_rodada": {},
@@ -37,8 +37,7 @@ def ss_init():
         "show_final": False,
 
         "prognosticos": {},
-        "progn_pre": {},
-        "progn_pos": {},
+        "progn_turn_idx": 0,
 
         "ordem": [],
         "turn_idx": 0,
@@ -560,6 +559,30 @@ html, body, [class*="css"] {{
 inject_css(st.session_state.neon_mode)
 
 # =========================
+# HUMAN HELPERS
+# =========================
+def human_names():
+    return st.session_state.get("humanos", [])
+
+def is_human(nome: str) -> bool:
+    return nome in human_names()
+
+def human_label(nome: str) -> str:
+    humanos = human_names()
+    if nome not in humanos:
+        return nome
+    if len(humanos) == 1:
+        return f"{nome} (Você)"
+    return f"{nome} (Humano)"
+
+def current_human_turn():
+    ordem = st.session_state.ordem
+    if not ordem:
+        return None
+    atual = ordem[st.session_state.turn_idx]
+    return atual if is_human(atual) else None
+
+# =========================
 # QUERY PARAM HANDLER
 # =========================
 def handle_card_query_param():
@@ -573,7 +596,9 @@ def handle_card_query_param():
     if not carta:
         return
     st.query_params.pop("play", None)
-    humano = st.session_state.nomes[st.session_state.humano_idx]
+    humano = current_human_turn()
+    if not humano:
+        return
     atual = st.session_state.ordem[st.session_state.turn_idx]
     validas = set(cartas_validas_para_jogar(humano))
     if (
@@ -765,8 +790,7 @@ def distribuir(cartas_alvo: int):
         st.session_state.mao_da_rodada = (st.session_state.mao_da_rodada + 1) % n
 
     st.session_state.prognosticos = {}
-    st.session_state.progn_pre = {}
-    st.session_state.progn_pos = {}
+    st.session_state.progn_turn_idx = 0
     st.session_state.vazas_rodada = {nome: 0 for nome in nomes}
     st.session_state.pile_counts = {nome: 0 for nome in nomes}
 
@@ -781,35 +805,20 @@ def distribuir(cartas_alvo: int):
     st.session_state.trick_winner = None
     st.session_state.trick_snapshot = []
 
-def preparar_prognosticos_anteriores():
+def advance_prognostico_until_human():
     nomes = st.session_state.nomes
     ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
-    humano = nomes[st.session_state.humano_idx]
-    pos_h = ordem.index(humano)
-    prev = ordem[:pos_h]
-    st.session_state.progn_pre = {
-        n: ai_prognostico(
-            st.session_state.maos[n],
-            st.session_state.cartas_alvo,
-            st.session_state.hard_mode,
-        )
-        for n in prev
-    }
-
-def preparar_prognosticos_posteriores():
-    nomes = st.session_state.nomes
-    ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
-    humano = nomes[st.session_state.humano_idx]
-    pos_h = ordem.index(humano)
-    post = ordem[pos_h+1:]
-    st.session_state.progn_pos = {
-        n: ai_prognostico(
-            st.session_state.maos[n],
-            st.session_state.cartas_alvo,
-            st.session_state.hard_mode,
-        )
-        for n in post
-    }
+    while st.session_state.progn_turn_idx < len(ordem):
+        nome = ordem[st.session_state.progn_turn_idx]
+        if is_human(nome):
+            return
+        if nome not in st.session_state.prognosticos:
+            st.session_state.prognosticos[nome] = ai_prognostico(
+                st.session_state.maos[nome],
+                st.session_state.cartas_alvo,
+                st.session_state.hard_mode,
+            )
+        st.session_state.progn_turn_idx += 1
 
 def iniciar_fase_jogo():
     nomes = st.session_state.nomes
@@ -1003,7 +1012,6 @@ def ai_escolhe_carta(nome):
         return min(validas, key=losing_sort_key)
     return min(validas, key=sort_key)
 def avancar_ate_humano_ou_fim():
-    humano = st.session_state.nomes[st.session_state.humano_idx]
     ordem = st.session_state.ordem
 
     if st.session_state.trick_pending:
@@ -1038,7 +1046,7 @@ def avancar_ate_humano_ou_fim():
             st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
             continue
 
-        if atual == humano and len(st.session_state.maos[humano]) > 0:
+        if is_human(atual) and len(st.session_state.maos[atual]) > 0:
             return
 
         carta = ai_escolhe_carta(atual)
@@ -1059,7 +1067,6 @@ def start_next_round():
     st.session_state.rodada += 1
     prox = st.session_state.cartas_alvo - 1
     distribuir(prox)
-    preparar_prognosticos_anteriores()
 
     # =========================
 # UI helpers
@@ -1155,8 +1162,21 @@ if not st.session_state.started:
         "🔥 Modo difícil (IA mais próxima do jogador real)",
         value=st.session_state.hard_mode,
     )
-    nomes_txt = st.text_input("Jogadores (separados por vírgula). O último será Você",
-                             value=", ".join(st.session_state.nomes))
+    nomes_txt = st.text_input(
+        "Jogadores (separados por vírgula)",
+        value=", ".join(st.session_state.nomes),
+    )
+    nomes_preview = [n.strip() for n in nomes_txt.split(",") if n.strip()]
+    if not nomes_preview:
+        nomes_preview = st.session_state.nomes
+    humanos_default = [n for n in st.session_state.get("humanos", []) if n in nomes_preview]
+    if not humanos_default and nomes_preview:
+        humanos_default = [nomes_preview[-1]]
+    humanos_sel = st.multiselect(
+        "Jogadores humanos (passa e joga no mesmo dispositivo)",
+        options=nomes_preview,
+        default=humanos_default,
+    )
     colA, colB = st.columns([1, 2])
     with colA:
         start = st.button("▶️ Iniciar partida", use_container_width=True)
@@ -1167,9 +1187,11 @@ if not st.session_state.started:
         nomes = [n.strip() for n in nomes_txt.split(",") if n.strip()]
         if len(nomes) < 2:
             st.error("Informe pelo menos 2 jogadores.")
+        elif len(humanos_sel) < 1:
+            st.error("Selecione ao menos 1 jogador humano.")
         else:
             st.session_state.nomes = nomes
-            st.session_state.humano_idx = len(nomes) - 1
+            st.session_state.humanos = [n for n in humanos_sel if n in nomes]
             st.session_state.pontos = {n: 0 for n in nomes}
             st.session_state.started = True
 
@@ -1180,7 +1202,6 @@ if not st.session_state.started:
             st.session_state.rodada = 1
 
             distribuir(cartas_inicio)
-            preparar_prognosticos_anteriores()
             st.rerun()
 
     st.stop()
@@ -1196,6 +1217,7 @@ def render_topbar():
 
     ordem = st.session_state.ordem
     vez = ordem[st.session_state.turn_idx]
+    vez_label = human_label(vez)
 
     naipe_txt = st.session_state.naipe_base or "—"
     quebrada_txt = "Sim" if st.session_state.copas_quebrada else "Não"
@@ -1205,23 +1227,8 @@ def render_topbar():
         f'<div class="topbar">'
         f'<div class="topLeft">'
         f'<div class="topTitle">Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>'
-        f'<div class="topSub">Vez: <b>{vez}</b></div>'
+        f'<div class="topSub">Vez: <b>{vez_label}</b></div>'
         f'</div>'
-        f'<div class="topRight pillGroup">'
-        f'<span class="pill">Naipe {naipe_txt}</span>'
-        f'<span class="pill">♥ quebrada: {quebrada_txt}</span>'
-        f'<span class="pill">1ª vaza: {primeira_txt}</span>'
-        f'<span class="pill">Sobras {st.session_state.sobras_monte}</span>'
-        f'<span class="pill pillSoft">Trunfo: ♥</span>'
-        f'<span class="pill pillSoft">1ª vaza: ♥ proibida</span>'
-        f'<span class="pill pillSoft">Abrir ♥ só após quebrar</span>'
-        f'</div>'
-        f'</div>'
-    )
-    st.markdown(topbar_html, unsafe_allow_html=True)
-
-
-render_topbar()
 
 # =========================
 # AÇÕES RÁPIDAS (SEMPRE VISÍVEIS)
