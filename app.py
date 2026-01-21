@@ -306,8 +306,19 @@ html, body, [class*="css"] {{
   letter-spacing: .1px;
 }}
 
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"] * {{
+  color: var(--textMain) !important;
+}}
+
+.stCaption,
+.smallMuted {{
+  color: var(--textSub) !important;
+}}
+
+.stMarkdown p,
+.stMarkdown span,
 label,
-.stMarkdown,
 .stTextInput > label,
 .stTextInput div[data-baseweb="input"] label,
 .stRadio > label,
@@ -316,13 +327,14 @@ label,
 .stMultiSelect > label,
 .stToggle > label,
 .stNumberInput > label {{
-  color: var(--textMain) !important;
+  color: #ffffff !important;
 }}
 
-.stCaption, .smallMuted {{
-  color: var(--textSub) !important;
+.stTextInput input,
+.stNumberInput input,
+.stTextArea textarea {{
+  color: #ffffff !important;
 }}
-
 .titleRow {{
   display:flex;
   align-items:center;
@@ -697,11 +709,6 @@ label,
   .topRight{{ justify-content:flex-start; max-width: 100%; }}
 }}
 
-label,
-.stMarkdown,
-.stCaption {{
-  color: white !important;
-}}
 </style>
 """
     st.markdown(css, unsafe_allow_html=True)
