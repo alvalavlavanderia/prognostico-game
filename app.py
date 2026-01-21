@@ -5,7 +5,6 @@ import time
 import base64
 import textwrap
 import copy
-from typing import Optional
 from threading import Lock
 import pandas as pd
 import streamlit as st
@@ -205,8 +204,8 @@ def online_autorefresh(interval_ms: int, key: str):
 
 
 if not hasattr(st, "autorefresh"):
-    def autorefresh(interval: int, key: Optional[str] = None):
-        online_autorefresh(interval_ms=interval, key=key or "legacy_autorefresh")
+    def autorefresh(*_args, **_kwargs):
+        return None
 
     st.autorefresh = autorefresh
     
