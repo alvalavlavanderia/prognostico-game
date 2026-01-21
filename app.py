@@ -1565,6 +1565,10 @@ if st.session_state.fase == "prognostico":
         st.session_state.prognosticos[humano_nome] = int(palpite)
         st.session_state.progn_turn_idx += 1
         advance_prognostico_until_human()
+        key_fn = peso_carta if "peso_carta" in globals() else (lambda _c: (0, 0))
+        st.markdown('<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
+            "".join(carta_html(c) for c in sorted(mao_humano, key=key_fn)) +
+            "</div>", unsafe_allow_html=True)
         if st.session_state.progn_turn_idx >= len(ordem_preview):
             iniciar_fase_jogo()
             avancar_ate_humano_ou_fim()
