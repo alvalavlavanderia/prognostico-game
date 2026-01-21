@@ -1146,7 +1146,7 @@ def ai_escolhe_carta(nome):
             return max(validas, key=sort_key)
         if need_wins is not None and need_wins > 0:
             return max(validas, key=sort_key)
-      return min(validas, key=losing_sort_key)
+            return min(validas, key=losing_sort_key)
 
     current_best = max(mesa, key=lambda item: card_rank(item[1], naipe_base))[1]
     best_rank = card_rank(current_best, naipe_base)
