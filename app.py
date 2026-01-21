@@ -57,27 +57,28 @@ def ss_init():
 
         # Trick animation state
         "trick_pending": False,
-        "trick_phase": None,          # "show" -> "fly"
-        "trick_resolve_at": 0.0,
-        "trick_fly_until": 0.0,
-        "trick_winner": None,
-        "trick_snapshot": [],
+    "trick_phase": None,          # "show" -> "fly"
+    "trick_resolve_at": 0.0,
+    "trick_fly_until": 0.0,
+    "trick_winner": None,
+    "trick_snapshot": [],
 
-        "pile_counts": {},
+    "pile_counts": {},
 
-        # autoplay
-        "autoplay_last": 0.0,
+    # autoplay
+    "autoplay_last": 0.0,
 
-        # visual
-        "neon_mode": False,
-        "hard_mode": False,
-        "fast_mode": False,
-        "online_mode": False,
-        "room_code": "",
-        "player_name": "",
-        "is_host": False,
-        "players_online": [],
-    }
+    # visual
+    "neon_mode": False,
+    "hard_mode": False,
+    "fast_mode": False,
+    "online_mode": False,
+    "room_code": "",
+    "player_name": "",
+    "is_host": False,
+    "players_online": [],
+    "online_last_refresh": 0.0,
+}
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
@@ -183,10 +184,21 @@ def rerun_with_room_sync():
     sync_to_room()
     st.rerun()
 
-
 def stop_with_room_sync():
     sync_to_room()
     st.stop()
+
+def online_autorefresh(interval_ms: int, key: str):
+    if hasattr(st, "autorefresh"):
+        st.autorefresh(interval=interval_ms, key=key)
+        return
+    interval_s = max(interval_ms / 1000.0, 0.2)
+    last = st.session_state.get("online_last_refresh", 0.0)
+    now = time.time()
+    if now - last >= interval_s:
+        st.session_state.online_last_refresh = now
+        time.sleep(interval_s)
+        st.experimental_rerun()
 
 # =========================
 # CSS
@@ -708,7 +720,7 @@ if st.session_state.online_mode and st.session_state.started:
         if st.session_state.player_name not in st.session_state.players_online:
             st.session_state.players_online.append(st.session_state.player_name)
             sync_to_room()
-    st.autorefresh(interval=1000, key="online_refresh")
+    online_autorefresh(interval_ms=1000, key="online_refresh")
 
 # =========================
 # QUERY PARAM HANDLER
