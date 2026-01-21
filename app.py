@@ -15,6 +15,7 @@ random = rng
 # =========================
 # CONFIG
 # =========================
+
 st.set_page_config(page_title="Jogo de Prognóstico", page_icon="🃏", layout="wide")
 
 # =========================
@@ -191,7 +192,7 @@ def stop_with_room_sync():
     st.stop()
 
 def online_autorefresh(interval_ms: int, key: str):
-    if hasattr(st, "autorefresh"):
+    if hasattr(st, "autorefresh") and not getattr(st, "_autorefresh_shim", False):
         st.autorefresh(interval=interval_ms, key=key)
         return
     interval_s = max(interval_ms / 1000.0, 0.2)
@@ -210,6 +211,7 @@ if not hasattr(st, "autorefresh"):
     def _autorefresh(interval: int, key: Optional[str] = None):
         online_autorefresh(interval_ms=interval, key=key or "legacy_autorefresh")
 
+    st._autorefresh_shim = True
     st.autorefresh = _autorefresh
     
 # =========================
