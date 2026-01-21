@@ -202,6 +202,13 @@ def online_autorefresh(interval_ms: int, key: str):
             st.rerun()
         elif hasattr(st, "experimental_rerun"):
             st.experimental_rerun()
+
+
+if not hasattr(st, "autorefresh"):
+    def autorefresh(interval: int, key: Optional[str] = None):
+        online_autorefresh(interval_ms=interval, key=key or "legacy_autorefresh")
+
+    st.autorefresh = autorefresh
     
 # =========================
 # CSS
