@@ -306,6 +306,23 @@ html, body, [class*="css"] {{
   letter-spacing: .1px;
 }}
 
+label,
+.stMarkdown,
+.stTextInput > label,
+.stTextInput div[data-baseweb="input"] label,
+.stRadio > label,
+.stCheckbox > label,
+.stSelectbox > label,
+.stMultiSelect > label,
+.stToggle > label,
+.stNumberInput > label {
+  color: var(--textMain) !important;
+}
+
+.stCaption, .smallMuted {{
+  color: var(--textSub) !important;
+}}
+
 .titleRow {{
   display:flex;
   align-items:center;
