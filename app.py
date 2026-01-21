@@ -198,7 +198,10 @@ def online_autorefresh(interval_ms: int, key: str):
     if now - last >= interval_s:
         st.session_state.online_last_refresh = now
         time.sleep(interval_s)
-        st.experimental_rerun()
+        if hasattr(st, "rerun"):
+            st.rerun()
+        elif hasattr(st, "experimental_rerun"):
+            st.experimental_rerun()
 
 # =========================
 # CSS
