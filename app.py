@@ -438,7 +438,7 @@ label,
   0%   {{ transform: translateY(0px) scale(1); opacity: 1; }}
   55%  {{ transform: translateY(-26px) scale(1.03); opacity: .85; }}
   100% {{ transform: translateY(-70px) scale(.96); opacity: 0; }}
-}
+}}
 .flyAway{{ animation: flyAway .25s ease-in forwards; }}
 
 @media (max-width: 900px){{
