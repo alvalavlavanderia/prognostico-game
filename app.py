@@ -184,6 +184,7 @@ def rerun_with_room_sync():
     sync_to_room()
     st.rerun()
 
+
 def stop_with_room_sync():
     sync_to_room()
     st.stop()
@@ -1297,126 +1298,7 @@ with st.sidebar:
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             ss_init()
-            rerun_with_room_sync()
-    else:
-        st.info("Inicie uma partida.")
-
-# =========================
-# HEADER (sempre)
-# =========================
-st.markdown(
-    """
-<div class="titleRow">
-  <h1 style="color:#D4AF37;">JOGO DE PROGNÓSTICO</h1>
-</div>
-""",
-    unsafe_allow_html=True
-)
-
-# =========================
-# SETUP
-# =========================
-# =========================
-# SETUP
-# =========================
-if not st.session_state.started:
-    st.markdown("### Configuração")
-    mode_label = st.radio(
-        "Modo de jogo",
-        ["Local (hot-seat)", "Online (beta)"],
-        index=1 if st.session_state.online_mode else 0,
-    )
-    st.session_state.online_mode = mode_label == "Online (beta)"
-    st.session_state.hard_mode = st.toggle(
-        "🔥 Modo difícil (IA mais próxima do jogador real)",
-        value=st.session_state.hard_mode,
-    )
-    st.session_state.fast_mode = st.toggle(
-        "⚡ Modo rápido (animações e IA mais ágeis)",
-        value=st.session_state.fast_mode,
-    )
-    room_state = None
-    if st.session_state.online_mode:
-        st.session_state.room_code = st.text_input(
-            "Código da sala",
-            value=st.session_state.room_code,
-        ).strip()
-        st.session_state.player_name = st.text_input(
-            "Seu nome na sala",
-            value=st.session_state.player_name,
-        ).strip()
-        st.session_state.is_host = st.toggle(
-            "Sou o anfitrião da sala",
-            value=st.session_state.is_host,
-        )
-        room_state = get_room_state(st.session_state.room_code)
-        if room_state:
-            st.info(
-                f"Sala encontrada • Jogadores: {', '.join(room_state.get('nomes', []))} • "
-                f"Humanos: {', '.join(room_state.get('humanos', []))}"
-            )
-            if not st.session_state.is_host:
-                st.session_state.nomes = room_state.get("nomes", st.session_state.nomes)
-                st.session_state.humanos = room_state.get("humanos", st.session_state.humanos)
-                if (
-                    st.session_state.player_name
-                    and st.session_state.player_name not in room_state.get("humanos", [])
-                ):
-                    st.error("Seu nome precisa estar na lista de humanos da sala.")
-    nomes_txt = st.text_input(
-        "Jogadores (separados por vírgula)",
-        value=", ".join(st.session_state.nomes),
-        disabled=st.session_state.online_mode and not st.session_state.is_host,
-    )
-    nomes_preview = [n.strip() for n in nomes_txt.split(",") if n.strip()]
-    if not nomes_preview:
-        nomes_preview = st.session_state.nomes
-    humanos_default = [n for n in st.session_state.get("humanos", []) if n in nomes_preview]
-    if not humanos_default and nomes_preview:
-        humanos_default = [nomes_preview[-1]]
-    humanos_sel = st.multiselect(
-        "Jogadores humanos (passa e joga no mesmo dispositivo)" if not st.session_state.online_mode else "Jogadores humanos (online)",
-        options=nomes_preview,
-        default=humanos_default,
-        disabled=st.session_state.online_mode and not st.session_state.is_host,
-    )
-    colA, colB = st.columns([1, 2])
-    with colA:
-        start_label = "▶️ Iniciar partida"
-        if st.session_state.online_mode and st.session_state.is_host:
-            start_label = "▶️ Criar sala e iniciar"
-        start = st.button(
-            start_label,
-            use_container_width=True,
-            disabled=st.session_state.online_mode and not st.session_state.is_host,
-        )
-    with colB:
-        st.info("As cartas serão distribuídas igualmente até acabar o baralho (sobras no monte). A cada rodada diminui 1 carta por jogador.")
-        st.caption("Multiplayer online está em beta — use uma sala compartilhada para jogar em tempo real.")
-
-    if start:
-        nomes = [n.strip() for n in nomes_txt.split(",") if n.strip()]
-        if len(nomes) < 2:
-            st.error("Informe pelo menos 2 jogadores.")
-        elif len(humanos_sel) < 1:
-            st.error("Selecione ao menos 1 jogador humano.")
-        elif st.session_state.online_mode and not st.session_state.room_code:
-            st.error("Informe um código da sala para jogar online.")
-        elif st.session_state.online_mode and not st.session_state.player_name:
-            st.error("Informe seu nome na sala.")
-        elif st.session_state.online_mode and st.session_state.player_name not in humanos_sel:
-            st.error("Seu nome precisa estar na lista de jogadores humanos.")
-        else:
-            st.session_state.nomes = nomes
-            st.session_state.humanos = [n for n in humanos_sel if n in nomes]
-            st.session_state.pontos = {n: 0 for n in nomes}
-            st.session_state.started = True
-            st.session_state.players_online = []
-            if st.session_state.online_mode and st.session_state.player_name:
-                st.session_state.players_online.append(st.session_state.player_name)
-
-            n = len(nomes)
-            cartas_inicio = 52 // n
+rerun_with_room_sync
             st.session_state.cartas_inicio = cartas_inicio
             st.session_state.cartas_alvo = cartas_inicio
             st.session_state.rodada = 1
