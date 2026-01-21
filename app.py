@@ -1229,7 +1229,21 @@ def render_topbar():
         f'<div class="topTitle">Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>'
         f'<div class="topSub">Vez: <b>{vez_label}</b></div>'
         f'</div>'
-        )
+        f'<div class="topRight pillGroup">'
+        f'<span class="pill">Naipe {naipe_txt}</span>'
+        f'<span class="pill">♥ quebrada: {quebrada_txt}</span>'
+        f'<span class="pill">1ª vaza: {primeira_txt}</span>'
+        f'<span class="pill">Sobras {st.session_state.sobras_monte}</span>'
+        f'<span class="pill pillSoft">Trunfo: ♥</span>'
+        f'<span class="pill pillSoft">1ª vaza: ♥ proibida</span>'
+        f'<span class="pill pillSoft">Abrir ♥ só após quebrar</span>'
+        f'</div>'
+        f'</div>'
+    )
+    st.markdown(topbar_html, unsafe_allow_html=True)
+
+
+render_topbar()
 
 # =========================
 # AÇÕES RÁPIDAS (SEMPRE VISÍVEIS)
@@ -1262,43 +1276,56 @@ st.markdown('</div>', unsafe_allow_html=True)
 # PROGNÓSTICO
 # =========================
 nomes = st.session_state.nomes
-humano_nome = nomes[st.session_state.humano_idx]
 
 if st.session_state.fase == "prognostico":
     ordem_preview = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
     st.markdown(f"### 📌 Prognóstico — Rodada {st.session_state.rodada} ({st.session_state.cartas_alvo} cartas/jogador)")
 
+    advance_prognostico_until_human()
+    if st.session_state.progn_turn_idx >= len(ordem_preview):
+        iniciar_fase_jogo()
+        avancar_ate_humano_ou_fim()
+        st.rerun()
+
+    humano_nome = ordem_preview[st.session_state.progn_turn_idx]
     mao_humano = st.session_state.maos.get(humano_nome, [])
+    st.markdown(
+        f"#### 🎯 Vez de {human_label(humano_nome)} — passe o dispositivo",
+    )
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
-    st.markdown('<div class="handTitle"><h3>🃏 Suas cartas (prognóstico)</h3><div class="hint">Ordenadas por naipe e valor</div></div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="handTitle"><h3>🃏 Cartas do jogador (prognóstico)</h3><div class="hint">Ordenadas por naipe e valor</div></div>',
+        unsafe_allow_html=True,
+    )
     st.markdown('<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
                 "".join(carta_html(c) for c in sorted(mao_humano, key=peso_carta)) +
                 "</div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("#### ✅ Prognósticos visíveis (anteriores na mesa)")
-    if not st.session_state.progn_pre:
-        preparar_prognosticos_anteriores()
-
-    vis = st.session_state.progn_pre
+    vis = st.session_state.prognosticos
     if not vis:
-        st.info("Você é o mão — ninguém fez prognóstico antes de você.")
+        st.info("Este jogador é o mão — ninguém fez prognóstico antes dele.")
     else:
         rows = [(n, vis[n]) for n in ordem_preview if n in vis]
         st.table({"Jogador": [r[0] for r in rows], "Prognóstico": [r[1] for r in rows]})
 
-    palpite = st.number_input("Seu prognóstico", min_value=0, max_value=len(mao_humano), value=0, step=1)
+    palpite = st.number_input(
+        f"Prognóstico de {human_label(humano_nome)}",
+        min_value=0,
+        max_value=len(mao_humano),
+        value=0,
+        step=1,
+        key=f"progn_{humano_nome}_{st.session_state.rodada}",
+    )
 
-    if st.button("Confirmar meu prognóstico", use_container_width=True):
-        st.session_state.prognosticos = {}
-        st.session_state.prognosticos.update(st.session_state.progn_pre)
+    if st.button("Confirmar prognóstico", use_container_width=True):
         st.session_state.prognosticos[humano_nome] = int(palpite)
-
-        preparar_prognosticos_posteriores()
-        st.session_state.prognosticos.update(st.session_state.progn_pos)
-
-        iniciar_fase_jogo()
-        avancar_ate_humano_ou_fim()
+        st.session_state.progn_turn_idx += 1
+        advance_prognostico_until_human()
+        if st.session_state.progn_turn_idx >= len(ordem_preview):
+            iniciar_fase_jogo()
+            avancar_ate_humano_ou_fim()
         st.rerun()
 
     st.stop()
@@ -1323,7 +1350,6 @@ def seat_positions(ordem):
 def render_mesa():
     ordem = st.session_state.ordem
     n = len(ordem)
-    humano = st.session_state.nomes[st.session_state.humano_idx]
     active_player = ordem[st.session_state.turn_idx] if ordem else None
     dealer = ordem[0]
     pos = seat_positions(ordem)
@@ -1347,9 +1373,9 @@ def render_mesa():
 
         cls = "seat"
         label = nome
-        if nome == humano:
+        if is_human(nome):
             cls += " you"
-            label = f"{nome} (Você)"
+            label = human_label(nome)
         if nome == dealer:
             cls += " dealer"
             label = f"{label} • mão"
@@ -1448,8 +1474,10 @@ def render_mesa():
 # MÃO clicável
 # =========================
 def render_hand_clickable_streamlit():
-    humano = st.session_state.nomes[st.session_state.humano_idx]
     atual = st.session_state.ordem[st.session_state.turn_idx]
+    humano = current_human_turn()
+    if not humano:
+        return None
     mao = st.session_state.maos[humano]
     validas = set(cartas_validas_para_jogar(humano))
 
@@ -1544,7 +1572,7 @@ if st.session_state.fase == "jogo":
 
     ordem = st.session_state.ordem
     atual = ordem[st.session_state.turn_idx]
-    humano = st.session_state.nomes[st.session_state.humano_idx]
+    humano = current_human_turn()
 
     if rodada_terminou() and (not st.session_state.trick_pending) and (len(st.session_state.mesa) == len(ordem)):
         schedule_trick_resolution()
@@ -1568,7 +1596,7 @@ if st.session_state.fase == "jogo":
         time.sleep(0.06)
         st.rerun()
 
-    if atual != humano and st.session_state.pending_play is None:
+    if not is_human(atual) and st.session_state.pending_play is None:
         now = time.time()
         if now - st.session_state.autoplay_last > 0.08:
             st.session_state.autoplay_last = now
@@ -1593,7 +1621,6 @@ if st.session_state.fase == "jogo":
             schedule_trick_resolution()
 
         avancar_ate_humano_ou_fim()
-        st.rerun()
 
 # =========================
 # FIM
