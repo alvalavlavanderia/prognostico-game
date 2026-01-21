@@ -1229,6 +1229,7 @@ def render_topbar():
         f'<div class="topTitle">Rodada {st.session_state.rodada} — {st.session_state.cartas_alvo} cartas</div>'
         f'<div class="topSub">Vez: <b>{vez_label}</b></div>'
         f'</div>'
+        )
 
 # =========================
 # AÇÕES RÁPIDAS (SEMPRE VISÍVEIS)
