@@ -795,6 +795,12 @@ def peso_carta(c):
     naipe, valor = c
     return (ORDEM_NAIPE[naipe], PESO_VALOR[valor])
 
+def safe_peso_carta(c):
+    key_fn = globals().get("peso_carta")
+    if callable(key_fn):
+        return key_fn(c)
+    return (0, 0)
+
 def valor_str(v):
     return str(v)
 
@@ -924,7 +930,7 @@ def distribuir(cartas_alvo: int):
             st.session_state.maos[nome].append(baralho.pop())
 
     for nome in nomes:
-        st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=peso_carta)
+        st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=safe_peso_carta)
 
     if not st.session_state.mao_primeira_sorteada:
         st.session_state.mao_da_rodada = rng.randint(0, n - 1)
@@ -949,6 +955,8 @@ def distribuir(cartas_alvo: int):
     st.session_state.trick_snapshot = []
 
 def advance_prognostico_until_human():
+    if st.session_state.online_mode and not st.session_state.is_host:
+        return
     nomes = st.session_state.nomes
     ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
     while st.session_state.progn_turn_idx < len(ordem):
@@ -1017,6 +1025,8 @@ def vencedor_da_vaza(mesa_snapshot, naipe_base_snapshot):
     return max(base, key=lambda x: PESO_VALOR[x[1][1]])[0]
 
 def schedule_trick_resolution():
+    if st.session_state.online_mode and not st.session_state.is_host:
+        return
     if st.session_state.trick_pending:
         return
     now = time.time()
@@ -1031,6 +1041,8 @@ def schedule_trick_resolution():
     st.session_state.trick_fly_until = now + show_seconds + fly_seconds
 
 def resolve_trick_if_due():
+    if st.session_state.online_mode and not st.session_state.is_host:
+        return False
     if not st.session_state.trick_pending:
         return False
 
@@ -1058,7 +1070,7 @@ def resolve_trick_if_due():
         st.session_state.mesa = []
         st.session_state.naipe_base = None
         st.session_state.primeira_vaza = False
-
+        
         st.session_state.trick_pending = False
         st.session_state.trick_phase = None
         st.session_state.trick_resolve_at = 0.0
@@ -1133,7 +1145,7 @@ def ai_escolhe_carta(nome):
             return max(validas, key=sort_key)
         if need_wins is not None and need_wins > 0:
             return max(validas, key=sort_key)
-        return min(validas, key=losing_sort_key)
+      return min(validas, key=losing_sort_key)
 
     current_best = max(mesa, key=lambda item: card_rank(item[1], naipe_base))[1]
     best_rank = card_rank(current_best, naipe_base)
@@ -1156,6 +1168,8 @@ def ai_escolhe_carta(nome):
         return min(validas, key=losing_sort_key)
     return min(validas, key=sort_key)
 def avancar_ate_humano_ou_fim():
+    if st.session_state.online_mode and not st.session_state.is_host:
+        return
     ordem = st.session_state.ordem
 
     if st.session_state.trick_pending:
@@ -1189,7 +1203,7 @@ def avancar_ate_humano_ou_fim():
         if len(st.session_state.maos[atual]) == 0:
             st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
             continue
-
+        
         if is_human(atual) and len(st.session_state.maos[atual]) > 0:
             return
 
@@ -1519,7 +1533,7 @@ if st.session_state.fase == "prognostico":
         iniciar_fase_jogo()
         avancar_ate_humano_ou_fim()
         rerun_with_room_sync()
-    
+
     humano_nome = ordem_preview[st.session_state.progn_turn_idx]
     if st.session_state.online_mode and st.session_state.player_name and humano_nome != st.session_state.player_name:
         proximos_humanos = [
@@ -1567,7 +1581,7 @@ if st.session_state.fase == "prognostico":
         advance_prognostico_until_human()
         key_fn = peso_carta if "peso_carta" in globals() else (lambda _c: (0, 0))
         st.markdown('<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
-            "".join(carta_html(c) for c in sorted(mao_humano, key=key_fn)) +
+            "".join(carta_html(c) for c in sorted(mao_humano, key=safe_peso_carta)) +
             "</div>", unsafe_allow_html=True)
         if st.session_state.progn_turn_idx >= len(ordem_preview):
             iniciar_fase_jogo()
@@ -1729,7 +1743,7 @@ def render_hand_clickable_streamlit():
 
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
 
-    mao_ord = sorted(mao, key=peso_carta)
+    mao_ord = sorted(mao, key=safe_peso_carta)
     if not mao_ord:
         st.markdown("</div>", unsafe_allow_html=True)
         return None
