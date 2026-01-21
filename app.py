@@ -71,12 +71,6 @@ def ss_init():
         "neon_mode": False,
         "hard_mode": False,
         "fast_mode": False,
-        "online_mode": False,
-        "room_code": "",
-        "player_name": "",
-        "is_host": False,
-        "players_online": [],
-        "online_last_refresh": 0.0,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -84,124 +78,6 @@ def ss_init():
 
 ss_init()
 
-
-# =========================
-# ONLINE ROOM STORE
-# =========================
-ROOM_STATE_KEYS = [
-    "started",
-    "nomes",
-    "humanos",
-    "pontos",
-    "vazas_rodada",
-    "maos",
-    "rodada",
-    "cartas_inicio",
-    "cartas_alvo",
-    "sobras_monte",
-    "mao_da_rodada",
-    "mao_primeira_sorteada",
-    "fase",
-    "show_final",
-    "prognosticos",
-    "progn_turn_idx",
-    "ordem",
-    "turn_idx",
-    "naipe_base",
-    "mesa",
-    "primeira_vaza",
-    "copas_quebrada",
-    "pontuou_rodada",
-    "pending_play",
-    "table_pop_until",
-    "winner_flash_name",
-    "winner_flash_until",
-    "trick_pending",
-    "trick_phase",
-    "trick_resolve_at",
-    "trick_fly_until",
-    "trick_winner",
-    "trick_snapshot",
-    "pile_counts",
-    "autoplay_last",
-    "neon_mode",
-    "hard_mode",
-    "fast_mode",
-    "players_online",
-]
-
-
-class RoomStore:
-    def __init__(self):
-        self.lock = Lock()
-        self.rooms = {}
-
-
-@st.cache_resource
-def get_room_store():
-    return RoomStore()
-
-
-def get_room_state(code: str):
-    if not code:
-        return None
-    store = get_room_store()
-    with store.lock:
-        data = store.rooms.get(code)
-        return copy.deepcopy(data) if data else None
-
-
-def save_room_state(code: str, state: dict):
-    if not code:
-        return
-    store = get_room_store()
-    with store.lock:
-        store.rooms[code] = copy.deepcopy(state)
-
-
-def sync_from_room():
-    if not st.session_state.online_mode or not st.session_state.room_code:
-        return
-    room_state = get_room_state(st.session_state.room_code)
-    if not room_state:
-        return
-    for key in ROOM_STATE_KEYS:
-        if key in room_state:
-            st.session_state[key] = room_state[key]
-
-
-def sync_to_room():
-    if not st.session_state.online_mode or not st.session_state.room_code:
-        return
-    if not st.session_state.is_host and not st.session_state.started:
-        return
-    state = {key: copy.deepcopy(st.session_state.get(key)) for key in ROOM_STATE_KEYS}
-    save_room_state(st.session_state.room_code, state)
-
-
-def rerun_with_room_sync():
-    sync_to_room()
-    st.rerun()
-
-
-def stop_with_room_sync():
-    sync_to_room()
-    st.stop()
-
-def online_autorefresh(interval_ms: int, key: str):
-    if hasattr(st, "autorefresh"):
-        st.autorefresh(interval=interval_ms, key=key)
-        return
-    interval_s = max(interval_ms / 1000.0, 0.2)
-    last = st.session_state.get("online_last_refresh", 0.0)
-    now = time.time()
-    if now - last >= interval_s:
-        st.session_state.online_last_refresh = now
-        time.sleep(interval_s)
-        if hasattr(st, "rerun"):
-            st.rerun()
-        elif hasattr(st, "experimental_rerun"):
-            st.experimental_rerun()
 
 # =========================
 # CSS
@@ -305,36 +181,6 @@ html, body, [class*="css"] {{
   letter-spacing: .1px;
 }}
 
-[data-testid="stAppViewContainer"],
-[data-testid="stAppViewContainer"] * {{
-  color: var(--textMain) !important;
-}}
-
-.stCaption,
-.smallMuted {{
-  color: var(--textSub) !important;
-}}
-
-.stMarkdown p,
-.stMarkdown span,
-label,
-.stTextInput > label,
-.stTextInput div[data-baseweb="input"] label,
-.stRadio > label,
-.stCheckbox > label,
-.stSelectbox > label,
-.stMultiSelect > label,
-.stToggle > label,
-.stNumberInput > label {{
-  color: #ffffff !important;
-}}
-
-.stTextInput input,
-.stNumberInput input,
-.stTextArea textarea {{
-  color: #ffffff !important;
-}}
-
 .titleRow {{
   display:flex;
   align-items:center;
@@ -389,6 +235,262 @@ label,
   justify-content:space-between;
   gap: 12px;
 }}
+
+.topbar:before {{
+  content:"";
+  position:absolute; inset:0;
+  border-radius: 26px;
+  background: radial-gradient(circle at 20% 10%, {top_glow}, transparent 40%);
+  pointer-events:none;
+}}
+
+.topLeft{{ display:flex; flex-direction:column; gap:4px; min-width: 210px; }}
+.topTitle{{ font-weight: 950; font-size: 14px; color: var(--textMain); }}
+.topSub{{ font-weight: 800; font-size: 12px; color: var(--textSub); }}
+
+.topRight{{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  align-items:center;
+  max-width: 780px;
+}}
+
+.pill {{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+  color: var(--textMain);
+  font-weight: 900;
+  font-size: 12px;
+  white-space: nowrap;
+}}
+
+.menuCard {{
+  border-radius: 18px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,.07);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow2);
+  padding: 10px 12px;
+  margin-top: 0;
+}}
+.menuHint {{
+  color: var(--textSub);
+  font-weight: 800;
+  font-size: 12px;
+}}
+
+.scoreItem{{
+  display:flex; justify-content:space-between;
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.08);
+  margin-bottom:8px;
+  color: var(--textMain);
+}}
+.scoreName{{ font-weight:900; }}
+.scorePts{{ font-weight:900; }}
+.smallMuted{{ opacity:.70; font-size:12px; color: var(--textSub); }}
+
+.mesaWrap{{ margin-top: 6px; margin-bottom: 0; }}
+.mesa{{
+  border-radius: 50% / 46%;
+  border: 1px solid transparent;
+  background: #0f7a4a !important;
+  height: 470px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  isolation: isolate;
+}}
+
+.mesa:before{{
+  content:"";
+  position:absolute; inset:0;
+  border-radius: 50% / 46%;
+  box-shadow:
+    inset 0 0 0 26px #5a3a1e,
+    inset 0 0 0 38px #b22222,
+    inset 0 0 0 44px #d4af37,
+    0 16px 32px rgba(0,0,0,.25);
+  opacity:1;
+  pointer-events:none;
+  z-index: 1;
+}}
+.mesaCenter{{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:900; opacity:.55;
+  pointer-events:none;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: rgba(255,255,255,.90);
+  z-index: 3;
+}}
+
+.seat{{
+  position:absolute;
+  padding:6px 10px;
+  border-radius:999px;
+  background: var(--seatBg);
+  border:1px solid var(--seatBorder);
+  font-size:12px;
+  white-space:nowrap;
+  z-index: 25;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color: rgba(240,255,252,.92);
+}}
+.seat.you{{ outline:2px solid rgba(34,197,94,.55); font-weight:900; }}
+.seat.dealer{{ border-color: rgba(34,197,94,.35); }}
+.seat.active{{ outline: 3px solid rgba(251,191,36,.9); box-shadow: 0 0 18px rgba(251,191,36,.45); }}
+.avatarImg{{
+  width:26px; height:26px;
+  border-radius:50%;
+  border: 1px solid rgba(0,0,0,.12);
+  background: rgba(0,0,0,.04);
+  box-shadow: 0 6px 12px rgba(0,0,0,.10);
+  flex: 0 0 auto;
+}}
+
+@keyframes winnerGlow {{
+  0% {{ box-shadow: 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }}
+  35% {{ box-shadow: 0 0 0 6px rgba(34,197,94,.22), 0 14px 28px rgba(0,0,0,.14); transform: translate(-50%,-50%) scale(1.03); }}
+  100% {{ box-shadow: 0 0 0 0 rgba(0,0,0,0); transform: translate(-50%,-50%) scale(1); }}
+}}
+.seat.winnerFlash{{
+  animation: winnerGlow 1.2s ease-out;
+  outline: 2px solid rgba(34,197,94,.55);
+  background: rgba(255,255,255,.97);
+}}
+
+.playCard{{ position:absolute; transform: translate(-50%,-50%); pointer-events:none; z-index: 18; }}
+@keyframes popIn {{
+  0% {{ transform: translate(-50%,-50%) scale(.92); opacity: 0; }}
+  100% {{ transform: translate(-50%,-50%) scale(1); opacity: 1; }}
+}}
+.playCard.pop{{ animation: popIn .16s ease-out; }}
+
+.card{{
+  width:70px;
+  height:102px;
+  border-radius:14px;
+  border:1px solid rgba(0,0,0,.16);
+  background: linear-gradient(180deg, #ffffff 0%, #f8f8f8 100%);
+  box-shadow: 0 10px 22px rgba(0,0,0,.12);
+  position:relative;
+  user-select:none;
+}}
+.card .tl{{ position:absolute; top:7px; left:7px; font-weight:900; font-size:13px; line-height:13px; }}
+.card .br{{ position:absolute; bottom:7px; right:7px; font-weight:900; font-size:13px; line-height:13px; transform:rotate(180deg); }}
+.card .mid{{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; opacity:.92; }}
+
+.chipWrap{{ position:absolute; transform: translate(-50%,-50%); z-index: 30; pointer-events:none; }}
+.chipRow{{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; align-items:center; max-width: 140px; }}
+.chipMini{{
+  width:22px; height:22px;
+  border-radius:50%;
+  position:relative;
+  box-shadow: 0 8px 14px rgba(0,0,0,.14);
+  border: 2px solid rgba(0,0,0,.14);
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), rgba(255,255,255,0) 45%),
+    conic-gradient(from 0deg,
+      rgba(255,255,255,0) 0 18deg,
+      rgba(255,255,255,.70) 18deg 28deg,
+      rgba(255,255,255,0) 28deg 54deg,
+      rgba(255,255,255,.70) 54deg 64deg,
+      rgba(255,255,255,0) 64deg 90deg,
+      rgba(255,255,255,.70) 90deg 100deg,
+      rgba(255,255,255,0) 100deg 126deg,
+      rgba(255,255,255,.70) 126deg 136deg,
+      rgba(255,255,255,0) 136deg 162deg,
+      rgba(255,255,255,.70) 162deg 172deg,
+      rgba(255,255,255,0) 172deg 198deg,
+      rgba(255,255,255,.70) 198deg 208deg,
+      rgba(255,255,255,0) 208deg 234deg,
+      rgba(255,255,255,.70) 234deg 244deg,
+      rgba(255,255,255,0) 244deg 270deg,
+      rgba(255,255,255,.70) 270deg 280deg,
+      rgba(255,255,255,0) 280deg 306deg,
+      rgba(255,255,255,.70) 306deg 316deg,
+      rgba(255,255,255,0) 316deg 342deg,
+      rgba(255,255,255,.70) 342deg 352deg,
+      rgba(255,255,255,0) 352deg 360deg
+    );
+  background-color: var(--chip-base, rgba(16,185,129,.88));
+}}
+.chipMini:after{{
+  content:"";
+  position:absolute;
+  inset:5px;
+  border-radius:50%;
+  background: rgba(255,255,255,.78);
+  border: 1px solid rgba(0,0,0,.10);
+}}
+.chipNote{{
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 900;
+  opacity: .85;
+  color: #111827;
+  background: rgba(255,255,255,.86);
+  border: 1px solid rgba(0,0,0,.08);
+  padding: 3px 8px;
+  border-radius: 999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width: 18px;
+}}
+
+.pileWrap{{ position:absolute; transform: translate(-50%,-50%); z-index: 15; }}
+.pileStack{{ position:relative; width:26px; height:40px; }}
+.cardBackLayer{{
+  position:absolute;
+  width:26px; height:40px;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,.18);
+  background: linear-gradient(180deg, rgba(12,110,80,.95) 0%, rgba(7,86,64,.95) 100%);
+  box-shadow: 0 6px 10px rgba(0,0,0,.12);
+  overflow:hidden;
+}}
+.cardBackLayer:before{{
+  content:"";
+  position:absolute; inset:-28%;
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 8px, rgba(255,255,255,0) 8px 16px);
+  transform: rotate(14deg);
+}}
+.pileLabel{{
+  margin-top:4px;
+  text-align:center;
+  font-weight:900;
+  font-size:10px;
+  opacity:.74;
+  color: rgba(255,255,255,.92);
+  text-shadow: 0 2px 6px rgba(0,0,0,.25);
+}}
+
+.handDock{{
+  margin-top: 0;
+  border-radius: 18px;
+  border: none;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+  padding: 12px;
+}}
+.handTitle{{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 6px; }}
+.handTitle h3{{ margin:0; font-size:16px; color: var(--textMain); }}
+.hint{{ font-size:12px; opacity:.72; font-weight:800; color: var(--textSub); }}
 
 .handDock div[data-testid="column"]{{
   position: relative;
@@ -471,8 +573,6 @@ def human_label(nome: str) -> str:
     humanos = human_names()
     if nome not in humanos:
         return nome
-    if st.session_state.online_mode and st.session_state.player_name:
-        return f"{nome} (Você)" if nome == st.session_state.player_name else f"{nome} (Humano)"
     if len(humanos) == 1:
         return f"{nome} (Você)"
     return f"{nome} (Humano)"
@@ -482,22 +582,7 @@ def current_human_turn():
     if not ordem:
         return None
     atual = ordem[st.session_state.turn_idx]
-    if not is_human(atual):
-        return None
-    if st.session_state.online_mode and st.session_state.player_name:
-        return atual if atual == st.session_state.player_name else None
-    return atual
-
-# =========================
-# ONLINE MODE SYNC
-# =========================
-if st.session_state.online_mode and st.session_state.started:
-    sync_from_room()
-    if st.session_state.player_name:
-        if st.session_state.player_name not in st.session_state.players_online:
-            st.session_state.players_online.append(st.session_state.player_name)
-            sync_to_room()
-    online_autorefresh(interval_ms=1000, key="online_refresh")
+    return atual if is_human(atual) else None
 
 # =========================
 # QUERY PARAM HANDLER
@@ -509,7 +594,7 @@ def handle_card_query_param():
     carta = param_to_carta(param)
     if param and not carta:
         st.query_params.pop("play", None)
-        rerun_with_room_sync()
+        st.rerun()
     if not carta:
         return
     st.query_params.pop("play", None)
@@ -525,7 +610,7 @@ def handle_card_query_param():
         and (not st.session_state.trick_pending)
     ):
         st.session_state.pending_play = carta
-    rerun_with_room_sync()
+    st.rerun()
 
 # =========================
 # BARALHO / REGRAS
@@ -568,12 +653,6 @@ def criar_baralho():
 def peso_carta(c):
     naipe, valor = c
     return (ORDEM_NAIPE[naipe], PESO_VALOR[valor])
-
-def safe_peso_carta(c):
-    key_fn = globals().get("peso_carta")
-    if callable(key_fn):
-        return key_fn(c)
-    return (0, 0)
 
 def valor_str(v):
     return str(v)
@@ -680,7 +759,7 @@ def ai_prognostico(mao, cartas_por_jogador: int, hard_mode: bool = False, *_args
     divisor = 2.25 if hard_mode else 2.4
     expected = strength / divisor
     variance = 0.12 if hard_mode else 0.25
-    expected += rng.uniform(-variance, variance)
+    expected += random.uniform(-variance, variance)
     guess = int(round(expected))
     guess = max(0, min(cartas_por_jogador, guess))
     return guess
@@ -692,7 +771,7 @@ def distribuir(cartas_alvo: int):
     nomes = st.session_state.nomes
     n = len(nomes)
     baralho = criar_baralho()
-    rng.shuffle(baralho)
+    random.shuffle(baralho)
 
     usadas = cartas_alvo * n
     st.session_state.sobras_monte = len(baralho) - usadas
@@ -704,10 +783,10 @@ def distribuir(cartas_alvo: int):
             st.session_state.maos[nome].append(baralho.pop())
 
     for nome in nomes:
-        st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=safe_peso_carta)
+        st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=peso_carta)
 
     if not st.session_state.mao_primeira_sorteada:
-        st.session_state.mao_da_rodada = rng.randint(0, n - 1)
+        st.session_state.mao_da_rodada = random.randint(0, n - 1)
         st.session_state.mao_primeira_sorteada = True
     else:
         st.session_state.mao_da_rodada = (st.session_state.mao_da_rodada + 1) % n
@@ -729,8 +808,6 @@ def distribuir(cartas_alvo: int):
     st.session_state.trick_snapshot = []
 
 def advance_prognostico_until_human():
-    if st.session_state.online_mode and not st.session_state.is_host:
-        return
     nomes = st.session_state.nomes
     ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada)
     while st.session_state.progn_turn_idx < len(ordem):
@@ -799,8 +876,6 @@ def vencedor_da_vaza(mesa_snapshot, naipe_base_snapshot):
     return max(base, key=lambda x: PESO_VALOR[x[1][1]])[0]
 
 def schedule_trick_resolution():
-    if st.session_state.online_mode and not st.session_state.is_host:
-        return
     if st.session_state.trick_pending:
         return
     now = time.time()
@@ -815,8 +890,6 @@ def schedule_trick_resolution():
     st.session_state.trick_fly_until = now + show_seconds + fly_seconds
 
 def resolve_trick_if_due():
-    if st.session_state.online_mode and not st.session_state.is_host:
-        return False
     if not st.session_state.trick_pending:
         return False
 
@@ -866,8 +939,6 @@ def fim_de_rodada_pronto():
     )
 
 def pontuar_rodada():
-    if st.session_state.online_mode and not st.session_state.is_host:
-        return
     if st.session_state.pontuou_rodada:
         return
     for n in st.session_state.nomes:
@@ -881,7 +952,7 @@ def ai_escolhe_carta(nome):
     if not validas:
         return None
     if not st.session_state.hard_mode:
-        return rng.choice(validas)
+        return random.choice(validas)
 
     naipe_base = st.session_state.naipe_base
     mesa = st.session_state.mesa
@@ -944,8 +1015,6 @@ def ai_escolhe_carta(nome):
         return min(validas, key=losing_sort_key)
     return min(validas, key=sort_key)
 def avancar_ate_humano_ou_fim():
-    if st.session_state.online_mode and not st.session_state.is_host:
-        return
     ordem = st.session_state.ordem
 
     if st.session_state.trick_pending:
@@ -971,7 +1040,7 @@ def avancar_ate_humano_ou_fim():
             if st.session_state.cartas_alvo <= 1:
                 st.session_state.fase = "fim"
                 st.session_state.show_final = True
-                rerun_with_room_sync()
+                st.rerun()
             return
 
         atual = ordem[st.session_state.turn_idx]
@@ -996,8 +1065,6 @@ def avancar_ate_humano_ou_fim():
             return
 
 def start_next_round():
-    if st.session_state.online_mode and not st.session_state.is_host:
-        return
     if st.session_state.cartas_alvo <= 1:
         return
     st.session_state.rodada += 1
@@ -1067,15 +1134,11 @@ with st.sidebar:
         st.markdown("---")
         st.session_state.neon_mode = st.toggle("✨ Modo Neon", value=st.session_state.neon_mode)
         st.session_state.fast_mode = st.toggle("⚡ Modo rápido", value=st.session_state.fast_mode)
-        if st.button(
-            "🔄 Reiniciar",
-            use_container_width=True,
-            disabled=st.session_state.online_mode and not st.session_state.is_host,
-        ):
+        if st.button("🔄 Reiniciar", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             ss_init()
-            rerun_with_room_sync()
+            st.rerun()
     else:
         st.info("Inicie uma partida.")
 
@@ -1099,12 +1162,6 @@ st.markdown(
 # =========================
 if not st.session_state.started:
     st.markdown("### Configuração")
-    mode_label = st.radio(
-        "Modo de jogo",
-        ["Local (hot-seat)", "Online (beta)"],
-        index=1 if st.session_state.online_mode else 0,
-    )
-    st.session_state.online_mode = mode_label == "Online (beta)"
     st.session_state.hard_mode = st.toggle(
         "🔥 Modo difícil (IA mais próxima do jogador real)",
         value=st.session_state.hard_mode,
@@ -1113,38 +1170,9 @@ if not st.session_state.started:
         "⚡ Modo rápido (animações e IA mais ágeis)",
         value=st.session_state.fast_mode,
     )
-    room_state = None
-    if st.session_state.online_mode:
-        st.session_state.room_code = st.text_input(
-            "Código da sala",
-            value=st.session_state.room_code,
-        ).strip()
-        st.session_state.player_name = st.text_input(
-            "Seu nome na sala",
-            value=st.session_state.player_name,
-        ).strip()
-        st.session_state.is_host = st.toggle(
-            "Sou o anfitrião da sala",
-            value=st.session_state.is_host,
-        )
-        room_state = get_room_state(st.session_state.room_code)
-        if room_state:
-            st.info(
-                f"Sala encontrada • Jogadores: {', '.join(room_state.get('nomes', []))} • "
-                f"Humanos: {', '.join(room_state.get('humanos', []))}"
-            )
-            if not st.session_state.is_host:
-                st.session_state.nomes = room_state.get("nomes", st.session_state.nomes)
-                st.session_state.humanos = room_state.get("humanos", st.session_state.humanos)
-                if (
-                    st.session_state.player_name
-                    and st.session_state.player_name not in room_state.get("humanos", [])
-                ):
-                    st.error("Seu nome precisa estar na lista de humanos da sala.")
     nomes_txt = st.text_input(
         "Jogadores (separados por vírgula)",
         value=", ".join(st.session_state.nomes),
-        disabled=st.session_state.online_mode and not st.session_state.is_host,
     )
     nomes_preview = [n.strip() for n in nomes_txt.split(",") if n.strip()]
     if not nomes_preview:
@@ -1153,24 +1181,16 @@ if not st.session_state.started:
     if not humanos_default and nomes_preview:
         humanos_default = [nomes_preview[-1]]
     humanos_sel = st.multiselect(
-        "Jogadores humanos (passa e joga no mesmo dispositivo)" if not st.session_state.online_mode else "Jogadores humanos (online)",
+        "Jogadores humanos (passa e joga no mesmo dispositivo)",
         options=nomes_preview,
         default=humanos_default,
-        disabled=st.session_state.online_mode and not st.session_state.is_host,
     )
     colA, colB = st.columns([1, 2])
     with colA:
-        start_label = "▶️ Iniciar partida"
-        if st.session_state.online_mode and st.session_state.is_host:
-            start_label = "▶️ Criar sala e iniciar"
-        start = st.button(
-            start_label,
-            use_container_width=True,
-            disabled=st.session_state.online_mode and not st.session_state.is_host,
-        )
+        start = st.button("▶️ Iniciar partida", use_container_width=True)
     with colB:
         st.info("As cartas serão distribuídas igualmente até acabar o baralho (sobras no monte). A cada rodada diminui 1 carta por jogador.")
-        st.caption("Multiplayer online está em beta — use uma sala compartilhada para jogar em tempo real.")
+        st.caption("Multiplayer online (pela internet) ainda não está disponível — primeiro validaremos o modo local.")
 
     if start:
         nomes = [n.strip() for n in nomes_txt.split(",") if n.strip()]
@@ -1178,20 +1198,11 @@ if not st.session_state.started:
             st.error("Informe pelo menos 2 jogadores.")
         elif len(humanos_sel) < 1:
             st.error("Selecione ao menos 1 jogador humano.")
-        elif st.session_state.online_mode and not st.session_state.room_code:
-            st.error("Informe um código da sala para jogar online.")
-        elif st.session_state.online_mode and not st.session_state.player_name:
-            st.error("Informe seu nome na sala.")
-        elif st.session_state.online_mode and st.session_state.player_name not in humanos_sel:
-            st.error("Seu nome precisa estar na lista de jogadores humanos.")
         else:
             st.session_state.nomes = nomes
             st.session_state.humanos = [n for n in humanos_sel if n in nomes]
             st.session_state.pontos = {n: 0 for n in nomes}
             st.session_state.started = True
-            st.session_state.players_online = []
-            if st.session_state.online_mode and st.session_state.player_name:
-                st.session_state.players_online.append(st.session_state.player_name)
 
             n = len(nomes)
             cartas_inicio = 52 // n
@@ -1200,17 +1211,9 @@ if not st.session_state.started:
             st.session_state.rodada = 1
 
             distribuir(cartas_inicio)
-            rerun_with_room_sync()
+            st.rerun()
 
-    if st.session_state.online_mode and not st.session_state.is_host and room_state:
-        if room_state.get("started") and st.session_state.player_name in room_state.get("humanos", []):
-            st.session_state.started = True
-            st.session_state.nomes = room_state.get("nomes", [])
-            st.session_state.humanos = room_state.get("humanos", [])
-            sync_from_room()
-            rerun_with_room_sync()
-
-    stop_with_room_sync()
+    st.stop()
 
 # =========================
 # TOPBAR (com regras dentro)
@@ -1277,35 +1280,23 @@ def timing_config():
 c1, c2, c3 = st.columns([1, 1, 1])
 
 with c1:
-    if st.button(
-        "🔄 Reiniciar partida",
-        use_container_width=True,
-        key="menu_reset_icon",
-        help="Reiniciar o jogo",
-        disabled=st.session_state.online_mode and not st.session_state.is_host,
-    ):
+    if st.button("🔄 Reiniciar partida", use_container_width=True, key="menu_reset_icon", help="Reiniciar o jogo"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         ss_init()
-        rerun_with_room_sync()
+        st.rerun()
 
 with c2:
     can_next = (st.session_state.fase == "jogo" and fim_de_rodada_pronto() and st.session_state.cartas_alvo > 1)
-    if st.button(
-        "⏭️ Próxima rodada",
-        use_container_width=True,
-        key="menu_next_round_icon",
-        help="Próxima rodada",
-        disabled=not can_next or (st.session_state.online_mode and not st.session_state.is_host),
-    ):
+    if st.button("⏭️ Próxima rodada", use_container_width=True, key="menu_next_round_icon", help="Próxima rodada", disabled=not can_next):
         start_next_round()
-        rerun_with_room_sync()
+        st.rerun()
 
 with c3:
     neon_new = st.toggle("💚 Modo Neon", value=st.session_state.neon_mode, key="menu_neon_icon", help="Modo Neon")
     if neon_new != st.session_state.neon_mode:
         st.session_state.neon_mode = neon_new
-        rerun_with_room_sync()
+        st.rerun()
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1322,18 +1313,9 @@ if st.session_state.fase == "prognostico":
     if st.session_state.progn_turn_idx >= len(ordem_preview):
         iniciar_fase_jogo()
         avancar_ate_humano_ou_fim()
-        rerun_with_room_sync()
+        st.rerun()
 
     humano_nome = ordem_preview[st.session_state.progn_turn_idx]
-    if st.session_state.online_mode and st.session_state.player_name and humano_nome != st.session_state.player_name:
-        proximos_humanos = [
-            n for n in ordem_preview[st.session_state.progn_turn_idx:]
-            if n in st.session_state.humanos
-        ]
-        fila_txt = " → ".join(proximos_humanos) if proximos_humanos else "—"
-        st.info(f"⏳ Aguardando prognóstico de {humano_nome}.")
-        st.caption(f"Ordem de prognósticos humanos: {fila_txt}")
-        stop_with_room_sync()
     mao_humano = st.session_state.maos.get(humano_nome, [])
     st.markdown(
         f"#### 🎯 Vez de {human_label(humano_nome)} — passe o dispositivo",
@@ -1344,7 +1326,7 @@ if st.session_state.fase == "prognostico":
         unsafe_allow_html=True,
     )
     st.markdown('<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
-                "".join(carta_html(c) for c in sorted(mao_humano, key=safe_peso_carta)) +
+                "".join(carta_html(c) for c in sorted(mao_humano, key=peso_carta)) +
                 "</div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1368,16 +1350,13 @@ if st.session_state.fase == "prognostico":
     if st.button("Confirmar prognóstico", use_container_width=True):
         st.session_state.prognosticos[humano_nome] = int(palpite)
         st.session_state.progn_turn_idx += 1
-        if st.session_state.online_mode and not st.session_state.is_host:
-            rerun_with_room_sync()
-        else:
-            advance_prognostico_until_human()
-            if st.session_state.progn_turn_idx >= len(ordem_preview):
-                iniciar_fase_jogo()
-                avancar_ate_humano_ou_fim()
-            rerun_with_room_sync()
+        advance_prognostico_until_human()
+        if st.session_state.progn_turn_idx >= len(ordem_preview):
+            iniciar_fase_jogo()
+            avancar_ate_humano_ou_fim()
+        st.rerun()
 
-    stop_with_room_sync()
+    st.stop()
 
 # =========================
 # MESA
@@ -1474,6 +1453,201 @@ def render_mesa():
 
         is_last = (idx == len(mesa_to_render) - 1)
         cls = "playCard"
-        extra_style = f"left:{x}%; top:{y}%;"<cut>
+        extra_style = f"left:{x}%; top:{y}%;"
 
+        if pop_active and is_last and not st.session_state.trick_pending:
+            cls += " pop"
+
+        if st.session_state.trick_pending and st.session_state.trick_phase == "fly" and winner_target:
+            tx, ty = winner_target
+            anim_name = f"flyToWinner_{idx}"
+            anim_css += f"""
+@keyframes {anim_name} {{
+  0% {{ left:{x}%; top:{y}%; opacity:1; transform:translate(-50%,-50%) scale(1); }}
+  70% {{ opacity:.85; }}
+  100% {{ left:{tx}%; top:{ty}%; opacity:.22; transform:translate(-50%,-50%) scale(.70); }}
+}}
+"""
+            extra_style = f"left:{x}%; top:{y}%; animation:{anim_name} .55s ease-in forwards;"
+
+        plays_html += f'<div class="{cls}" style="{extra_style}">{carta_html(carta)}</div>'
+
+    if st.session_state.trick_pending:
+        centro_txt = "Vaza completa — mostrando..." if st.session_state.trick_phase == "show" else "Vaza completa — indo ao vencedor..."
+    else:
+        centro_txt = "Aguardando jogada" if not st.session_state.mesa else "Vaza em andamento"
+
+    if naipe_base_show:
+        centro_txt = f"{centro_txt} • Naipe: {naipe_base_show}"
+
+    if anim_css.strip():
+        st.markdown(f"<style>{anim_css}</style>", unsafe_allow_html=True)
+
+    st.markdown('<div class="mesaWrap">', unsafe_allow_html=True)
+    st.markdown(
+        f"""
+<div class="mesa">
+  {seats_html}
+  {chips_html}
+  {piles_html}
+  {plays_html}
+  <div class="mesaCenter">{centro_txt}</div>
+</div>
+""",
+        unsafe_allow_html=True
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# =========================
+# MÃO clicável
+# =========================
+def render_hand_clickable_streamlit():
+    atual = st.session_state.ordem[st.session_state.turn_idx]
+    humano = current_human_turn()
+    if not humano:
+        return None
+    mao = st.session_state.maos[humano]
+    validas = set(cartas_validas_para_jogar(humano))
+
+    st.markdown('<div class="handDock">', unsafe_allow_html=True)
+
+    mao_ord = sorted(mao, key=peso_carta)
+    if not mao_ord:
+        st.markdown("</div>", unsafe_allow_html=True)
+        return None
+    
+    pending = st.session_state.pending_play
+    clicked_card = None
+    cols_per_row = 10
+    rows = [mao_ord[i:i + cols_per_row] for i in range(0, len(mao_ord), cols_per_row)]
+    
+    for r, row_cards in enumerate(rows):
+        cols = st.columns(cols_per_row)
+        for j, c in enumerate(row_cards):
+            # Lógica de desabilitar (disabled)
+            disabled = (
+                (c not in validas) or 
+                (atual != humano) or 
+                (pending is not None) or 
+                st.session_state.trick_pending
+            )
+            
+            with cols[j]:
+                is_pending = (pending is not None and c == pending)
+                card_html = card_btn_html(c, extra_class="flyAway" if is_pending else "")
+                key = f"card_btn_{c[0]}_{c[1]}_{r}_{j}"
+                st.markdown('<div class="cardSlot">', unsafe_allow_html=True)
+                if st.button(" ", key=key, disabled=disabled, use_container_width=True):
+                    clicked_card = c
+                st.markdown(
+                    f'<div class="cardOverlay">{card_html}</div></div>',
+                    unsafe_allow_html=True,
+                )
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+    return clicked_card
+
+# =========================
+# PLACAR PARCIAL
+# =========================
+def render_placar_parcial():
+    st.markdown("## 🧾 Placar parcial")
+    ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
+
+    linhas = []
+    medals = ["🥇", "🥈", "🥉"]
+    for i, (nome, pts) in enumerate(ranking, start=1):
+        medalha = medals[i - 1] if i <= 3 else ""
+        linhas.append({"Posição": f"{medalha} {i}º".strip(), "Jogador": nome, "Pontos": pts})
+
+    df = pd.DataFrame(linhas)
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+
+# =========================
+# TELA FINAL
+# =========================
+def render_tela_final():
+    st.markdown("## 🏁 Placar final")
+    ranking = sorted(st.session_state.pontos.items(), key=lambda x: x[1], reverse=True)
+
+    linhas = []
+    medals = ["🥇", "🥈", "🥉"]
+    for i, (nome, pts) in enumerate(ranking, start=1):
+        medalha = medals[i - 1] if i <= 3 else ""
+        linhas.append({"Posição": f"{medalha} {i}º".strip(), "Jogador": nome, "Pontos": pts})
+
+    df = pd.DataFrame(linhas)
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    vencedor, pts = ranking[0]
+    st.success(f"🏆 Vencedor: {vencedor} com {pts} pontos!")
+
+    if st.button("🔄 Jogar novamente", use_container_width=True, key="btn_play_again"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        ss_init()
+        st.rerun()
+
+# =========================
+# JOGO
+# =========================
+if st.session_state.fase == "jogo":
+    handle_card_query_param()
+
+    if resolve_trick_if_due():
+        st.rerun()
+
+    ordem = st.session_state.ordem
+    atual = ordem[st.session_state.turn_idx]
+    humano = current_human_turn()
+
+    if rodada_terminou() and (not st.session_state.trick_pending) and (len(st.session_state.mesa) == len(ordem)):
+        schedule_trick_resolution()
+        st.rerun()
+
+    if fim_de_rodada_pronto():
+        pontuar_rodada()
+        if st.session_state.cartas_alvo <= 1:
+            st.session_state.fase = "fim"
+            st.session_state.show_final = True
+            st.rerun()
+        render_placar_parcial()
+        if st.button("▶️ Continuar jogo", use_container_width=True, key="btn_continue_game"):
+            start_next_round()
+            st.rerun()
+        st.stop()
+
+    render_mesa()
+
+    if st.session_state.trick_pending:
+        time.sleep(timing_config()["trick_tick"])
+        st.rerun()
+
+    if not is_human(atual) and st.session_state.pending_play is None:
+        now = time.time()
+        if now - st.session_state.autoplay_last > timing_config()["autoplay_delay"]:
+            st.session_state.autoplay_last = now
+            avancar_ate_humano_ou_fim()
+            time.sleep(timing_config()["ai_step_delay"])
+            st.rerun()
+
+    clicked = render_hand_clickable_streamlit()
+    if clicked is not None:
+        st.session_state.pending_play = clicked
+        st.rerun()
+
+    if st.session_state.pending_play is not None and atual == humano:
+        time.sleep(timing_config()["play_delay"])
+        carta = st.session_state.pending_play
+        st.session_state.pending_play = None
+
+        jogar_carta(humano, carta)
+        st.session_state.turn_idx = (st.session_state.turn_idx + 1) % len(ordem)
+
+        if len(st.session_state.mesa) == len(ordem):
+            schedule_trick_resolution()
+
+        avancar_ate_humano_ou_fim()
+        st.rerun()
 
