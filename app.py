@@ -70,6 +70,11 @@ def ss_init():
         "neon_mode": False,
         "hard_mode": False,
         "fast_mode": False,
+        "online_mode": False,
+        "room_code": "",
+        "player_name": "",
+        "is_host": False,
+        "players_online": [],
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -77,6 +82,109 @@ def ss_init():
 
 ss_init()
 
+
+# =========================
+# ONLINE ROOM STORE
+# =========================
+ROOM_STATE_KEYS = [
+    "started",
+    "nomes",
+    "humanos",
+    "pontos",
+    "vazas_rodada",
+    "maos",
+    "rodada",
+    "cartas_inicio",
+    "cartas_alvo",
+    "sobras_monte",
+    "mao_da_rodada",
+    "mao_primeira_sorteada",
+    "fase",
+    "show_final",
+    "prognosticos",
+    "progn_turn_idx",
+    "ordem",
+    "turn_idx",
+    "naipe_base",
+    "mesa",
+    "primeira_vaza",
+    "copas_quebrada",
+    "pontuou_rodada",
+    "pending_play",
+    "table_pop_until",
+    "winner_flash_name",
+    "winner_flash_until",
+    "trick_pending",
+    "trick_phase",
+    "trick_resolve_at",
+    "trick_fly_until",
+    "trick_winner",
+    "trick_snapshot",
+    "pile_counts",
+    "autoplay_last",
+    "neon_mode",
+    "hard_mode",
+    "fast_mode",
+    "players_online",
+]
+
+
+class RoomStore:
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.rooms = {}
+
+
+@st.cache_resource
+def get_room_store():
+    return RoomStore()
+
+
+def get_room_state(code: str):
+    if not code:
+        return None
+    store = get_room_store()
+    with store.lock:
+        data = store.rooms.get(code)
+        return copy.deepcopy(data) if data else None
+
+
+def save_room_state(code: str, state: dict):
+    if not code:
+        return
+    store = get_room_store()
+    with store.lock:
+        store.rooms[code] = copy.deepcopy(state)
+
+
+def sync_from_room():
+    if not st.session_state.online_mode or not st.session_state.room_code:
+        return
+    room_state = get_room_state(st.session_state.room_code)
+    if not room_state:
+        return
+    for key in ROOM_STATE_KEYS:
+        if key in room_state:
+            st.session_state[key] = room_state[key]
+
+
+def sync_to_room():
+    if not st.session_state.online_mode or not st.session_state.room_code:
+        return
+    if not st.session_state.is_host and not st.session_state.started:
+        return
+    state = {key: copy.deepcopy(st.session_state.get(key)) for key in ROOM_STATE_KEYS}
+    save_room_state(st.session_state.room_code, state)
+
+
+def rerun_with_room_sync():
+    sync_to_room()
+    st.rerun()
+
+
+def stop_with_room_sync():
+    sync_to_room()
+    st.stop()
 
 # =========================
 # CSS
@@ -610,6 +718,17 @@ def handle_card_query_param():
     ):
         st.session_state.pending_play = carta
     st.rerun()
+    
+# =========================
+# ONLINE MODE SYNC
+# =========================
+if st.session_state.online_mode and st.session_state.started:
+    sync_from_room()
+    if st.session_state.player_name:
+        if st.session_state.player_name not in st.session_state.players_online:
+            st.session_state.players_online.append(st.session_state.player_name)
+            sync_to_room()
+    st.autorefresh(interval=1000, key="online_refresh")
 
 # =========================
 # BARALHO / REGRAS
@@ -1133,11 +1252,15 @@ with st.sidebar:
         st.markdown("---")
         st.session_state.neon_mode = st.toggle("✨ Modo Neon", value=st.session_state.neon_mode)
         st.session_state.fast_mode = st.toggle("⚡ Modo rápido", value=st.session_state.fast_mode)
-        if st.button("🔄 Reiniciar", use_container_width=True):
+        if st.button(
+            "🔄 Reiniciar",
+            use_container_width=True,
+            disabled=st.session_state.online_mode and not st.session_state.is_host,
+        ):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             ss_init()
-            st.rerun()
+            rerun_with_room_sync()
     else:
         st.info("Inicie uma partida.")
 
@@ -1161,6 +1284,12 @@ st.markdown(
 # =========================
 if not st.session_state.started:
     st.markdown("### Configuração")
+    mode_label = st.radio(
+        "Modo de jogo",
+        ["Local (hot-seat)", "Online (beta)"],
+        index=1 if st.session_state.online_mode else 0,
+    )
+    st.session_state.online_mode = mode_label == "Online (beta)"
     st.session_state.hard_mode = st.toggle(
         "🔥 Modo difícil (IA mais próxima do jogador real)",
         value=st.session_state.hard_mode,
@@ -1169,9 +1298,38 @@ if not st.session_state.started:
         "⚡ Modo rápido (animações e IA mais ágeis)",
         value=st.session_state.fast_mode,
     )
+    room_state = None
+    if st.session_state.online_mode:
+        st.session_state.room_code = st.text_input(
+            "Código da sala",
+            value=st.session_state.room_code,
+        ).strip()
+        st.session_state.player_name = st.text_input(
+            "Seu nome na sala",
+            value=st.session_state.player_name,
+        ).strip()
+        st.session_state.is_host = st.toggle(
+            "Sou o anfitrião da sala",
+            value=st.session_state.is_host,
+        )
+        room_state = get_room_state(st.session_state.room_code)
+        if room_state:
+            st.info(
+                f"Sala encontrada • Jogadores: {', '.join(room_state.get('nomes', []))} • "
+                f"Humanos: {', '.join(room_state.get('humanos', []))}"
+            )
+            if not st.session_state.is_host:
+                st.session_state.nomes = room_state.get("nomes", st.session_state.nomes)
+                st.session_state.humanos = room_state.get("humanos", st.session_state.humanos)
+                if (
+                    st.session_state.player_name
+                    and st.session_state.player_name not in room_state.get("humanos", [])
+                ):
+                    st.error("Seu nome precisa estar na lista de humanos da sala.")
     nomes_txt = st.text_input(
         "Jogadores (separados por vírgula)",
         value=", ".join(st.session_state.nomes),
+        disabled=st.session_state.online_mode and not st.session_state.is_host,
     )
     nomes_preview = [n.strip() for n in nomes_txt.split(",") if n.strip()]
     if not nomes_preview:
@@ -1180,16 +1338,24 @@ if not st.session_state.started:
     if not humanos_default and nomes_preview:
         humanos_default = [nomes_preview[-1]]
     humanos_sel = st.multiselect(
-        "Jogadores humanos (passa e joga no mesmo dispositivo)",
+        "Jogadores humanos (passa e joga no mesmo dispositivo)" if not st.session_state.online_mode else "Jogadores humanos (online)",
         options=nomes_preview,
         default=humanos_default,
+        disabled=st.session_state.online_mode and not st.session_state.is_host,
     )
     colA, colB = st.columns([1, 2])
     with colA:
-        start = st.button("▶️ Iniciar partida", use_container_width=True)
+        start_label = "▶️ Iniciar partida"
+        if st.session_state.online_mode and st.session_state.is_host:
+            start_label = "▶️ Criar sala e iniciar"
+        start = st.button(
+            start_label,
+            use_container_width=True,
+            disabled=st.session_state.online_mode and not st.session_state.is_host,
+        )
     with colB:
         st.info("As cartas serão distribuídas igualmente até acabar o baralho (sobras no monte). A cada rodada diminui 1 carta por jogador.")
-        st.caption("Multiplayer online (pela internet) ainda não está disponível — primeiro validaremos o modo local.")
+        st.caption("Multiplayer online está em beta — use uma sala compartilhada para jogar em tempo real.")
 
     if start:
         nomes = [n.strip() for n in nomes_txt.split(",") if n.strip()]
@@ -1197,11 +1363,20 @@ if not st.session_state.started:
             st.error("Informe pelo menos 2 jogadores.")
         elif len(humanos_sel) < 1:
             st.error("Selecione ao menos 1 jogador humano.")
+        elif st.session_state.online_mode and not st.session_state.room_code:
+            st.error("Informe um código da sala para jogar online.")
+        elif st.session_state.online_mode and not st.session_state.player_name:
+            st.error("Informe seu nome na sala.")
+        elif st.session_state.online_mode and st.session_state.player_name not in humanos_sel:
+            st.error("Seu nome precisa estar na lista de jogadores humanos.")
         else:
             st.session_state.nomes = nomes
             st.session_state.humanos = [n for n in humanos_sel if n in nomes]
             st.session_state.pontos = {n: 0 for n in nomes}
             st.session_state.started = True
+            st.session_state.players_online = []
+            if st.session_state.online_mode and st.session_state.player_name:
+                st.session_state.players_online.append(st.session_state.player_name)
 
             n = len(nomes)
             cartas_inicio = 52 // n
@@ -1210,9 +1385,17 @@ if not st.session_state.started:
             st.session_state.rodada = 1
 
             distribuir(cartas_inicio)
-            st.rerun()
+            rerun_with_room_sync()
 
-    st.stop()
+    if st.session_state.online_mode and not st.session_state.is_host and room_state:
+        if room_state.get("started") and st.session_state.player_name in room_state.get("humanos", []):
+            st.session_state.started = True
+            st.session_state.nomes = room_state.get("nomes", [])
+            st.session_state.humanos = room_state.get("humanos", [])
+            sync_from_room()
+            rerun_with_room_sync()
+
+    stop_with_room_sync()
 
 # =========================
 # TOPBAR (com regras dentro)
