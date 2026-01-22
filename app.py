@@ -751,7 +751,7 @@ if st.session_state.online_mode and st.session_state.started:
         if st.session_state.player_name not in st.session_state.players_online:
             st.session_state.players_online.append(st.session_state.player_name)
             sync_to_room()
-    st.autorefresh(interval=1000, key="online_refresh")
+    online_autorefresh(interval_ms=1000, key="online_refresh")
 
 # =========================
 # BARALHO / REGRAS
