@@ -188,10 +188,10 @@ def rerun_with_room_sync():
     elif hasattr(st, "experimental_rerun"):
         st.experimental_rerun()
 
-
 def stop_with_room_sync():
     sync_to_room()
-    st.stop()
+    if hasattr(st, "stop"):
+        st.stop()
 
 def online_autorefresh(interval_ms: int, key: str):
     interval_s = max(interval_ms / 1000.0, 0.2)
