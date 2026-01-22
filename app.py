@@ -1454,7 +1454,7 @@ def render_topbar():
 
     ordem = st.session_state.ordem
     vez = ordem[st.session_state.turn_idx]
-    vez_label = human_label(vez)
+    vez_label = safe_human_label(vez)
 
     naipe_txt = st.session_state.naipe_base or "—"
     quebrada_txt = "Sim" if st.session_state.copas_quebrada else "Não"
@@ -1633,14 +1633,14 @@ def render_mesa():
         x, y = pos[nome]["seat"]
         tx, ty = pos[nome]["target"]
 
-        cls = "seat"
-        label = nome
-        if is_human(nome):
-            cls += " you"
-            label = human_label(nome)
-        if nome == dealer:
-            cls += " dealer"
-            label = f"{label} • mão"
+    cls = "seat"
+    label = nome
+    if is_human(nome):
+        cls += " you"
+        label = safe_human_label(nome)
+    if nome == dealer:
+        cls += " dealer"
+        label = f"{label} • mão"
         if flash_name and nome == flash_name:
             cls += " winnerFlash"
 
