@@ -1553,7 +1553,14 @@ if st.session_state.fase == "prognostico":
         '<div class="handTitle"><h3>🃏 Cartas do jogador (prognóstico)</h3><div class="hint">Ordenadas por naipe e valor</div></div>',
         unsafe_allow_html=True,
     )
-    cards_html = "".join(carta_html(c) for c in sorted(mao_humano, key=safe_sort_key))
+    sort_key = (
+        globals().get("safe_sort_key")
+        or globals().get("safe_peso_carta")
+        or globals().get("peso_carta")
+    )
+    cards_html = "".join(
+        carta_html(c) for c in sorted(mao_humano, key=sort_key or (lambda _c: (0, 0)))
+    )
     st.markdown(
         f'<div style="display:flex; flex-wrap:wrap; gap:10px;">{cards_html}</div>',
         unsafe_allow_html=True,
