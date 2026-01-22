@@ -1585,7 +1585,7 @@ if st.session_state.fase == "prognostico":
     min_value=0,
     max_value=len(mao_humano),
     value=0,
-   step=1,
+    step=1,
     key=f"progn_{humano_nome}_{st.session_state.rodada}",
 )
 
