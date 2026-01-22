@@ -1525,7 +1525,7 @@ if st.session_state.fase == "prognostico":
     if st.session_state.progn_turn_idx >= len(ordem_preview):
         iniciar_fase_jogo()
         avancar_ate_humano_ou_fim()
-        st.rerun()
+        rerun_with_room_sync()
 
     humano_nome = ordem_preview[st.session_state.progn_turn_idx]
     if st.session_state.online_mode and st.session_state.player_name and humano_nome != st.session_state.player_name:
@@ -1547,7 +1547,7 @@ if st.session_state.fase == "prognostico":
         unsafe_allow_html=True,
     )
     st.markdown('<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
-                "".join(carta_html(c) for c in sorted(mao_humano, key=peso_carta)) +
+                "".join(carta_html(c) for c in sorted(mao_humano, key=safe_peso_carta)) +
                 "</div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1571,13 +1571,16 @@ if st.session_state.fase == "prognostico":
     if st.button("Confirmar prognóstico", use_container_width=True):
         st.session_state.prognosticos[humano_nome] = int(palpite)
         st.session_state.progn_turn_idx += 1
-        advance_prognostico_until_human()
-        if st.session_state.progn_turn_idx >= len(ordem_preview):
-            iniciar_fase_jogo()
-            avancar_ate_humano_ou_fim()
-        st.rerun()
+        if st.session_state.online_mode and not st.session_state.is_host:
+            rerun_with_room_sync()
+        else:
+            advance_prognostico_until_human()
+            if st.session_state.progn_turn_idx >= len(ordem_preview):
+                iniciar_fase_jogo()
+                avancar_ate_humano_ou_fim()
+            rerun_with_room_sync()
 
-    st.stop()
+    stop_with_room_sync()
 
 # =========================
 # MESA
