@@ -795,6 +795,19 @@ def peso_carta(c):
     naipe, valor = c
     return (ORDEM_NAIPE[naipe], PESO_VALOR[valor])
 
+def safe_peso_carta(c):
+    key_fn = globals().get("peso_carta")
+    if callable(key_fn):
+        return key_fn(c)
+    return (0, 0)
+
+
+def safe_sort_key(c):
+    key_fn = globals().get("safe_peso_carta") or globals().get("peso_carta")
+    if callable(key_fn):
+        return key_fn(c)
+    return (0, 0)
+
 def valor_str(v):
     return str(v)
 
@@ -912,7 +925,7 @@ def distribuir(cartas_alvo: int):
     nomes = st.session_state.nomes
     n = len(nomes)
     baralho = criar_baralho()
-    random.shuffle(baralho)
+    rng.shuffle(baralho)
 
     usadas = cartas_alvo * n
     st.session_state.sobras_monte = len(baralho) - usadas
@@ -924,8 +937,7 @@ def distribuir(cartas_alvo: int):
             st.session_state.maos[nome].append(baralho.pop())
 
     for nome in nomes:
-        st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=peso_carta)
-
+        st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=safe_sort_key
     if not st.session_state.mao_primeira_sorteada:
         st.session_state.mao_da_rodada = random.randint(0, n - 1)
         st.session_state.mao_primeira_sorteada = True
@@ -1547,7 +1559,7 @@ if st.session_state.fase == "prognostico":
         unsafe_allow_html=True,
     )
     st.markdown('<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
-                "".join(carta_html(c) for c in sorted(mao_humano, key=safe_peso_carta)) +
+                "".join(carta_html(c) for c in sorted(mao_humano, key=safe_sort_key)) +
                 "</div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1735,7 +1747,7 @@ def render_hand_clickable_streamlit():
 
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
 
-    mao_ord = sorted(mao, key=peso_carta)
+    mao_ord = sorted(mao, key=safe_sort_key)
     if not mao_ord:
         st.markdown("</div>", unsafe_allow_html=True)
         return None
