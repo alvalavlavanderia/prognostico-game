@@ -1567,16 +1567,20 @@ if st.session_state.fase == "prognostico":
         key=f"progn_{humano_nome}_{st.session_state.rodada}",
     )
 
-    if st.button("Confirmar prognóstico", use_container_width=True):
-        st.session_state.prognosticos[humano_nome] = int(palpite)
-        st.session_state.progn_turn_idx += 1
+if st.button("Confirmar prognóstico", use_container_width=True):
+    st.session_state.prognosticos[humano_nome] = int(palpite)
+    st.session_state.progn_turn_idx += 1
+    if st.session_state.online_mode and not st.session_state.is_host:
+        rerun_with_room_sync()
+    else:
         advance_prognostico_until_human()
         if st.session_state.progn_turn_idx >= len(ordem_preview):
             iniciar_fase_jogo()
             avancar_ate_humano_ou_fim()
-        st.rerun()
+        rerun_with_room_sync()
 
-    st.stop()
+if st.session_state.online_mode and not st.session_state.is_host:
+    stop_with_room_sync()
 
 # =========================
 # MESA
