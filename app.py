@@ -712,7 +712,16 @@ def current_human_turn():
     if not ordem:
         return None
     atual = ordem[st.session_state.turn_idx]
-    return atual if is_human(atual) else None
+    if not is_human(atual):
+        return None
+    if st.session_state.online_mode and st.session_state.player_name:
+        if atual == st.session_state.player_name:
+            return atual
+        if st.session_state.is_host:
+            online_humans = set(st.session_state.players_online or [])
+            return atual if atual not in online_humans else None
+        return None
+    return atual
 
 # =========================
 # QUERY PARAM HANDLER
