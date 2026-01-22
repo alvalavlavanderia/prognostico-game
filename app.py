@@ -1863,7 +1863,10 @@ if st.session_state.fase == "jogo":
     handle_card_query_param()
 
     if resolve_trick_if_due():
-        st.rerun()
+        rerun_with_room_sync()
+
+    if not st.session_state.ordem:
+        st.session_state.ordem = ordem_da_mesa(st.session_state.nomes, st.session_state.mao_da_rodada)
 
     ordem = st.session_state.ordem
     atual = ordem[st.session_state.turn_idx]
