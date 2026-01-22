@@ -808,6 +808,11 @@ def peso_carta(c):
     naipe, valor = c
     return (ORDEM_NAIPE[naipe], PESO_VALOR[valor])
 
+def safe_peso_carta(c):
+    key_fn = globals().get("peso_carta")
+    if callable(key_fn):
+        return key_fn(c)
+
 def valor_str(v):
     return str(v)
 
@@ -913,7 +918,7 @@ def ai_prognostico(mao, cartas_por_jogador: int, hard_mode: bool = False, *_args
     divisor = 2.25 if hard_mode else 2.4
     expected = strength / divisor
     variance = 0.12 if hard_mode else 0.25
-    expected += random.uniform(-variance, variance)
+    expected += rng.uniform(-variance, variance)
     guess = int(round(expected))
     guess = max(0, min(cartas_por_jogador, guess))
     return guess
@@ -1550,17 +1555,10 @@ if st.session_state.fase == "prognostico":
     )
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
     st.markdown(
-        '<div class="handTitle"><h3>🃏 Cartas do jogador (prognóstico)</h3><div class="hint">Ordenadas por naipe e valor</div></div>',
-        unsafe_allow_html=True,
+    '<div class="handTitle"><h3>🃏 Cartas do jogador (prognóstico)</h3><div class="hint">Ordenadas por naipe e valor</div></div>',
+    unsafe_allow_html=True,
     )
-    sort_key = (
-        globals().get("safe_sort_key")
-        or globals().get("safe_peso_carta")
-        or globals().get("peso_carta")
-    )
-    cards_html = "".join(
-        carta_html(c) for c in sorted(mao_humano, key=sort_key or (lambda _c: (0, 0)))
-    )
+    cards_html = "".join(carta_html(c) for c in sorted(mao_humano, key=resolve_sort_key()))
     st.markdown(
         f'<div style="display:flex; flex-wrap:wrap; gap:10px;">{cards_html}</div>',
         unsafe_allow_html=True,
@@ -1712,7 +1710,7 @@ def render_mesa():
             extra_style = f"left:{x}%; top:{y}%; animation:{anim_name} .55s ease-in forwards;"
 
         plays_html += f'<div class="{cls}" style="{extra_style}">{carta_html(carta)}</div>'
-
+    
     if st.session_state.trick_pending:
         centro_txt = "Vaza completa — mostrando..." if st.session_state.trick_phase == "show" else "Vaza completa — indo ao vencedor..."
     else:
