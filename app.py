@@ -1626,12 +1626,15 @@ def render_mesa():
         sync_from_room()
     ordem = st.session_state.ordem
     if not ordem:
-        ordem = ordem_da_mesa(st.session_state.nomes, st.session_state.mao_da_rodada)
+        nomes = st.session_state.nomes
+        if not nomes:
+            nomes = list(st.session_state.maos.keys())
+            st.session_state.nomes = nomes
+        ordem = ordem_da_mesa(nomes, st.session_state.mao_da_rodada) if nomes else []
         st.session_state.ordem = ordem
     if not ordem:
         st.markdown(
             '<div class="mesaWrap"><div class="mesa"><div class="mesaCenter">Mesa aguardando jogadores...</div></div></div>',
-            unsafe_allow_html=True,
         )
         return
     n = len(ordem)
