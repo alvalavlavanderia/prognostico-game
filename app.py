@@ -136,7 +136,7 @@ ROOM_STATE_KEYS = [
 
 class RoomStore:
     def __init__(self):
-        self.lock = threading.Lock()
+        self.lock = Lock()
         self.rooms = {}
 
 
