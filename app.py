@@ -1540,15 +1540,32 @@ if st.session_state.fase == "prognostico":
         rerun_with_room_sync()
 
     humano_nome = ordem_preview[st.session_state.progn_turn_idx]
-    if st.session_state.online_mode and st.session_state.player_name and humano_nome != st.session_state.player_name:
-        proximos_humanos = [
-            n for n in ordem_preview[st.session_state.progn_turn_idx:]
-            if n in st.session_state.humanos
-        ]
-        fila_txt = " → ".join(proximos_humanos) if proximos_humanos else "—"
-        st.info(f"⏳ Aguardando prognóstico de {humano_nome}.")
-        st.caption(f"Ordem de prognósticos humanos: {fila_txt}")
-        stop_with_room_sync()
+    if st.session_state.online_mode:
+        if not st.session_state.is_host:
+            if st.session_state.player_name and humano_nome != st.session_state.player_name:
+                proximos_humanos = [
+                    n for n in ordem_preview[st.session_state.progn_turn_idx:]
+                    if n in st.session_state.humanos
+                ]
+                fila_txt = " → ".join(proximos_humanos) if proximos_humanos else "—"
+                st.info(f"⏳ Aguardando prognóstico de {humano_nome}.")
+                st.caption(f"Ordem de prognósticos humanos: {fila_txt}")
+                stop_with_room_sync()
+        else:
+            online_humanos = set(st.session_state.players_online or [])
+            if (
+                st.session_state.player_name
+                and humano_nome != st.session_state.player_name
+                and humano_nome in online_humanos
+            ):
+                proximos_humanos = [
+                    n for n in ordem_preview[st.session_state.progn_turn_idx:]
+                    if n in st.session_state.humanos
+                ]
+                fila_txt = " → ".join(proximos_humanos) if proximos_humanos else "—"
+                st.info(f"⏳ Aguardando prognóstico de {humano_nome}.")
+                st.caption(f"Ordem de prognósticos humanos: {fila_txt}")
+                stop_with_room_sync()
     mao_humano = st.session_state.maos.get(humano_nome, [])
     st.markdown(
         f"#### 🎯 Vez de {human_label(humano_nome)} — passe o dispositivo",
@@ -1559,8 +1576,6 @@ if st.session_state.fase == "prognostico":
         unsafe_allow_html=True,
     )
     st.markdown('<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
-                "".join(carta_html(c) for c in sorted(mao_humano, key=safe_sort_key)) +
-                "</div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("#### ✅ Prognósticos visíveis (anteriores na mesa)")
