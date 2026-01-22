@@ -1579,8 +1579,8 @@ if st.session_state.fase == "prognostico":
     st.markdown(
         f'<div style="display:flex; flex-wrap:wrap; gap:10px;">{cards_html}</div>',
         unsafe_allow_html=True,
-)
-st.markdown('</div>', unsafe_allow_html=True)
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("#### ✅ Prognósticos visíveis (anteriores na mesa)")
     vis = st.session_state.prognosticos
