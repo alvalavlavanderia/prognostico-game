@@ -183,7 +183,10 @@ def sync_to_room():
 
 def rerun_with_room_sync():
     sync_to_room()
-    st.rerun()
+    if hasattr(st, "rerun"):
+        st.rerun()
+    elif hasattr(st, "experimental_rerun"):
+        st.experimental_rerun()
 
 
 def stop_with_room_sync():
