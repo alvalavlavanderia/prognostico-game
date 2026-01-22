@@ -1622,6 +1622,8 @@ def seat_positions(ordem):
     return pos
 
 def render_mesa():
+    if st.session_state.online_mode and not st.session_state.nomes:
+        sync_from_room()
     ordem = st.session_state.ordem
     if not ordem:
         ordem = ordem_da_mesa(st.session_state.nomes, st.session_state.mao_da_rodada)
