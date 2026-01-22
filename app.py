@@ -937,7 +937,7 @@ def distribuir(cartas_alvo: int):
             st.session_state.maos[nome].append(baralho.pop())
 
     for nome in nomes:
-        st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=safe_sort_key
+        st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=safe_sort_key)
     if not st.session_state.mao_primeira_sorteada:
         st.session_state.mao_da_rodada = random.randint(0, n - 1)
         st.session_state.mao_primeira_sorteada = True
