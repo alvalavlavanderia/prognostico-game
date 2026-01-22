@@ -706,9 +706,17 @@ def human_label(nome: str) -> str:
     humanos = human_names()
     if nome not in humanos:
         return nome
+    if st.session_state.online_mode and st.session_state.player_name:
+        return f"{nome} (Você)" if nome == st.session_state.player_name else f"{nome} (Humano)"
     if len(humanos) == 1:
         return f"{nome} (Você)"
     return f"{nome} (Humano)"
+
+def safe_human_label(nome: str) -> str:
+    label_fn = globals().get("human_label")
+    if callable(label_fn):
+        return label_fn(nome)
+    return nome
 
 def current_human_turn():
     ordem = st.session_state.ordem
@@ -1538,16 +1546,18 @@ if st.session_state.fase == "prognostico":
     humano_nome = ordem_preview[st.session_state.progn_turn_idx]
     mao_humano = st.session_state.maos.get(humano_nome, [])
     st.markdown(
-        f"#### 🎯 Vez de {human_label(humano_nome)} — passe o dispositivo",
+        f"#### 🎯 Vez de {safe_human_label(humano_nome)} — passe o dispositivo",
     )
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
     st.markdown(
         '<div class="handTitle"><h3>🃏 Cartas do jogador (prognóstico)</h3><div class="hint">Ordenadas por naipe e valor</div></div>',
         unsafe_allow_html=True,
     )
-    st.markdown('<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
-                "".join(carta_html(c) for c in sorted(mao_humano, key=peso_carta)) +
-                "</div>", unsafe_allow_html=True)
+    cards_html = "".join(carta_html(c) for c in sorted(mao_humano, key=safe_sort_key))
+    st.markdown(
+        f'<div style="display:flex; flex-wrap:wrap; gap:10px;">{cards_html}</div>',
+        unsafe_allow_html=True,
+    )
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("#### ✅ Prognósticos visíveis (anteriores na mesa)")
@@ -1557,8 +1567,8 @@ if st.session_state.fase == "prognostico":
     else:
         rows = [(n, vis[n]) for n in ordem_preview if n in vis]
         st.table({"Jogador": [r[0] for r in rows], "Prognóstico": [r[1] for r in rows]})
-
-palpite = st.number_input(
+    
+    palpite = st.number_input(
     f"Prognóstico de {human_label(humano_nome)}",
     min_value=0,
     max_value=len(mao_humano),
