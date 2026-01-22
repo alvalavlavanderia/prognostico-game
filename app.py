@@ -712,16 +712,7 @@ def current_human_turn():
     if not ordem:
         return None
     atual = ordem[st.session_state.turn_idx]
-    if not is_human(atual):
-        return None
-    if st.session_state.online_mode and st.session_state.player_name:
-        if atual == st.session_state.player_name:
-            return atual
-        if st.session_state.is_host:
-            online_humans = set(st.session_state.players_online or [])
-            return atual if atual not in online_humans else None
-        return None
-    return atual
+    return atual if is_human(atual) else None
 
 # =========================
 # QUERY PARAM HANDLER
@@ -803,19 +794,6 @@ def criar_baralho():
 def peso_carta(c):
     naipe, valor = c
     return (ORDEM_NAIPE[naipe], PESO_VALOR[valor])
-
-def safe_peso_carta(c):
-    key_fn = globals().get("peso_carta")
-    if callable(key_fn):
-        return key_fn(c)
-    return (0, 0)
-
-
-def safe_sort_key(c):
-    key_fn = globals().get("safe_peso_carta") or globals().get("peso_carta")
-    if callable(key_fn):
-        return key_fn(c)
-    return (0, 0)
 
 def valor_str(v):
     return str(v)
@@ -934,7 +912,7 @@ def distribuir(cartas_alvo: int):
     nomes = st.session_state.nomes
     n = len(nomes)
     baralho = criar_baralho()
-    rng.shuffle(baralho)
+    random.shuffle(baralho)
 
     usadas = cartas_alvo * n
     st.session_state.sobras_monte = len(baralho) - usadas
@@ -946,7 +924,8 @@ def distribuir(cartas_alvo: int):
             st.session_state.maos[nome].append(baralho.pop())
 
     for nome in nomes:
-        st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=safe_sort_key)
+        st.session_state.maos[nome] = sorted(st.session_state.maos[nome], key=peso_carta)
+
     if not st.session_state.mao_primeira_sorteada:
         st.session_state.mao_da_rodada = random.randint(0, n - 1)
         st.session_state.mao_primeira_sorteada = True
@@ -1184,9 +1163,6 @@ def ai_escolhe_carta(nome):
     return min(validas, key=sort_key)
 def avancar_ate_humano_ou_fim():
     if st.session_state.online_mode and not st.session_state.is_host:
-        return
-    ordem = st.session_state.ordem
-    if not ordem:
         return
 
     if st.session_state.trick_pending:
@@ -1549,35 +1525,9 @@ if st.session_state.fase == "prognostico":
     if st.session_state.progn_turn_idx >= len(ordem_preview):
         iniciar_fase_jogo()
         avancar_ate_humano_ou_fim()
-        rerun_with_room_sync()
+        st.rerun()
 
     humano_nome = ordem_preview[st.session_state.progn_turn_idx]
-    if st.session_state.online_mode:
-        if not st.session_state.is_host:
-            if st.session_state.player_name and humano_nome != st.session_state.player_name:
-                proximos_humanos = [
-                    n for n in ordem_preview[st.session_state.progn_turn_idx:]
-                    if n in st.session_state.humanos
-                ]
-                fila_txt = " → ".join(proximos_humanos) if proximos_humanos else "—"
-                st.info(f"⏳ Aguardando prognóstico de {humano_nome}.")
-                st.caption(f"Ordem de prognósticos humanos: {fila_txt}")
-                stop_with_room_sync()
-        else:
-            online_humanos = set(st.session_state.players_online or [])
-            if (
-                st.session_state.player_name
-                and humano_nome != st.session_state.player_name
-                and humano_nome in online_humanos
-            ):
-                proximos_humanos = [
-                    n for n in ordem_preview[st.session_state.progn_turn_idx:]
-                    if n in st.session_state.humanos
-                ]
-                fila_txt = " → ".join(proximos_humanos) if proximos_humanos else "—"
-                st.info(f"⏳ Aguardando prognóstico de {humano_nome}.")
-                st.caption(f"Ordem de prognósticos humanos: {fila_txt}")
-                stop_with_room_sync()
     mao_humano = st.session_state.maos.get(humano_nome, [])
     st.markdown(
         f"#### 🎯 Vez de {human_label(humano_nome)} — passe o dispositivo",
@@ -1587,11 +1537,9 @@ if st.session_state.fase == "prognostico":
         '<div class="handTitle"><h3>🃏 Cartas do jogador (prognóstico)</h3><div class="hint">Ordenadas por naipe e valor</div></div>',
         unsafe_allow_html=True,
     )
-    cards_html = "".join(carta_html(c) for c in sorted(mao_humano, key=safe_sort_key))
-    st.markdown(
-        f'<div style="display:flex; flex-wrap:wrap; gap:10px;">{cards_html}</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
+                "".join(carta_html(c) for c in sorted(mao_humano, key=peso_carta)) +
+                "</div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("#### ✅ Prognósticos visíveis (anteriores na mesa)")
@@ -1614,16 +1562,13 @@ if st.session_state.fase == "prognostico":
     if st.button("Confirmar prognóstico", use_container_width=True):
         st.session_state.prognosticos[humano_nome] = int(palpite)
         st.session_state.progn_turn_idx += 1
-        if st.session_state.online_mode and not st.session_state.is_host:
-            rerun_with_room_sync()
-        else:
-            advance_prognostico_until_human()
-            if st.session_state.progn_turn_idx >= len(ordem_preview):
-                iniciar_fase_jogo()
-                avancar_ate_humano_ou_fim()
-            rerun_with_room_sync()
+        advance_prognostico_until_human()
+        if st.session_state.progn_turn_idx >= len(ordem_preview):
+            iniciar_fase_jogo()
+            avancar_ate_humano_ou_fim()
+        st.rerun()
 
-    stop_with_room_sync()
+    st.stop()
 
 # =========================
 # MESA
@@ -1778,7 +1723,7 @@ def render_hand_clickable_streamlit():
 
     st.markdown('<div class="handDock">', unsafe_allow_html=True)
 
-    mao_ord = sorted(mao, key=safe_sort_key)
+    mao_ord = sorted(mao, key=peso_carta)
     if not mao_ord:
         st.markdown("</div>", unsafe_allow_html=True)
         return None
@@ -1863,10 +1808,7 @@ if st.session_state.fase == "jogo":
     handle_card_query_param()
 
     if resolve_trick_if_due():
-        rerun_with_room_sync()
-
-    if not st.session_state.ordem:
-        st.session_state.ordem = ordem_da_mesa(st.session_state.nomes, st.session_state.mao_da_rodada)
+        st.rerun()
 
     ordem = st.session_state.ordem
     atual = ordem[st.session_state.turn_idx]
