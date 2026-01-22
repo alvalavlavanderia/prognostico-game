@@ -1623,6 +1623,15 @@ def seat_positions(ordem):
 
 def render_mesa():
     ordem = st.session_state.ordem
+    if not ordem:
+        ordem = ordem_da_mesa(st.session_state.nomes, st.session_state.mao_da_rodada)
+        st.session_state.ordem = ordem
+    if not ordem:
+        st.markdown(
+            '<div class="mesaWrap"><div class="mesa"><div class="mesaCenter">Mesa aguardando jogadores...</div></div></div>',
+            unsafe_allow_html=True,
+        )
+        return
     n = len(ordem)
     active_player = ordem[st.session_state.turn_idx] if ordem else None
     dealer = ordem[0]
