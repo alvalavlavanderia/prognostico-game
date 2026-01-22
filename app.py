@@ -1166,6 +1166,9 @@ def ai_escolhe_carta(nome):
 def avancar_ate_humano_ou_fim():
     if st.session_state.online_mode and not st.session_state.is_host:
         return
+    ordem = st.session_state.ordem
+    if not ordem:
+        return
 
     if st.session_state.trick_pending:
         return
